@@ -42,30 +42,13 @@ namespace grid
 
   void data_manager_t::init()
   {
-    tri_idx_list_t tris;
+    tri_idx_list_t tlist;
+    vertex_list_t  vlist;
+
+    glutils::read_tri_file(m_tri_filename.c_str(),vlist,tlist);
+
     cell_fn_list_t cell_fns;
 
-    uint num_vertices,num_triangles;
-
-    // read in topology of the triangulation
-
-    fstream trifile ( m_tri_filename.c_str(), fstream::in );
-
-    if(trifile.is_open() == false)
-      throw std::runtime_error("unable to open tri file");
-
-    trifile >> num_vertices >> num_triangles;
-
-    double coord;
-
-    for ( uint i = 0; i < num_vertices; ++i )
-      for ( uint j = 0; j < 3; ++j )
-        trifile >> coord;
-
-    for ( uint i = 0; i < num_triangles; i++ )
-      trifile >> tris[i][0] >> tris[i][1] >> tris[i][2];
-
-    trifile.close();
 
     // read in function values
 
@@ -80,8 +63,11 @@ namespace grid
     fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
     fnfile.read ( reinterpret_cast<char *> ( &num_bin_comps ), sizeof ( int ) );
 
-    if(num_bin_values != num_vertices)
+    if(num_bin_values != vlist.size())
       throw std::runtime_error("tri / bin file num verts mismatch");
+
+    if(!(m_bin_comp_no < num_bin_comps))
+      throw std::runtime_error("selected scalar component does not exist");
 
     char *fnnames = new char[num_bin_comps * fnname_max_size];
 
@@ -111,7 +97,7 @@ namespace grid
 
     datapiece_t * dp = m_pieces[0];
 
-    dp->dataset->init(cell_fns,tris);
+    dp->dataset->init(cell_fns,tlist);
   }
 
   void data_manager_t::createDataPieces()

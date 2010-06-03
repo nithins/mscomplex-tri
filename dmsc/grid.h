@@ -11,13 +11,12 @@ namespace grid
 
   typedef double                 cell_fn_t;
   typedef uint                   cellid_t;
-  typedef glutils::tri_idx_t     tri_idx_t;
-  typedef glutils::vertex_t      vertex_t;
 
-  typedef std::vector<cellid_t>  cellid_list_t;
-  typedef std::vector<tri_idx_t> tri_idx_list_t;
-  typedef std::vector<vertex_t>  vertex_list_t;
-  typedef std::vector<cell_fn_t> cell_fn_list_t;
+  typedef std::vector<cellid_t>   cellid_list_t;
+  typedef std::vector<cell_fn_t>  cell_fn_list_t;
+
+  typedef glutils::tri_idx_list_t tri_idx_list_t;
+  typedef glutils::vertex_list_t  vertex_list_t;
 
   const cellid_t invalid_cellid = -1;
 
@@ -27,7 +26,6 @@ namespace grid
     GRADDIR_ASCENDING,
     GRADDIR_COUNT,
   };
-
 }
 
 #endif
