@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>grid_viewer_mainwindow_Dialog</class>
+ <widget class="QDialog" name="grid_viewer_mainwindow_Dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>817</width>
+    <height>828</height>
+   </rect>
+  </property>
+  <property name="contextMenuPolicy">
+   <enum>Qt::DefaultContextMenu</enum>
+  </property>
+  <property name="windowTitle">
+   <string>Frame</string>
+  </property>
+  <widget class="QWidget" name="glviewer" native="true">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>10</y>
+     <width>800</width>
+     <height>600</height>
+    </rect>
+   </property>
+   <property name="autoFillBackground">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QTableView" name="datapiece_view">
+   <property name="geometry">
+    <rect>
+     <x>189</x>
+     <y>650</y>
+     <width>241</width>
+     <height>171</height>
+    </rect>
+   </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::CustomContextMenu</enum>
+   </property>
+   <property name="selectionMode">
+    <enum>QAbstractItemView::ExtendedSelection</enum>
+   </property>
+   <property name="selectionBehavior">
+    <enum>QAbstractItemView::SelectRows</enum>
+   </property>
+   <property name="sortingEnabled">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QTableView" name="critpt_view">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>650</y>
+     <width>370</width>
+     <height>171</height>
+    </rect>
+   </property>
+   <property name="contextMenuPolicy">
+    <enum>Qt::CustomContextMenu</enum>
+   </property>
+   <property name="alternatingRowColors">
+    <bool>true</bool>
+   </property>
+   <property name="selectionMode">
+    <enum>QAbstractItemView::ExtendedSelection</enum>
+   </property>
+   <property name="selectionBehavior">
+    <enum>QAbstractItemView::SelectRows</enum>
+   </property>
+   <property name="showGrid">
+    <bool>false</bool>
+   </property>
+   <property name="sortingEnabled">
+    <bool>true</bool>
+   </property>
+   <attribute name="horizontalHeaderCascadingSectionResizes">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>100</number>
+   </attribute>
+   <attribute name="verticalHeaderVisible">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderCascadingSectionResizes">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>20</number>
+   </attribute>
+   <attribute name="verticalHeaderVisible">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderDefaultSectionSize">
+    <number>20</number>
+   </attribute>
+   <attribute name="horizontalHeaderCascadingSectionResizes">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="verticalHeaderCascadingSectionResizes">
+    <bool>false</bool>
+   </attribute>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>100</number>
+   </attribute>
+  </widget>
+  <widget class="QLineEdit" name="critpt_filter_edit">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>620</y>
+     <width>171</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="readOnly">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QGroupBox" name="roi_groupBox">
+   <property name="geometry">
+    <rect>
+     <x>2</x>
+     <y>620</y>
+     <width>181</width>
+     <height>190</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Region of Interest</string>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QPushButton" name="update_roi_pushButton">
+    <property name="geometry">
+     <rect>
+      <x>36</x>
+      <y>126</y>
+      <width>97</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>update roi</string>
+    </property>
+   </widget>
+   <widget class="QxtSpanSlider" name="zroi_spanslider">
+    <property name="geometry">
+     <rect>
+      <x>4</x>
+      <y>92</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+    <property name="tickPosition">
+     <enum>QSlider::NoTicks</enum>
+    </property>
+    <property name="lowerValue">
+     <number>0</number>
+    </property>
+    <property name="upperValue">
+     <number>99</number>
+    </property>
+    <property name="upperPosition">
+     <number>99</number>
+    </property>
+    <property name="handleMovementMode">
+     <enum>QxtSpanSlider::NoOverlapping</enum>
+    </property>
+   </widget>
+   <widget class="QxtSpanSlider" name="yroi_spanslider">
+    <property name="geometry">
+     <rect>
+      <x>4</x>
+      <y>70</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+    <property name="tickPosition">
+     <enum>QSlider::NoTicks</enum>
+    </property>
+    <property name="lowerValue">
+     <number>0</number>
+    </property>
+    <property name="upperValue">
+     <number>99</number>
+    </property>
+    <property name="upperPosition">
+     <number>99</number>
+    </property>
+    <property name="handleMovementMode">
+     <enum>QxtSpanSlider::NoOverlapping</enum>
+    </property>
+   </widget>
+   <widget class="QxtSpanSlider" name="xroi_spanslider">
+    <property name="geometry">
+     <rect>
+      <x>4</x>
+      <y>46</y>
+      <width>171</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+    <property name="tickPosition">
+     <enum>QSlider::NoTicks</enum>
+    </property>
+    <property name="lowerValue">
+     <number>0</number>
+    </property>
+    <property name="upperValue">
+     <number>99</number>
+    </property>
+    <property name="upperPosition">
+     <number>99</number>
+    </property>
+    <property name="handleMovementMode">
+     <enum>QxtSpanSlider::NoOverlapping</enum>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="center_to_roi_checkBox">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>150</y>
+      <width>141</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Center View To ROI</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QxtSpanSlider</class>
+   <extends>QSlider</extends>
+   <header>QxtSpanSlider</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
