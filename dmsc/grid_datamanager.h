@@ -65,7 +65,6 @@ namespace grid
     u_int                        m_num_levels;
     double                       m_simp_tresh;
     bool                         m_single_threaded_mode;
-    bool                         m_use_ocl;
     bool                         m_compute_out_of_core;
 
     boost::thread **             m_threads;
@@ -80,7 +79,6 @@ namespace grid
           cellid_t     size,
           u_int        num_levels,
           bool         threaded_mode,
-          bool         use_ocl,
           double       simp_tresh,
           bool         compute_out_of_core,
           uint         np);

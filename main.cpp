@@ -23,8 +23,6 @@ int main(int ac , char **av)
 
   bool   single_thread = false;
 
-  bool   use_ocl = false;
-
   bool   out_of_core_flag = false;
 
   uint   num_levels  = 1;
@@ -41,7 +39,6 @@ int main(int ac , char **av)
       ("file,f",bpo::value<std::string >(), "grid file name")
       ("dim,d", bpo::value<n_vector_t<int,2> >(), "dim of grid entered as (x,y)")
       ("single-thread-mode,s", "single threaded mode")
-      ("cl","use OpenCL ")
       ("out-of-core-mode,o", "Compute out of Core")
       ("num-levels,n",bpo::value<int>(),"num levels to partition into")
       ("simp-tresh,t",bpo::value<double>(),"simplification treshold")
@@ -70,9 +67,6 @@ int main(int ac , char **av)
   else
     throw std::invalid_argument("no filename specified");
 
-  if (vm.count("cl"))
-    use_ocl = true;
-
   if (vm.count("single-thread-mode"))
     single_thread = true;
 
@@ -94,7 +88,7 @@ int main(int ac , char **av)
   grid::data_manager_t * gdm = new grid::data_manager_t
       (filename,dim,
        num_levels,
-       single_thread,use_ocl,
+       single_thread,
        simp_tresh,
        out_of_core_flag,
        num_parallel);

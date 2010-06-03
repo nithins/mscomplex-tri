@@ -28,8 +28,6 @@
 
 #include <grid.h>
 
-#include <CL/cl.h>
-
 namespace grid
 {
 
@@ -81,11 +79,6 @@ namespace grid
     std::vector<uint>  m_saddle_incidence_idx_offset;
     std::vector<uint>  m_saddle_incidence_idx;
 
-    cl_mem             m_cell_pair_img;
-    cl_mem             m_cell_flag_img;
-    cl_mem             m_critical_cells_buf;
-    cl_mem             m_cell_own_img;
-
     pt_comp_t          m_ptcomp;
 
   public:
@@ -125,32 +118,7 @@ namespace grid
 
     void  assignCellOwnerExtrema();
 
-
-
-    void  work_ocl(bool collect_cps = true);
-
-    void  writeout_connectivity_ocl(mscomplex_t *msgraph);
-
-    void  assignGradients_ocl(cl_command_queue &commands);
-
-    void  read_pair_img_ocl(cl_command_queue &commands);
-
-    void  read_flag_img_ocl(cl_command_queue &commands);
-
-    void  read_own_img_ocl(cl_command_queue &commands);
-
-    void  collateCritcalPoints_ocl(cl_command_queue &commands);
-
-    int   assignCellOwnerExtrema_ocl(cl_command_queue &commands);
-
-    void  collect_saddle_conn_ocl(cl_command_queue &commands);
-
-
-
     int   postMergeFillDiscs(mscomplex_t *msgraph);
-
-
-
 
     // dataset interface
   public:
@@ -231,13 +199,6 @@ namespace grid
     // for rendering support
   public:
     void getCellCoord ( cellid_t c,double &x,double &y,double &z );
-
-    // opencl implementations
-  public:
-
-    static void init_opencl();
-
-    static void stop_opencl();
 
   };
 

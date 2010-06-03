@@ -122,16 +122,10 @@ namespace grid
 
   void data_manager_t::computeMsGraph( datapiece_t *dp )
   {
-    if(m_use_ocl != true)
-    {
-      dp->dataset->work();
+    dp->dataset->work();
 
-      dp->dataset->writeout_connectivity(dp->msgraph);
-    }
-    else
-    {
-      dp->dataset->writeout_connectivity_ocl(dp->msgraph);
-    }
+    dp->dataset->writeout_connectivity(dp->msgraph);
+
 
     dp->dataset->clear_fnref();
 
@@ -223,9 +217,6 @@ namespace grid
       datapiece_t * dp = m_pieces[i];
 
       dp->dataset->init();
-
-      if(m_use_ocl == true)
-        dp->dataset->work_ocl();
 
       if(m_single_threaded_mode == false)
       {
@@ -402,12 +393,6 @@ namespace grid
 
   void data_manager_t::collectManifold( datapiece_t  * dp)
   {
-
-    if(m_use_ocl == false)
-    {
-      dp->dataset->work();
-    }
-
     dp->dataset->postMergeFillDiscs(dp->msgraph);
 
     dp->dataset->clear_fnref();
@@ -437,9 +422,6 @@ namespace grid
     for ( int j = start; j < end; j += 1)
     {
       datapiece_t *dp  = m_pieces[j];
-
-      if(m_use_ocl)
-        dp->dataset->work_ocl(false);
 
       if(m_single_threaded_mode == false)
       {
@@ -603,7 +585,6 @@ namespace grid
         cellid_t    size,
         u_int        num_levels,
         bool         single_threaded_mode,
-        bool         use_ocl,
         double       simp_tresh,
         bool         compute_out_of_core,
         uint         np):
@@ -611,7 +592,6 @@ namespace grid
       m_size(size),
       m_num_levels(num_levels),
       m_single_threaded_mode(single_threaded_mode),
-      m_use_ocl(use_ocl),
       m_simp_tresh(simp_tresh),
       m_compute_out_of_core(compute_out_of_core),
       num_parallel(np)
@@ -626,9 +606,6 @@ namespace grid
     m_threads = new boost::thread*[num_parallel];
 
     createDataPieces();
-
-    if(m_use_ocl)
-      dataset_t::init_opencl();
 
     Timer t;
     t.start();
@@ -667,9 +644,6 @@ namespace grid
 
     if ( m_compute_out_of_core == true )
     {
-      if(m_use_ocl)
-        dataset_t::stop_opencl();
-
       exit(0);
     }
 

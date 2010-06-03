@@ -1,5 +1,5 @@
 #Define the project we are working on
-project(mscomplex-2d)
+project(mscomplex-tri)
 
 # Look for various software we need
 cmake_minimum_required(VERSION 2.6)
@@ -26,12 +26,9 @@ find_package(Qxt REQUIRED)
 
 find_package(PythonInterp REQUIRED)
 
-find_package(OpenCL REQUIRED)
-
 add_subdirectory(utls)
 
 set(dmsc_SRCS
-
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid.h
 
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset.h
@@ -43,16 +40,6 @@ set(dmsc_SRCS
 
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_datamanager.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_datamanager.cpp
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/bitonic_sort.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/bitonic_sort.cpp
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/prefix_scan.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/prefix_scan.cpp
-  )
-
-QT4_ADD_RESOURCES(dmsc_RC_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/ocl/mscomplex.qrc
   )
 
 set(viewer_SRCS
@@ -102,7 +89,6 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/viewer/
   ${utls_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${OPENCL_INCLUDE_DIRS}
   ${QT_ADDITIONAL_INCLUDE_PATHS}
   ${QGLVIEWER_INCLUDE_DIR}
   ${Boost_INCLUDE_DIRS}
@@ -123,7 +109,6 @@ target_link_libraries(
   ${PROJECT_NAME}
   utls
   ${Boost_LIBRARIES}
-  ${OPENCL_LIBRARIES}
   ${QT_LIBRARIES}
   ${QT_ADDITIONAL_LIBRARIES}
   ${QGLVIEWER_LIBRARY}
