@@ -32,6 +32,7 @@ set(dmsc_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid.h
 
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset_ensure.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset.cpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_mscomplex.h
@@ -43,6 +44,8 @@ set(dmsc_SRCS
   )
 
 set(viewer_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/aabb.h
+
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer.cpp
 
@@ -60,23 +63,9 @@ set(viewer_UIS
 
 QT4_WRAP_UI(viewer_UI_SRCS ${viewer_UIS})
 
-file(GLOB viewer_shader_FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/geom_1mfold.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/vert_1mfold.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/geom_2mfold.glsl
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/shaders/vert_2mfold.glsl
-  )
-
 set(viewer_shader_SRCS
   ${CMAKE_CURRENT_BINARY_DIR}/viewer/shadersources.h
   ${CMAKE_CURRENT_BINARY_DIR}/viewer/shadersources.cpp
-  )
-
-add_custom_command(
-  OUTPUT ${viewer_shader_SRCS}
-  COMMAND ${PYTHON_EXECUTABLE} ${utls_SOURCE_DIR}/copy_files_to_c_header.py
-  ${CMAKE_CURRENT_BINARY_DIR}/viewer/shadersources ${viewer_shader_FILES}
-  DEPENDS ${viewer_shader_FILES} ${utls_SOURCE_DIR}/copy_files_to_c_header.py
   )
 
 set(main_SRCS

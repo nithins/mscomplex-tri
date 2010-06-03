@@ -47,6 +47,7 @@ namespace grid
 
     bool isCancelled;
     bool is_paired;
+    bool is_boundry;
 
     critpt_t()
     {
@@ -73,14 +74,11 @@ namespace grid
     critpt_list_t m_cps;
     id_cp_map_t   m_id_cp_map;
 
-    rect_t        m_rect;
-    rect_t        m_ext_rect;
-
     void connect_cps(cellid_t c1,cellid_t c2);
 
     void connect_cps(uint_pair_t p);
 
-    void add_critpt(cellid_t c,uchar i,cell_fn_t f);
+    void add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg);
 
     void simplify(uint_pair_list_t &,double simplification_treshold);
 
@@ -91,14 +89,6 @@ namespace grid
     void add_disc_tracking_seed_cps();
 
     void clear();
-
-    static mscomplex_t * merge_up(const mscomplex_t& msc1,
-                                  const mscomplex_t& msc2);
-
-    void merge_down(mscomplex_t& msc1,
-                    mscomplex_t& msc2);
-
-    mscomplex_t(rect_t r,rect_t e):m_rect(r),m_ext_rect(e){}
 
     mscomplex_t(){}
 
@@ -121,19 +111,5 @@ namespace grid
     if(msc->m_cps[e[0]]->index < msc->m_cps[e[1]]->index)
       std::swap(e[0],e[1]);
   }
-}
-
-
-#include <boost/serialization/array.hpp>
-#include <boost/serialization/base_object.hpp>
-
-namespace boost
-{
-  namespace serialization
-  {
-    template<class Archive>
-    void serialize(Archive & ar, grid::mscomplex_t & g, const unsigned int );
-
-  } // namespace serialization
 }
 #endif

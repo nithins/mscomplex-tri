@@ -9,11 +9,16 @@
 
 #include <boost/multi_array.hpp>
 
+#include <aabb.h>
+
 namespace grid
 {
   class datapiece_t ;
 
   class mscomplex_t;
+
+  typedef aabb::aabb_t<double,3>          rect_t;
+  typedef aabb::aabb_t<double,3>::point_t point_t;
 
   class disc_rendata_t
   {
@@ -104,10 +109,10 @@ namespace grid
   {
   public:
     std::vector<octtree_piece_rendata * >  m_grid_piece_rens;
-    cellid_t                               m_size;
     rect_t                                 m_roi;
+    rect_t                                 m_extent;
     double                                 m_scale_factor;
-    cellid_t                               m_roi_base_pt;
+    point_t                                m_roi_base_pt;
 
   public:
     bool                                   m_bShowRoiBB;
@@ -115,7 +120,6 @@ namespace grid
     bool                                   m_bCenterToRoi;
 
     data_manager_t *                       m_gdm;
-    uint                                   m_rawdata_texture;
 
   public:
 
@@ -125,8 +129,6 @@ namespace grid
 
     // ensure normalization of l and u, l < u , dim in {0,1,2}
     void set_roi_dim_range_nrm(double l,double u,int dim);
-
-    bool init_rawdata_texture();
 
   private:
 

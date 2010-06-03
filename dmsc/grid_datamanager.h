@@ -49,71 +49,37 @@ namespace grid
     std::string label();
   };
 
-
-
   class data_manager_t
   {
     typedef std::vector<datapiece_t *> pieces_list_t;
 
   public:
 
-    pieces_list_t                m_pieces;
+    pieces_list_t  m_pieces;
 
-    std::string                  m_filename;
-    cellid_t                     m_size;
-
-    u_int                        m_num_levels;
-    double                       m_simp_tresh;
-    bool                         m_single_threaded_mode;
-    bool                         m_compute_out_of_core;
-
-    boost::thread **             m_threads;
+    std::string    m_tri_filename;
+    std::string    m_bin_filename;
+    uint           m_bin_comp_no;
+    double         m_simp_tresh;
 
   public:
 
-    uint num_parallel;
+    data_manager_t (
+        std::string tri_file,
+        std::string bin_file,
+        uint bin_comp,
+        double simp_tresh
+        );
 
+    ~data_manager_t ();
 
-    data_manager_t
-        ( std::string  filename,
-          cellid_t     size,
-          u_int        num_levels,
-          bool         threaded_mode,
-          double       simp_tresh,
-          bool         compute_out_of_core,
-          uint         np);
-
-    virtual ~data_manager_t ();
-
-    void createPieces_quadtree(rect_t r,rect_t e,u_int level );
+    void work();
 
     void createDataPieces();
 
-    void readDataAndInit(std::ifstream &data_stream,cell_fn_t *,uint start_offset);
+    void destroyDataPieces();
 
-    uint getMaxDataBufItems();
-
-    void waitForThreadsInRange(uint,uint);
-
-    void computeMsGraph ( datapiece_t  * );
-
-    void computeMsGraphInRange(uint ,uint );
-
-    void finalMergeDownPiecesInRange(uint start,uint end);
-
-    void collectManifold( datapiece_t  * );
-
-    void collectManifoldsInRange(uint start,uint end);
-
-    void writeManifoldsInRange(uint start,uint end);
-
-    void computeSubdomainMsgraphs ();
-
-    void mergePiecesUp( );
-
-    void mergePiecesDown( );
-
-    void collectSubdomainManifolds( );
+    void init();
 
     void logAllConnections(const std::string &prefix);
 

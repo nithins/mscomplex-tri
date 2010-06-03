@@ -19,48 +19,12 @@
 #include <grid_mscomplex_ensure.h>
 #include <grid_dataset.h>
 
-#include <shadersources.h>
-
-#define static_assert BOOST_STATIC_ASSERT
-
-const int s_rawdata_texture_no = 0;
-
-
-struct s_shader_data_t
+template<typename T> std::string to_string(const T & t)
 {
-  enum eSourceType { ST_VERT,ST_GEOM,ST_FRAG,ST_COUNT};
-
-  GLSLProgram * prog;
-
-  const char * source[ST_COUNT];
-  const char * header[ST_COUNT];
-
-  uint geom_in;
-  uint geom_out;
-};
-
-const char * s_is_dual_str[grid::GRADDIR_COUNT]=
-{
-  "const int is_dual = 0;",
-  "const int is_dual = 1;",
-};
-
-const char * s_shader_header_regex =
-    "//HEADER_REPLACE_BEGIN(.*)//HEADER_REPLACE_END";
-
-s_shader_data_t  s_cell_shaders[grid::GRADDIR_COUNT][grid::gc_grid_dim+1] =
-{
-  {
-    {NULL,{vert_2mfold_glsl,geom_2mfold_glsl,NULL},{NULL,s_is_dual_str[0],NULL},GL_POINTS,GL_TRIANGLES},
-    {NULL,{vert_1mfold_glsl,geom_1mfold_glsl,NULL},{NULL,s_is_dual_str[0],NULL},GL_POINTS,GL_LINE_STRIP},
-    {NULL,{vert_2mfold_glsl,geom_2mfold_glsl,NULL},{NULL,s_is_dual_str[0],NULL},GL_POINTS,GL_TRIANGLES},
-  },
-{
-    {NULL,{vert_2mfold_glsl,geom_2mfold_glsl,NULL},{NULL,s_is_dual_str[1],NULL},GL_POINTS,GL_TRIANGLES},
-    {NULL,{vert_1mfold_glsl,geom_1mfold_glsl,NULL},{NULL,s_is_dual_str[1],NULL},GL_POINTS,GL_LINE_STRIP},
-    {NULL,{vert_2mfold_glsl,geom_2mfold_glsl,NULL},{NULL,s_is_dual_str[1],NULL},GL_POINTS,GL_TRIANGLES},
-  },
-};
+  std::stringstream ss;
+  ss<<t;
+  return ss.str();
+}
 
 glutils::color_t g_grid_cp_colors[grid::gc_grid_dim+1] =
 {
@@ -103,97 +67,28 @@ namespace grid
 
   glutils::vertex_t cell_to_vertex(cellid_t c)
   {
-    return glutils::vertex_t(c[0],0,c[1]);
+
+#warning "cell to vertex not implemented"
+    return glutils::vertex_t(0,0,0);
   }
 
   glutils::vertex_t cp_to_vertex(mscomplex_t *msc,uint i)
   {
-    cellid_t &c = msc->m_cps[i]->cellid;
 
-    return glutils::vertex_t(c[0],msc->m_cps[i]->fn,c[1]);
-  }
-
-  void disc_rendata_t::init()
-  {
-    for(uint k = 0 ;k < GRADDIR_COUNT;++k)
-    {
-      for(uint j = 0 ;j < gc_grid_dim+1;++j)
-      {
-        if(s_cell_shaders[k][j].prog != NULL )
-          continue;
-
-        std::string shader_source[s_shader_data_t::ST_COUNT];
-
-        for(uint i = 0 ;i < s_shader_data_t::ST_COUNT;++i)
-        {
-          if(s_cell_shaders[k][j].source[i] != NULL)
-            shader_source[i] = s_cell_shaders[k][j].source[i];
-
-          if(s_cell_shaders[k][j].header[i] != NULL)
-          {
-            boost::replace_regex
-                ( shader_source[i],boost::regex(s_shader_header_regex),
-                  std::string(s_cell_shaders[k][j].header[i]));
-          }
-        }
-
-        s_cell_shaders[k][j].prog =
-            GLSLProgram::createFromSourceStrings
-            (shader_source[0],shader_source[1],shader_source[2],
-             s_cell_shaders[k][j].geom_in,s_cell_shaders[k][j].geom_out);
-
-        std::string log;
-
-        s_cell_shaders[k][j].prog->GetProgramLog ( log );
-
-        if(log.size() !=0 )
-        {
-          std::stringstream ss;
-
-          for(uint i = 0 ;i < s_shader_data_t::ST_COUNT;++i)
-          {
-            ss<<"shader no"<<i<<"\n";
-
-            ss<<shader_source[i]<<"\n";
-          }
-
-          ss<<"shader log ::\n"<<log<<"\n";
-
-          throw std::runtime_error(ss.str());
-        }
-      }
-    }
-
-  }
-
-  void disc_rendata_t::cleanup()
-  {
-    for(uint k = 0 ;k < GRADDIR_COUNT;++k)
-    {
-      for(uint j = 0 ;j < gc_grid_dim+1;++j)
-      {
-        if(s_cell_shaders[k][j].prog == NULL )
-          continue;
-
-        delete s_cell_shaders[k][j].prog;
-
-        s_cell_shaders[k][j].prog = NULL;
-      }
-    }
+#warning "cp to vertex not implemented"
+    return glutils::vertex_t(0,0,0);
   }
 
   grid_viewer_t::grid_viewer_t
       (data_manager_t * gdm):
-      m_size(gdm->m_size),m_scale_factor(0),
+      m_scale_factor(0),
       m_bRebuildRens(true),m_bShowRoiBB(false),m_bCenterToRoi(false),
       m_gdm(gdm)
   {
-    m_roi = rect_t(cellid_t::zero,(m_size-cellid_t::one)*2);
-
     for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
       m_grid_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i)));
 
-    m_roi_base_pt  = ((m_roi.upper_corner() +  m_roi.lower_corner())/2);
+#warning "m_roi and m_roi_base_pt are not intialized"
 
   }
 
@@ -204,10 +99,6 @@ namespace grid
 
     m_grid_piece_rens.clear();
 
-    disc_rendata_t::cleanup();
-
-    glDeleteTextures( 1, &m_rawdata_texture );
-
     delete m_gdm;
   }
 
@@ -216,7 +107,7 @@ namespace grid
     if(!(l<u && 0.0 <= l && u <=1.0 && 0<=dim && dim < gc_grid_dim))
       return;
 
-    rect_t roi = rect_t(cellid_t::zero,(m_size-cellid_t::one)*2);
+    rect_t roi  = m_extent;
 
     double span = roi[dim].span();
 
@@ -243,14 +134,14 @@ namespace grid
              0.125,
              m_scale_factor);
 
+    point_t s = m_extent.span()/2;
+
     if(m_bCenterToRoi)
       glTranslatef(-m_roi_base_pt[0],
                    0,
                    -m_roi_base_pt[1]);
     else
-      glTranslatef(std::min(-m_size[0]+1,-1),
-                   0,
-                   std::min(-m_size[1]+1,-1));
+      glTranslated(-s[0],-s[1],-s[2]);
 
     if(m_bShowRoiBB)
     {
@@ -260,8 +151,7 @@ namespace grid
 
       glColor3dv(g_roiaabb_color.data());
 
-      glutils::draw_aabb_line(cell_to_vertex(m_roi.lower_corner()),
-                              cell_to_vertex(m_roi.upper_corner()));
+      glutils::draw_aabb_line(m_roi.lower_corner(),m_roi.upper_corner());
 
       glPopAttrib();
     }
@@ -271,24 +161,9 @@ namespace grid
       m_grid_piece_rens[i]->render_msgraph_data();
     }
 
-    if(m_rawdata_texture != 0 )
-    {
-      glEnable ( GL_TEXTURE_RECTANGLE_ARB );
-
-      glActiveTexture ( GL_TEXTURE0 + s_rawdata_texture_no );
-      glBindTexture ( GL_TEXTURE_RECTANGLE_ARB, m_rawdata_texture );
-    }
-
     for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
     {
       m_grid_piece_rens[i]->render_dataset_data();
-    }
-
-    if(m_rawdata_texture != 0 )
-    {
-      glBindTexture ( GL_TEXTURE_RECTANGLE_ARB, 0);
-
-      glDisable ( GL_TEXTURE_RECTANGLE_ARB );
     }
 
     glPopAttrib();
@@ -308,12 +183,12 @@ namespace grid
   {
     glutils::init();
 
-    disc_rendata_t::init();
+    if(m_extent.eff_dim() == 0)
+      throw std::runtime_error("NULL extent for viewer");
 
-    init_rawdata_texture();
+    point_t s = m_extent.span();
 
-    m_scale_factor = 0.5/ std::max((double) *std::max_element
-                                   (m_size.begin(),m_size.end())-1.0,1.0);
+    m_scale_factor =0.5/ *std::max_element(s.begin(),s.end());
 
     /*turn back face culling off */
     glEnable ( GL_CULL_FACE );
@@ -331,43 +206,6 @@ namespace grid
       m_grid_piece_rens[i]->create_cp_loc_bo();
       m_grid_piece_rens[i]->create_disc_rds();
     }
-  }
-
-  bool grid_viewer_t::init_rawdata_texture()
-  {
-    std::ifstream ifs;
-
-    ifs.open(m_gdm->m_filename.c_str(),std::ifstream::binary );
-
-    if(!ifs.is_open())
-      return false;
-
-    cell_fn_t * pData = new cell_fn_t[m_gdm->m_size[0]*m_gdm->m_size[1]];
-
-    ifs.read ( reinterpret_cast<char *> ( pData),
-               sizeof ( cell_fn_t)*m_gdm->m_size[0]*m_gdm->m_size[1]);
-
-    ifs.close();
-
-    glGenTextures ( 1, &m_rawdata_texture );
-
-    glBindTexture ( GL_TEXTURE_RECTANGLE_ARB, m_rawdata_texture );
-
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-    glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_FLOAT_R32_NV,
-                 m_gdm->m_size[0], m_gdm->m_size[1], 0,
-                 GL_RED, GL_FLOAT, pData);
-
-    glBindTexture ( GL_TEXTURE_RECTANGLE_ARB, 0 );
-
-    delete []pData;
-
-    return true;
   }
 
   int grid_viewer_t::rows()
@@ -466,7 +304,7 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(c))
+      if(!roi.contains(cell_to_vertex(c)))
         continue;
 
       uint index = dp->msgraph->m_cps[i]->index;
@@ -504,7 +342,7 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(c))
+      if(!roi.contains(cell_to_vertex(c)))
         continue;
 
       uint index = dp->msgraph->m_cps[i]->index;
@@ -512,7 +350,7 @@ namespace grid
       for(conn_iter_t it  = dp->msgraph->m_cps[i]->conn[0].begin();
       it != dp->msgraph->m_cps[i]->conn[0].end(); ++it)
       {
-        if(!roi.contains(dp->msgraph->m_cps[*it]->cellid))
+        if(!roi.contains(cell_to_vertex(dp->msgraph->m_cps[*it]->cellid)))
           continue;
 
         crit_conn_idxs[index-1].push_back
@@ -547,14 +385,12 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(c))
+      if(!roi.contains(cell_to_vertex(c)))
         continue;
 
       uint index = dp->msgraph->m_cps[i]->index;
 
-
-
-      canc_cp_labels[index].push_back(c.to_string());
+      canc_cp_labels[index].push_back(to_string(i));
       canc_cp_label_locations[index].push_back(cp_to_vertex(dp->msgraph,i)) ;
       canc_cp_idxs[index].push_back(i);
 
@@ -579,7 +415,7 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(c))
+      if(!roi.contains(cell_to_vertex(c)))
         continue;
 
       uint index = dp->msgraph->m_cps[i]->index;
@@ -589,7 +425,7 @@ namespace grid
         for(conn_iter_t it  = dp->msgraph->m_cps[i]->conn[dir].begin();
         it != dp->msgraph->m_cps[i]->conn[dir].end(); ++it)
         {
-          if(!roi.contains(dp->msgraph->m_cps[*it]->cellid))
+          if(!roi.contains(cell_to_vertex(dp->msgraph->m_cps[*it]->cellid)))
             continue;
 
           canc_cp_conn_idxs[index-(dir^1)].push_back
@@ -610,54 +446,7 @@ namespace grid
 
   void octtree_piece_rendata::create_grad_rens(const rect_t & roi)
   {
-    if(dp->dataset == NULL)
-      return;
-
-    rect_t r;
-    if(!dp->dataset->get_ext_rect().intersection(roi,r))
-      return;
-
-    std::vector<glutils::vertex_t>      cell_locations;
-    std::vector<glutils::line_idx_t>    pair_idxs[gc_grid_dim];
-
-    static_assert(gc_grid_dim == 2 && "defined for 2-manifolds only");
-
-    cellid_t c;
-
-    for(c[1] = r[1][0] ; c[1] <= r[1][1]; ++c[1])
-    {
-      for(c[0] = r[0][0] ; c[0] <= r[0][1]; ++c[0])
-      {
-        uint dim = dp->dataset->getCellDim(c);
-
-        if(dp->dataset->isCellPaired(c))
-        {
-          cellid_t p = dp->dataset->getCellPairId(c);
-
-          if(dp->dataset->isPairOrientationCorrect(c,p))
-          {
-            cell_locations.push_back(cell_to_vertex(c) );
-
-            cell_locations.push_back(cell_to_vertex(p) );
-
-            pair_idxs[dim].push_back
-                (glutils::line_idx_t(cell_locations.size()-2,
-                                     cell_locations.size()-1));
-          }
-        }
-      }
-    }
-
-    glutils::bufobj_ptr_t cell_bo= glutils::make_buf_obj(cell_locations);
-
-    for(uint i = 0 ; i < gc_grid_dim; ++i)
-
-    {
-      ren_grad[i].reset(glutils::create_buffered_lines_ren
-                        (cell_bo,
-                         glutils::make_buf_obj(pair_idxs[i]),
-                         glutils::make_buf_obj()));
-    }
+#warning "create_grad_rens not implemented"
   }
 
 
@@ -812,7 +601,7 @@ namespace grid
   }
   int octtree_piece_rendata::columns()
   {
-    return 6;
+    return 5;
   }
   bool octtree_piece_rendata::exchange_data
       (const data_index_t &idx,boost::any &v)
@@ -826,14 +615,12 @@ namespace grid
     switch(i)
     {
     case 0:
-      return s_exchange_ro(disc_rds[idx[1]]->cellid.to_string(),v);
-    case 1:
       return s_exchange_ro((int)disc_rds[idx[1]]->index,v);
+    case 1:
     case 2:
-    case 3:
       need_update =  s_exchange_rw(disc_rds[idx[1]]->show[i%2],v);break;
+    case 3:
     case 4:
-    case 5:
       return s_exchange_rw(disc_rds[idx[1]]->color[i%2],v);
     };
 
@@ -848,12 +635,11 @@ namespace grid
   {
     switch(i)
     {
-    case 0: return std::string("cellid");
-    case 1: return std::string("index");
+    case 0: return std::string("index");
+    case 1: return std::string("asc disc");
     case 2: return std::string("des disc");
-    case 3: return std::string("asc disc");
+    case 3: return std::string("asc disc color");
     case 4: return std::string("des disc color");
-    case 5: return std::string("asc disc color");
     }
     throw std::logic_error("invalid index");
   }
@@ -882,10 +668,6 @@ namespace grid
     {
       if(show[dir])
       {
-        s_cell_shaders[dir][index].prog->use();
-
-        s_cell_shaders[dir][index].prog->sendUniform ( "rawdata_texture",s_rawdata_texture_no );
-
         glColor3dv(g_grid_cp_colors[index].data());
 
         glBegin(GL_POINTS);
@@ -895,8 +677,6 @@ namespace grid
         glColor3dv(color[dir].data());
 
         ren[dir]->render();
-
-        s_cell_shaders[dir][index].prog->disable();
       }
     }
   }

@@ -24,7 +24,7 @@
 
 #include <vector>
 
-#include <boost/multi_array.hpp>
+#include <tri_edge.h>
 
 #include <grid.h>
 
@@ -45,12 +45,6 @@ namespace grid
       CELLFLAG_CRITCAL = 2,
     };
 
-    typedef int8_t                            cell_flag_t;
-    typedef boost::multi_array<cellid_t,gc_grid_dim>    cellpair_array_t;
-    typedef boost::multi_array<cell_flag_t,gc_grid_dim> cellflag_array_t;
-
-    typedef boost::multi_array_ref<cell_fn_t,gc_grid_dim>   varray_ref_t;
-
   public:
 
     class pt_comp_t
@@ -65,45 +59,27 @@ namespace grid
       }
     };
 
-
-    rect_t             m_rect;
-    rect_t             m_ext_rect;
-
-    varray_ref_t      *m_vert_fns_ref;
-
-    cellpair_array_t  *m_cell_pairs;
-    cellpair_array_t  *m_cell_own;
-    cellflag_array_t  *m_cell_flags;
+    cell_fn_list_t     m_vert_fns;
+    cellid_list_t      m_cell_own;
+    cellid_list_t      m_cell_pairs;
     cellid_list_t      m_critical_cells;
-
-    std::vector<uint>  m_saddle_incidence_idx_offset;
-    std::vector<uint>  m_saddle_incidence_idx;
+    std::vector<uchar> m_cell_flags;
 
     pt_comp_t          m_ptcomp;
+    TriEdge            m_tri_edge;
 
   public:
 
     // initialization of the dataset
 
-    dataset_t ( const rect_t &r,const rect_t &e );
-
     dataset_t ();
 
     ~dataset_t ();
 
-    void  init();
+    void  init(const cell_fn_list_t &vert_fns,const tri_idx_list_t & trilist);
 
     void  clear();
 
-    void  set_cell_fn ( cellid_t c,cell_fn_t f );
-
-    void  create_pair_flag_imgs_ocl();
-
-    void  clear_buffers_ocl();
-
-    void  init_fnref(cell_fn_t * pData);
-
-    void  clear_fnref();
 
     // actual algorithm work
   public:
@@ -127,8 +103,8 @@ namespace grid
 
     inline bool   ptLt ( cellid_t c1,cellid_t c2) const
     {
-      double f1 = (*m_vert_fns_ref)[c1[0]>>1][c1[1]>>1];
-      double f2 = (*m_vert_fns_ref)[c2[0]>>1][c2[1]>>1];
+      cell_fn_t f1 = m_vert_fns[c1];
+      cell_fn_t f2 = m_vert_fns[c2];
 
       if (f1 != f2)
         return f1 < f2;
@@ -158,15 +134,11 @@ namespace grid
 
     void   markCellCritical ( cellid_t c );
 
-    inline uint getCellDim ( cellid_t c ) const;
+    uint   getCellDim ( cellid_t c ) const;
 
     uint   getMaxCellDim() const;
 
-    bool   isTrueBoundryCell ( cellid_t c ) const;
-
-    bool   isFakeBoundryCell ( cellid_t c ) const;
-
-    bool   isCellExterior ( cellid_t c ) const;
+    bool   isBoundryCell ( cellid_t c ) const;
 
     std::string  getCellFunctionDescription ( cellid_t pt ) const;
 
@@ -174,20 +146,6 @@ namespace grid
 
     // misc functions
   public:
-    inline static uint s_getCellDim ( cellid_t c )
-    {
-      return ( ( c[0]&0x01 ) + ( c[1]&0x01 ) );
-    }
-
-    inline rect_t get_rect()
-    {
-      return m_rect;
-    }
-
-    inline rect_t get_ext_rect()
-    {
-      return m_ext_rect;
-    }
 
     void log_flags();
 
@@ -196,16 +154,8 @@ namespace grid
     // return fn at point .. averge of points for higher dims
     cell_fn_t get_cell_fn ( cellid_t c ) const;
 
-    // for rendering support
-  public:
-    void getCellCoord ( cellid_t c,double &x,double &y,double &z );
-
   };
 
-  inline uint dataset_t::getCellDim ( cellid_t c ) const
-  {
-    return ( ( c[0]&0x01 ) + ( c[1]&0x01 ) );
-  }
 }
 
 namespace boost

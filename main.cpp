@@ -17,32 +17,23 @@ namespace bpo = boost::program_options ;
 
 int main(int ac , char **av)
 {
-  string filename;
+  string tri_filename;
 
-  n_vector_t<int,2> dim;
+  string bin_filename;
 
-  bool   single_thread = false;
+  int    bin_comp_no = 0;
 
-  bool   out_of_core_flag = false;
-
-  uint   num_levels  = 1;
-
-  double   simp_tresh= 0.0;
-
-  uint   num_parallel  = 1;
+  double simp_tresh= 0.0;
 
   bool   gui = false;
 
   bpo::options_description desc("Allowed options");
   desc.add_options()
       ("help,h", "produce help message")
-      ("file,f",bpo::value<std::string >(), "grid file name")
-      ("dim,d", bpo::value<n_vector_t<int,2> >(), "dim of grid entered as (x,y)")
-      ("single-thread-mode,s", "single threaded mode")
-      ("out-of-core-mode,o", "Compute out of Core")
-      ("num-levels,n",bpo::value<int>(),"num levels to partition into")
-      ("simp-tresh,t",bpo::value<double>(),"simplification treshold")
-      ("num-parallel,p",bpo::value<int>(),"num subdomains to process in parallel")
+      ("tri-file,t",bpo::value<std::string >(), "tri file name")
+      ("bin-file,b",bpo::value<std::string >(), "bin file name (function file)")
+      ("simp-tresh,s",bpo::value<double>(),"simplification treshold")
+      ("bin-file-comp,c",bpo::value<int>(),"scalar component number")
       ("gui,g","show gui")
       ;
 
@@ -57,41 +48,27 @@ int main(int ac , char **av)
     return 1;
   }
 
-  if (vm.count("dim"))
-    dim = vm["dim"].as<n_vector_t<int,2> >();
+  if (vm.count("tri-file"))
+    tri_filename = vm["tri-file"].as<std::string>();
   else
-    throw std::invalid_argument("no dim specified");
+    throw std::invalid_argument("no tri filename specified");
 
-  if (vm.count("file"))
-    filename = vm["file"].as<std::string>();
+  if (vm.count("bin-file"))
+    bin_filename = vm["bin-file"].as<std::string>();
   else
-    throw std::invalid_argument("no filename specified");
-
-  if (vm.count("single-thread-mode"))
-    single_thread = true;
-
-  if (vm.count("out-of-core-mode"))
-    out_of_core_flag = true;
-
-  if (vm.count("num-levels"))
-    num_levels = vm["num-levels"].as<int>();
+    throw std::invalid_argument("no bin filename specified");
 
   if (vm.count("simp-tresh"))
     simp_tresh = vm["simp-tresh"].as<double>();
 
-  if (vm.count("num-parallel"))
-    num_parallel = vm["num-parallel"].as<int>();
+  if (vm.count("bin-file-comp"))
+    bin_comp_no = vm["bin-file-comp"].as<int>();
 
   if (vm.count("gui"))
     gui = true;
 
   grid::data_manager_t * gdm = new grid::data_manager_t
-      (filename,dim,
-       num_levels,
-       single_thread,
-       simp_tresh,
-       out_of_core_flag,
-       num_parallel);
+      (tri_filename,bin_filename,bin_comp_no,simp_tresh);
 
   if(gui)
   {

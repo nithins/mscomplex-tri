@@ -22,12 +22,13 @@ namespace grid
 
   }
 
-  void mscomplex_t::add_critpt(cellid_t c,uchar i,cell_fn_t f)
+  void mscomplex_t::add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg)
   {
-    critpt_t * cp = new critpt_t;
-    cp->cellid    = c;
-    cp->index     = i;
-    cp->fn        = f;
+    critpt_t * cp  = new critpt_t;
+    cp->cellid     = c;
+    cp->index      = i;
+    cp->fn         = f;
+    cp->is_boundry = bflg;
     m_id_cp_map.insert(std::make_pair(c,m_cps.size()));
     m_cps.push_back(cp);
   }
@@ -249,279 +250,6 @@ namespace grid
     msc.m_cps.push_back(dest_cp);
   }
 
-  mscomplex_t * mscomplex_t::merge_up(const mscomplex_t& msc1,const mscomplex_t& msc2)
-  {
-
-    // form the intersection rect
-    rect_t ixn;
-
-    if (!msc2.m_rect.intersection (msc1.m_rect,ixn))
-      throw std::logic_error ("rects should intersect for merge");
-
-    if ( ixn.eff_dim() != gc_grid_dim -1)
-      throw std::logic_error ("rects must merge along a 1 manifold");
-
-    // TODO: ensure that the union of  rects is not including anything extra
-
-    rect_t r = msc1.m_rect.bounding_box(msc2.m_rect);
-
-    rect_t e = msc1.m_ext_rect.bounding_box(msc2.m_ext_rect);
-
-    mscomplex_t * out_msc = new mscomplex_t(r,e);
-
-    const mscomplex_t* msc_arr[] = {&msc1,&msc2};
-
-    // make a union of the critical points in this
-    for (uint i = 0 ; i <2;++i)
-    {
-      const mscomplex_t * msc = msc_arr[i];
-
-      for (uint j = 0 ; j <msc->m_cps.size();++j)
-      {
-        const critpt_t *src_cp = msc->m_cps[j];
-
-        // if it is contained or not
-        if (i == 1 && (out_msc->m_id_cp_map.count(src_cp->cellid) == 1))
-          continue;
-
-        if(src_cp->isCancelled)
-          continue;
-
-        shallow_replicate_cp(*out_msc,*src_cp);
-
-      }
-    }
-
-    for (uint i = 0 ; i <2;++i)
-    {
-      const mscomplex_t * msc = msc_arr[i];
-
-      // copy over connectivity information
-      for (uint j = 0 ; j <msc->m_cps.size();++j)
-      {
-        const critpt_t *src_cp = msc->m_cps[j];
-
-        if(src_cp->isCancelled)
-          continue;
-
-        critpt_t *dest_cp = out_msc->m_cps[out_msc->m_id_cp_map[src_cp->cellid]];
-
-        if(src_cp->is_paired)
-        {
-          critpt_t *src_pair_cp = msc->m_cps[src_cp->pair_idx];
-
-          dest_cp->pair_idx = out_msc->m_id_cp_map[src_pair_cp->cellid];
-        }
-
-        bool is_src_cmn_bndry = (ixn.contains(src_cp->cellid) && i == 1);
-
-        for (uint j = 0 ; j < 2; ++j)
-        {
-          for (const_conn_iter_t it = src_cp->conn[j].begin();
-          it != src_cp->conn[j].end();++it)
-          {
-            const critpt_t *conn_cp = msc->m_cps[*it];
-
-            // common boundry connections would have been found along the boundry
-            if( is_src_cmn_bndry && ixn.contains(conn_cp->cellid))
-              continue;
-
-            if (conn_cp->isCancelled)
-              continue;
-
-            dest_cp->conn[j].insert (out_msc->m_id_cp_map[conn_cp->cellid]);
-          }
-        }
-      }
-    }
-
-    // carry out the cancellation
-    for(cell_coord_t y = ixn[1][0]; y <= ixn[1][1];++y)
-    {
-      for(cell_coord_t x = ixn[0][0]; x <= ixn[0][1];++x)
-      {
-        cellid_t c(x,y);
-
-        if(out_msc->m_id_cp_map.count(c) != 1)
-          throw std::logic_error("missing common bndry cp");
-
-        u_int src_idx = out_msc->m_id_cp_map[c];
-
-        critpt_t *src_cp = out_msc->m_cps[src_idx];
-
-        if(src_cp->isCancelled || !src_cp->is_paired)
-          continue;
-
-        u_int pair_idx = src_cp->pair_idx;
-
-        cellid_t p = out_msc->m_cps[pair_idx]->cellid;
-
-        if(!out_msc->m_rect.isInInterior(c)&& !out_msc->m_ext_rect.isOnBoundry(c))
-          continue;
-
-        if(!out_msc->m_rect.isInInterior(p)&& !out_msc->m_ext_rect.isOnBoundry(p))
-          continue;
-
-        cancelPairs(out_msc,uint_pair_t(src_idx,pair_idx));
-      }
-    }
-
-    return out_msc;
-  }
-
-  void mscomplex_t::merge_down(mscomplex_t& msc1,mscomplex_t& msc2)
-  {
-    rect_t ixn;
-
-    if (!msc2.m_rect.intersection (msc1.m_rect,ixn))
-      throw std::logic_error ("rects should intersect for merge");
-
-    if ( ixn.eff_dim() != gc_grid_dim -1)
-      throw std::logic_error ("rects must merge along a 1 manifold");
-
-    for(cell_coord_t y = ixn[1][1]; y >= ixn[1][0];--y)
-    {
-      for(cell_coord_t x = ixn[0][1]; x >= ixn[0][0];--x)
-      {
-
-        cellid_t c(x,y);
-
-        if(this->m_id_cp_map.count(c) != 1)
-          throw std::logic_error("missing common bndry cp");
-
-        u_int src_idx = this->m_id_cp_map[c];
-
-        critpt_t *src_cp = this->m_cps[src_idx];
-
-        if(!src_cp->isCancelled )
-          continue;
-
-        u_int pair_idx = src_cp->pair_idx;
-
-        cellid_t p = this->m_cps[pair_idx]->cellid;
-
-        if(!this->m_rect.isInInterior(c)&& !this->m_ext_rect.isOnBoundry(c))
-          continue;
-
-        if(!this->m_rect.isInInterior(p)&& !this->m_ext_rect.isOnBoundry(p))
-          continue;
-
-        uncancel_pair(this,uint_pair_t(src_idx,pair_idx));
-      }
-    }
-
-    // identify and copy the results to msc1 and msc2
-
-    mscomplex_t* msc_arr[] = {&msc1,&msc2};
-
-    for (uint i = 0 ; i <2;++i)
-    {
-      mscomplex_t * msc = msc_arr[i];
-
-      // adjust connections for uncancelled cps in msc
-      for(uint j = 0 ; j < m_cps.size();++j)
-      {
-        critpt_t * src_cp = m_cps[j];
-
-        if(src_cp->isCancelled)
-          throw std::logic_error("all cps ought to be uncancelled by now");
-
-        if(!src_cp->is_paired)
-          continue;
-
-        critpt_t * src_pair_cp = m_cps[src_cp->pair_idx];
-
-        bool src_in_msc      = (msc->m_id_cp_map.count(src_cp->cellid) != 0);
-        bool src_pair_in_msc = (msc->m_id_cp_map.count(src_pair_cp->cellid) != 0);
-
-        if(!src_in_msc && !src_pair_in_msc)
-          continue;
-
-        if(!src_in_msc)
-        {
-          shallow_replicate_cp(*msc,*src_cp);
-        }
-
-        if(!src_pair_in_msc)
-        {
-          shallow_replicate_cp(*msc,*src_pair_cp);
-        }
-
-        uint dest_cp_idx = msc->m_id_cp_map[src_cp->cellid];
-
-        critpt_t *dest_cp = msc->m_cps[dest_cp_idx];
-
-        if(!src_in_msc || !src_pair_in_msc || !dest_cp->is_paired)
-        {
-          uint dest_pair_cp_idx  = msc->m_id_cp_map[src_pair_cp->cellid];
-          critpt_t *dest_pair_cp = msc->m_cps[dest_pair_cp_idx];
-
-          dest_cp->is_paired      = true;
-          dest_pair_cp->is_paired = true;
-
-          dest_cp->pair_idx      = dest_pair_cp_idx;
-          dest_pair_cp->pair_idx = dest_cp_idx;
-        }
-
-        for(uint k = 0 ; k < 2;++k)
-        {
-          dest_cp->conn[k].clear();
-
-          for(conn_iter_t it = src_cp->conn[k].begin(); it!=src_cp->conn[k].end();++it)
-          {
-            critpt_t *src_conn_cp = m_cps[*it];
-
-            if(src_conn_cp->is_paired == true)
-              throw std::logic_error("only non cancellable cps must be remaining");
-
-            if(msc->m_id_cp_map.count(src_conn_cp->cellid) == 0)
-            {
-              shallow_replicate_cp(*msc,*src_conn_cp);
-            }
-
-            dest_cp->conn[k].insert(msc->m_id_cp_map[src_conn_cp->cellid]);
-          }// end it
-        }// end k
-      }// end j
-
-      // adjust connections for non uncancelled cps in msc
-      for(uint j = 0 ; j < m_cps.size();++j)
-      {
-        critpt_t * src_cp = m_cps[j];
-
-        if(src_cp->is_paired)
-          continue;
-
-        if(msc->m_id_cp_map.count(src_cp->cellid) != 1)
-          continue;
-
-        critpt_t *dest_cp = msc->m_cps[msc->m_id_cp_map[src_cp->cellid]];
-
-        for(uint k = 0 ; k < 2;++k)
-        {
-          dest_cp->conn[k].clear();
-
-          for(conn_iter_t it = src_cp->conn[k].begin(); it!=src_cp->conn[k].end();++it)
-          {
-            critpt_t *src_conn_cp = m_cps[*it];
-
-            if(src_conn_cp->is_paired == true)
-            {
-              _LOG("appears that "<<src_conn_cp->cellid<<"is still connected to"<<
-                   src_cp->cellid);
-              //throw std::logic_error("only non cancellable cps must be remaining 1");
-            }
-
-            if(msc->m_id_cp_map.count(src_conn_cp->cellid) == 0)
-              continue;
-
-            dest_cp->conn[k].insert(msc->m_id_cp_map[src_conn_cp->cellid]);
-          }// end it
-        }// end k
-      }// end j
-    }//end i
-  }
-
   void mscomplex_t::clear()
   {
     std::for_each(m_cps.begin(),m_cps.end(),&delete_ftor<critpt_t>);
@@ -554,12 +282,6 @@ namespace grid
       cellid_t c3 = m_msc->m_cps[p2[0]]->cellid;
       cellid_t c4 = m_msc->m_cps[p2[1]]->cellid;
 
-      d1 = (c1[0]-c2[0])*(c1[0]-c2[0]) + (c1[1]-c2[1])*(c1[1]-c2[1]);
-      d2 = (c3[0]-c4[0])*(c3[0]-c4[0]) + (c3[1]-c4[1])*(c3[1]-c4[1]);
-
-      if(d1 != d2)
-        return d1>d2;
-
       if(c1 > c2)
         std::swap(c1,c2);
 
@@ -584,8 +306,7 @@ namespace grid
         return false;
 
     for(uint dir = 0 ; dir < 2; ++dir)
-      if(!msc->m_rect.isOnBoundry(cp[dir]->cellid) &&
-         msc->m_rect.isOnBoundry(cp[dir^1]->cellid))
+      if(!cp[dir]->is_boundry && cp[dir^1]->is_boundry)
         return false;
 
 
@@ -688,9 +409,6 @@ namespace grid
   {
     for(uint i = 0 ; i < m_cps.size(); ++i)
     {
-      if(!m_ext_rect.contains(m_cps[i]->cellid))
-        continue;
-
       if(!m_cps[i]->is_paired)
       {
         for(uint dir = 0 ; dir < 2 ;++dir)
@@ -775,118 +493,5 @@ namespace grid
     }
   }
 }
-
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/array.hpp>
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/binary_object.hpp>
-
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-
-//#include <grid_dataset.h>
-
-namespace boost
-{
-  namespace serialization
-  {
-    template<class Archive>
-    void serialize(Archive & ar, grid::rect_point_t & r, const unsigned int )
-    {
-      typedef boost::array<grid::rect_point_t::value_type,grid::rect_point_t::static_size> base_t;
-
-      ar & boost::serialization::base_object<base_t>(r);
-    }
-
-    template<class Archive>
-    void serialize(Archive & ar, grid::rect_range_t & r, const unsigned int )
-    {
-      typedef boost::array<grid::rect_range_t::value_type,grid::rect_range_t::static_size> base_t;
-
-      ar & boost::serialization::base_object<base_t>(r);
-    }
-
-    template<class Archive>
-    void serialize(Archive & ar, grid::rect_t & r, const unsigned int )
-    {
-      typedef boost::array<grid::rect_t::value_type,grid::rect_t::static_size> base_t;
-
-      ar & boost::serialization::base_object<base_t>(r);
-    }
-
-    template<class Archive>
-    void serialize(Archive & ar, grid::critpt_t & c, const unsigned int )
-    {
-      ar & c.cellid;
-      ar & c.conn[0];
-      ar & c.conn[1];
-      ar & c.is_paired;
-      ar & c.isCancelled;
-      ar & c.fn;
-      ar & c.pair_idx;
-    }
-
-
-    template<class Archive>
-    void serialize(Archive & ar, grid::mscomplex_t & g, const unsigned int )
-    {
-      ar & g.m_rect;
-      ar & g.m_ext_rect;
-      ar & g.m_id_cp_map;
-      ar & g.m_cps;
-    }
-
-    //    template<class Archive>
-    //    void serialize(Archive & ar, GridDataset & ds, const unsigned int )
-    //    {
-    //       ar & ds.m_rect;
-    //       ar & ds.m_ext_rect;
-    //
-    //       GridDataset::rect_size_t ext_sz = ds.m_ext_rect.size();
-    //       uint num_data_items = (ext_sz[0]+1)*(ext_sz[1]+1);
-    //
-    //       if(Archive::is_loading::value)
-    //         ds.init(NULL);
-    //
-    //       ar & make_binary_object(ds.(*m_cell_flags).data(),num_data_items*sizeof(GridDataset::cell_flag_t));
-    //       ar & make_binary_object(ds.m_cell_own.data(),num_data_items*sizeof(GridDataset::cellid_t));
-    //       ar & make_binary_object(ds.m_cell_pairs.data(),num_data_items*sizeof(GridDataset::cellid_t));
-    //    }
-  }
-}
-
-//// without the explicit instantiations below, the program will
-//// fail to link for lack of instantiantiation of the above function
-//// The impls are visible only in this file to save compilation time..
-//
-//template void boost::serialization::serialize<boost::archive::text_iarchive>(
-//    boost::archive::text_iarchive & ar,
-//    GridDataset & g,
-//    const unsigned int file_version
-//);
-//
-//template void boost::serialization::serialize<boost::archive::text_oarchive>(
-//    boost::archive::text_oarchive & ar,
-//    GridDataset & g,
-//    const unsigned int file_version
-//);
-
-
-// without the explicit instantiations below, the program will
-// fail to link for lack of instantiantiation of the above function
-// The impls are visible only in this file to save compilation time..
-
-template void boost::serialization::serialize<boost::archive::binary_iarchive>(
-    boost::archive::binary_iarchive & ar,
-    grid::mscomplex_t & g,
-    const unsigned int file_version
-    );
-template void boost::serialization::serialize<boost::archive::binary_oarchive>(
-    boost::archive::binary_oarchive & ar,
-    grid::mscomplex_t & g,
-    const unsigned int file_version
-    );
 
 
