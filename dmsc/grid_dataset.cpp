@@ -13,6 +13,31 @@
 
 namespace grid
 {
+
+  class pt_comp_t
+  {
+    dataset_t *pOwn;
+  public:
+    pt_comp_t(dataset_t *o):pOwn(o){}
+
+    bool operator()(cellid_t c1,cellid_t c2)
+    {
+      return pOwn->ptLt(c1,c2);
+    }
+  };
+
+  inline bool dataset_t::ptLt(cellid_t c1, cellid_t c2) const
+  {
+    cell_fn_t f1 = m_vert_fns[c1];
+    cell_fn_t f2 = m_vert_fns[c2];
+
+    if (f1 != f2)
+      return f1 < f2;
+
+    return c1<c2;
+  }
+
+
   cellid_t get_cp_cellid(mscomplex_t *msgraph,uint idx)
   {
     return msgraph->m_cps[idx]->cellid;
@@ -23,13 +48,6 @@ namespace grid
     &dataset_t::getCellFacets,
     &dataset_t::getCellCofacets
   };
-
-  inline uint   dataset_t::getCellIncCells( cellid_t c,cellid_t * inc) const
-  {
-
-#warning "getCellIncCells not implemented "
-    return 0;
-  }
 
   void compute_disc_bfs
       (dataset_t *dataset,
@@ -213,13 +231,15 @@ namespace grid
 
 
   dataset_t::dataset_t () :
-      m_ptcomp(this)
+      m_ptcomp(new pt_comp_t(this))
   {
 
   }
 
   dataset_t::~dataset_t ()
   {
+    delete m_ptcomp;
+
     clear();
   }
 
@@ -271,12 +291,11 @@ namespace grid
     uint pts1_ct = getCellPoints ( c1,pts1);
     uint pts2_ct = getCellPoints ( c2,pts2);
 
-    std::sort ( pts1,pts1+pts1_ct,m_ptcomp );
-    std::sort ( pts2,pts2+pts2_ct,m_ptcomp);
+    std::sort ( pts1,pts1+pts1_ct,*m_ptcomp );
+    std::sort ( pts2,pts2+pts2_ct,*m_ptcomp);
 
     return std::lexicographical_compare
-        ( pts1,pts1+pts1_ct,pts2,pts2+pts2_ct,
-          m_ptcomp );
+        ( pts1,pts1+pts1_ct,pts2,pts2+pts2_ct,*m_ptcomp );
   }
 
   cell_fn_t dataset_t::get_cell_fn (cellid_t c) const
@@ -298,24 +317,17 @@ namespace grid
 
   uint dataset_t::getCellPoints (cellid_t c,cellid_t  *p) const
   {
-#warning "get cell points not implemented"
-
+#warning "getCellPoints not implemented"
   }
 
   uint dataset_t::getCellFacets (cellid_t c,cellid_t *f) const
   {
-#warning "get cell facets not implemented"
+#warning "getCellFacets not implemented"
   }
 
   uint dataset_t::getCellCofacets (cellid_t c,cellid_t *cf) const
   {
-#warning "get cell co facets not implemented"
-
-  }
-
-  uint dataset_t::getMaxCellDim() const
-  {
-    return 2;
+#warning "getCellCofacets not implemented"
   }
 
   bool dataset_t::isPairOrientationCorrect (cellid_t c, cellid_t p) const
@@ -349,7 +361,7 @@ namespace grid
 
   uint   dataset_t::getCellDim ( cellid_t c ) const
   {
-#warning "get isBoundryCell not implemented"
+#warning "getCellDim not implemented"
     return 0;
   }
 

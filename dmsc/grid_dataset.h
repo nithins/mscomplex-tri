@@ -33,6 +33,8 @@ namespace grid
 
   class mscomplex_t;
 
+  class pt_comp_t;
+
   class dataset_t
   {
 
@@ -47,25 +49,13 @@ namespace grid
 
   public:
 
-    class pt_comp_t
-    {
-      dataset_t *pOwn;
-    public:
-      pt_comp_t(dataset_t *o):pOwn(o){}
-
-      bool operator()(cellid_t c1,cellid_t c2)
-      {
-        return pOwn->ptLt(c1,c2);
-      }
-    };
-
     cell_fn_list_t     m_vert_fns;
     cellid_list_t      m_cell_own;
     cellid_list_t      m_cell_pairs;
     cellid_list_t      m_critical_cells;
     std::vector<uchar> m_cell_flags;
 
-    pt_comp_t          m_ptcomp;
+    pt_comp_t*         m_ptcomp;
     TriEdge            m_tri_edge;
 
   public:
@@ -101,24 +91,13 @@ namespace grid
 
     cellid_t   getCellPairId ( cellid_t ) const;
 
-    inline bool   ptLt ( cellid_t c1,cellid_t c2) const
-    {
-      cell_fn_t f1 = m_vert_fns[c1];
-      cell_fn_t f2 = m_vert_fns[c2];
-
-      if (f1 != f2)
-        return f1 < f2;
-
-      return c1<c2;
-    }
+    inline bool ptLt ( cellid_t c1,cellid_t c2) const;
 
     bool   compareCells( cellid_t ,cellid_t ) const;
 
     uint   getCellPoints ( cellid_t ,cellid_t  * ) const;
 
     uint   getCellFacets ( cellid_t ,cellid_t * ) const;
-
-    inline uint   getCellIncCells( cellid_t ,cellid_t * ) const;
 
     uint   getCellCofacets ( cellid_t ,cellid_t * ) const;
 
@@ -135,8 +114,6 @@ namespace grid
     void   markCellCritical ( cellid_t c );
 
     uint   getCellDim ( cellid_t c ) const;
-
-    uint   getMaxCellDim() const;
 
     bool   isBoundryCell ( cellid_t c ) const;
 
@@ -155,16 +132,5 @@ namespace grid
     cell_fn_t get_cell_fn ( cellid_t c ) const;
 
   };
-
-}
-
-namespace boost
-{
-  namespace serialization
-  {
-    template<class Archive>
-    void serialize(Archive & ar, grid::dataset_t & d, const unsigned int );
-
-  } // namespace serialization
 }
 #endif
