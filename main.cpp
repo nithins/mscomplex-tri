@@ -70,6 +70,8 @@ int main(int ac , char **av)
   grid::data_manager_t * gdm = new grid::data_manager_t
       (tri_filename,bin_filename,bin_comp_no,simp_tresh);
 
+  gdm->work();
+
   if(gui)
   {
       QApplication application(ac,av);

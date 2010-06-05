@@ -49,14 +49,14 @@ namespace grid
 
   public:
 
-    cell_fn_list_t     m_vert_fns;
-    cellid_list_t      m_cell_own;
-    cellid_list_t      m_cell_pairs;
-    cellid_list_t      m_critical_cells;
-    std::vector<uchar> m_cell_flags;
+    cell_fn_list_t      m_vert_fns;
+    cellid_list_t       m_cell_own;
+    cellid_list_t       m_cell_pairs;
+    cellid_list_t       m_critical_cells;
+    std::vector<uchar>  m_cell_flags;
 
-    pt_comp_t*         m_ptcomp;
-    TriEdge            m_tri_edge;
+    pt_comp_t*          m_ptcomp;
+    tri_cell_complex_t  m_tri_cc;
 
   public:
 

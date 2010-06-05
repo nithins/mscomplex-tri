@@ -49,6 +49,8 @@ namespace grid
 
     cell_fn_list_t cell_fns;
 
+    cell_fns.resize(vlist.size());
+
 
     // read in function values
 
@@ -88,9 +90,16 @@ namespace grid
 
     fnfile.close();
 
-    log_range(fnnames,fnnames+num_bin_comps,"bin component nos");
-
-    _LOG_VAR(m_bin_comp_no);
+    _LOG("------------------------");
+    _LOG(" scalar component names ");
+    _LOG("------------------------");
+    for(uint i = 0 ; i < num_bin_comps;++i)
+    {
+      _LOG(fnnames + i * fnname_max_size);
+    }
+    _LOG("------------------------");
+    _LOG("selected comp = "<< fnnames + m_bin_comp_no * fnname_max_size);
+    _LOG("------------------------");
 
 
     delete fnnames;

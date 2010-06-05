@@ -233,7 +233,6 @@ namespace grid
   dataset_t::dataset_t () :
       m_ptcomp(new pt_comp_t(this))
   {
-
   }
 
   dataset_t::~dataset_t ()
@@ -245,32 +244,34 @@ namespace grid
 
   void dataset_t::init(const cell_fn_list_t &vert_fns,const tri_idx_list_t & trilist)
   {
-
     ensure_valid_trilist_indexes(trilist,vert_fns.size());
 
     m_vert_fns.resize(vert_fns.size());
 
     std::copy(vert_fns.begin(),vert_fns.end(),m_vert_fns.begin());
 
-    m_tri_edge.setNumVerts(vert_fns.size());
+    m_tri_cc.get_tri_edge()->setup(trilist,vert_fns.size());
 
-    m_tri_edge.setNumTris(trilist.size());
+    m_cell_flags.resize(m_tri_cc.get_num_cells(),0);
 
-    m_tri_edge.start_adding_tris();
+    m_cell_pairs.resize(m_tri_cc.get_num_cells(),-1);
 
-    for(uint i = 0 ;i < trilist.size(); ++i)
-      m_tri_edge.add_tri(trilist[i].data());
-
-    m_tri_edge.end_adding_tris();
-
+    m_cell_own.resize(m_tri_cc.get_num_cells(),-1);
   }
 
   void  dataset_t::clear()
   {
-    m_tri_edge.destroy();
-
     m_vert_fns.clear();
 
+    m_cell_flags.clear();
+
+    m_cell_own.clear();
+
+    m_cell_pairs.clear();
+
+    m_tri_cc.get_tri_edge()->destroy();
+
+    m_critical_cells.clear();
   }
 
   cellid_t   dataset_t::getCellPairId (cellid_t c) const
@@ -317,17 +318,17 @@ namespace grid
 
   uint dataset_t::getCellPoints (cellid_t c,cellid_t  *p) const
   {
-#warning "getCellPoints not implemented"
+    return m_tri_cc.get_cell_points(c,p);
   }
 
   uint dataset_t::getCellFacets (cellid_t c,cellid_t *f) const
   {
-#warning "getCellFacets not implemented"
+    return m_tri_cc.get_cell_facets(c,f);
   }
 
   uint dataset_t::getCellCofacets (cellid_t c,cellid_t *cf) const
   {
-#warning "getCellCofacets not implemented"
+    return m_tri_cc.get_cell_co_facets(c,cf);
   }
 
   bool dataset_t::isPairOrientationCorrect (cellid_t c, cellid_t p) const
@@ -352,17 +353,16 @@ namespace grid
 
   void dataset_t::pairCells (cellid_t c,cellid_t p)
   {
-    m_cell_flags[c] = p;
-    m_cell_flags[p] = c;
+    m_cell_pairs[c] = p;
+    m_cell_pairs[p] = c;
 
     m_cell_flags[c] = m_cell_flags[c] |CELLFLAG_PAIRED;
     m_cell_flags[p] = m_cell_flags[p] |CELLFLAG_PAIRED;
   }
 
-  uint   dataset_t::getCellDim ( cellid_t c ) const
+  uint dataset_t::getCellDim ( cellid_t c ) const
   {
-#warning "getCellDim not implemented"
-    return 0;
+    return m_tri_cc.get_cell_dim(c);
   }
 
   void dataset_t::markCellCritical (cellid_t c)
@@ -372,8 +372,7 @@ namespace grid
 
   bool dataset_t::isBoundryCell (cellid_t c) const
   {
-#warning "get isBoundryCell not implemented"
-    return false;
+    return m_tri_cc.is_cell_boundry(c);
   }
 
   std::string dataset_t::getCellFunctionDescription (cellid_t c) const
@@ -410,7 +409,11 @@ namespace grid
   {
     // determine all the pairings of all cells in m_rect
 
-    for(uint i = 0 ; i < m_tri_edge.m_vert_ct + m_tri_edge.m_edge_ct;++i)
+    uint num_cells      = m_tri_cc.get_num_cells();
+
+    uint num_cells_ltmd = m_tri_cc.get_num_cells_max_dim(m_tri_cc.get_dim() -1);
+
+    for(uint i = 0 ; i < num_cells_ltmd; ++i)
     {
       cellid_t c = i,p;
 
@@ -421,7 +424,7 @@ namespace grid
         pairCells (c,p);
     }
 
-    for(uint i = 0 ; i < m_tri_edge.m_vert_ct + m_tri_edge.m_edge_ct;++i)
+    for(uint i = 0 ; i < num_cells;++i)
     {
       cellid_t c = i;
 
@@ -432,7 +435,9 @@ namespace grid
 
   void  dataset_t::collateCriticalPoints()
   {
-    for(uint i = 0 ; i < m_tri_edge.m_vert_ct + m_tri_edge.m_edge_ct;++i)
+    uint num_cells = m_tri_cc.get_num_cells();
+
+    for(uint i = 0 ; i < num_cells;++i )
     {
       cellid_t c = i;
 
@@ -522,11 +527,19 @@ namespace grid
 
   void dataset_t::log_flags()
   {
-#warning "log flags not implemented"
+    for(uint i = 0 ; i < m_cell_flags.size(); ++i)
+      std::cout<<(int)m_cell_flags[i]<<" ";
+
+    std::cout<<std::endl;
+
   }
 
   void dataset_t::log_pairs()
   {
-#warning "log pairs not implemented"
+    for(uint i = 0 ; i < m_cell_flags.size(); ++i)
+      std::cout<<m_cell_pairs[i]<<" ";
+
+    std::cout<<std::endl;
+
   }
 }
