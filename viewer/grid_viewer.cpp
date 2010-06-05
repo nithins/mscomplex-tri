@@ -64,7 +64,6 @@ glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
 
 namespace grid
 {
-
   glutils::vertex_t cell_to_vertex(cellid_t c)
   {
 
@@ -87,9 +86,6 @@ namespace grid
   {
     for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
       m_grid_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i)));
-
-#warning "m_roi and m_roi_base_pt are not intialized"
-
   }
 
   grid_viewer_t::~grid_viewer_t()
@@ -104,7 +100,7 @@ namespace grid
 
   void grid_viewer_t::set_roi_dim_range_nrm(double l,double u,int dim)
   {
-    if(!(l<u && 0.0 <= l && u <=1.0 && 0<=dim && dim < gc_grid_dim))
+    if(!(l<u && 0.0 <= l && u <=1.0 && 0<=dim && dim < 3))
       return;
 
     rect_t roi  = m_extent;
@@ -130,16 +126,12 @@ namespace grid
 
     glEnable(GL_NORMALIZE);
 
-    glScalef(m_scale_factor,
-             0.125,
-             m_scale_factor);
+    glScalef(m_scale_factor,m_scale_factor,m_scale_factor);
 
-    point_t s = m_extent.span()/2;
+    point_t s = ((m_extent.upper_corner() +  m_extent.lower_corner())/2);
 
     if(m_bCenterToRoi)
-      glTranslatef(-m_roi_base_pt[0],
-                   0,
-                   -m_roi_base_pt[1]);
+      glTranslatef(-m_roi_base_pt[0],-m_roi_base_pt[1],-m_roi_base_pt[2]);
     else
       glTranslated(-s[0],-s[1],-s[2]);
 
@@ -186,10 +178,6 @@ namespace grid
     if(m_extent.eff_dim() == 0)
       throw std::runtime_error("NULL extent for viewer");
 
-    point_t s = m_extent.span();
-
-    m_scale_factor =0.5/ *std::max_element(s.begin(),s.end());
-
     /*turn back face culling off */
     glEnable ( GL_CULL_FACE );
 
@@ -201,9 +189,25 @@ namespace grid
 
     glPolygonMode ( GL_BACK, GL_LINE );
 
+    glutils::tri_idx_list_t tlist;
+
+    glutils::vertex_list_t  vlist;
+
+    glutils::read_tri_file(m_gdm->m_tri_filename.c_str(),vlist,tlist);
+
+    glutils::compute_extent(vlist,m_extent.data()->data());
+
+    m_roi = m_extent;
+
+    point_t s = m_extent.span();
+
+    m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
+
+    m_grid_piece_rens[0]->tri_cc.get_tri_edge()->setup(tlist,vlist.size());
+
     for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
     {
-      m_grid_piece_rens[i]->create_cp_loc_bo();
+      m_grid_piece_rens[i]->create_cell_loc_bo(vlist);
       m_grid_piece_rens[i]->create_disc_rds();
     }
   }
@@ -272,19 +276,33 @@ namespace grid
 
   }
 
-  void octtree_piece_rendata::create_cp_loc_bo()
+  void octtree_piece_rendata::create_cell_loc_bo(const glutils::vertex_list_t &vlist)
   {
-    if(dp->msgraph == NULL)
-      return;
+    using namespace boost::lambda;
 
-    std::vector<glutils::vertex_t>  cp_loc;
+    if(vlist.size() != tri_cc.get_num_cells_dim(0))
+      throw std::runtime_error("vlist and tri_cc have incorrect num verts");
 
-    for(uint i = 0; i < dp->msgraph->m_cps.size(); ++i)
+    glutils::vertex_list_t  cell_loc(vlist.begin(),vlist.end());
+
+    for(uint i = tri_cc.get_num_cells_dim(0); i < tri_cc.get_num_cells(); ++i)
     {
-      cp_loc.push_back(cp_to_vertex(dp->msgraph,i));
+      cellid_t pts[20];
+
+      uint pt_ct = tri_cc.get_cell_points(i,pts);
+
+      glutils::vertex_t v(glutils::vertex_t::zero);
+
+      for(uint j = 0 ; j < pt_ct; ++j)
+      {
+        v += vlist[pts[j]];
+      }
+      v /= pt_ct;
+
+      cell_loc.push_back(v);
     }
 
-    cp_loc_bo = glutils::make_buf_obj(cp_loc);
+    cell_loc_bo = glutils::make_buf_obj(cell_loc);
   }
 
   void  octtree_piece_rendata::create_cp_rens(const rect_t & roi)
@@ -292,8 +310,6 @@ namespace grid
     if(dp->msgraph == NULL)
       return;
 
-    std::vector<std::string>            crit_labels[gc_grid_dim+1];
-    std::vector<glutils::vertex_t>      crit_label_locations[gc_grid_dim+1];
     std::vector<glutils::point_idx_t>   crit_pt_idxs[gc_grid_dim+1];
     std::vector<glutils::line_idx_t>    crit_conn_idxs[gc_grid_dim];
 
@@ -304,30 +320,15 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(cell_to_vertex(c)))
-        continue;
-
       uint index = dp->msgraph->m_cps[i]->index;
 
-      std::stringstream ss;
-
-      ((std::ostream&)ss)<<c;
-
-      if(!dp->msgraph->m_cps[i]->is_paired)
-      {
-        crit_labels[index].push_back(ss.str());
-        crit_label_locations[index].push_back(cp_to_vertex(dp->msgraph,i));
-        crit_pt_idxs[index].push_back(i);
-      }
+      crit_pt_idxs[index].push_back(c);
     }
 
     for(uint i = 0 ; i < gc_grid_dim+1; ++i)
     {
-      ren_cp_labels[i].reset(glutils::create_buffered_text_ren
-                             (crit_labels[i],crit_label_locations[i]));
-
       ren_cp[i].reset(glutils::create_buffered_points_ren
-                      (cp_loc_bo,
+                      (cell_loc_bo,
                        glutils::make_buf_obj(crit_pt_idxs[i]),
                        glutils::make_buf_obj()));
     }
@@ -342,26 +343,21 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(cell_to_vertex(c)))
-        continue;
-
       uint index = dp->msgraph->m_cps[i]->index;
 
       for(conn_iter_t it  = dp->msgraph->m_cps[i]->conn[0].begin();
       it != dp->msgraph->m_cps[i]->conn[0].end(); ++it)
       {
-        if(!roi.contains(cell_to_vertex(dp->msgraph->m_cps[*it]->cellid)))
-          continue;
+        cellid_t c_ = dp->msgraph->m_cps[*it]->cellid;
 
-        crit_conn_idxs[index-1].push_back
-            (glutils::line_idx_t(i,*it));
+        crit_conn_idxs[index-1].push_back(glutils::line_idx_t(c,c_));
       }
     }
 
     for(uint i = 0 ; i < gc_grid_dim; ++i)
     {
       ren_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                            (cp_loc_bo,
+                            (cell_loc_bo,
                              glutils::make_buf_obj(crit_conn_idxs[i]),
                              glutils::make_buf_obj()));
     }
@@ -373,8 +369,6 @@ namespace grid
     if(dp->msgraph == NULL)
       return;
 
-    std::vector<std::string>            canc_cp_labels[gc_grid_dim+1];
-    std::vector<glutils::vertex_t>      canc_cp_label_locations[gc_grid_dim+1];
     std::vector<glutils::point_idx_t>   canc_cp_idxs[gc_grid_dim+1];
     std::vector<glutils::line_idx_t>    canc_cp_conn_idxs[gc_grid_dim];
 
@@ -385,25 +379,16 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(cell_to_vertex(c)))
-        continue;
-
       uint index = dp->msgraph->m_cps[i]->index;
 
-      canc_cp_labels[index].push_back(to_string(i));
-      canc_cp_label_locations[index].push_back(cp_to_vertex(dp->msgraph,i)) ;
-      canc_cp_idxs[index].push_back(i);
+      canc_cp_idxs[index].push_back(c);
 
     }
 
     for(uint i = 0 ; i < gc_grid_dim+1; ++i)
     {
-
-      ren_canc_cp_labels[i].reset(glutils::create_buffered_text_ren
-                                  (canc_cp_labels[i],canc_cp_label_locations[i]));
-
       ren_canc_cp[i].reset(glutils::create_buffered_points_ren
-                           (cp_loc_bo,
+                           (cell_loc_bo,
                             glutils::make_buf_obj(canc_cp_idxs[i]),
                             glutils::make_buf_obj()));
     }
@@ -415,9 +400,6 @@ namespace grid
 
       cellid_t c = (dp->msgraph->m_cps[i]->cellid);
 
-      if(!roi.contains(cell_to_vertex(c)))
-        continue;
-
       uint index = dp->msgraph->m_cps[i]->index;
 
       for(uint dir = 0 ; dir <2 ;++dir)
@@ -425,11 +407,10 @@ namespace grid
         for(conn_iter_t it  = dp->msgraph->m_cps[i]->conn[dir].begin();
         it != dp->msgraph->m_cps[i]->conn[dir].end(); ++it)
         {
-          if(!roi.contains(cell_to_vertex(dp->msgraph->m_cps[*it]->cellid)))
-            continue;
+          cellid_t c_ = dp->msgraph->m_cps[*it]->cellid;
 
           canc_cp_conn_idxs[index-(dir^1)].push_back
-              (glutils::line_idx_t(i,*it));
+              (glutils::line_idx_t(c,c_));
         }
       }
     }
@@ -437,7 +418,7 @@ namespace grid
     for(uint i = 0 ; i < gc_grid_dim; ++i)
     {
       ren_canc_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                                 (cp_loc_bo,
+                                 (cell_loc_bo,
                                   glutils::make_buf_obj(canc_cp_conn_idxs[i]),
                                   glutils::make_buf_obj()));
     }
@@ -476,7 +457,7 @@ namespace grid
 
     for(uint i = 0 ; i < disc_rds.size();++i)
     {
-      if(disc_rds[i]->update(dp->msgraph))
+      if(disc_rds[i]->update(this))
       {
         active_disc_rens.insert(disc_rds[i]);
       }
@@ -666,39 +647,32 @@ namespace grid
   {
     for(uint dir = 0 ; dir<2;++dir)
     {
-      if(show[dir])
+      if(show[dir] && ren[dir])
       {
-        glColor3dv(g_grid_cp_colors[index].data());
-
-        glBegin(GL_POINTS);
-        glVertex3dv(cell_to_vertex(cellid).data());
-        glEnd();
-
         glColor3dv(color[dir].data());
-
         ren[dir]->render();
       }
     }
   }
 
-  bool disc_rendata_t::update(mscomplex_t *msc)
+  bool disc_rendata_t::update(octtree_piece_rendata *drd)
   {
 
     using namespace boost::lambda;
 
-    for(uint dir = 0 ; dir<2;++dir)
+    for(uint dir = 0 ; dir<1;++dir)
     {
-      if(show[dir] && this->ren[dir] == NULL && msc)
+      if(show[dir] && this->ren[dir] == NULL && drd->dp->msgraph)
       {
-        ensure_cellid_critical(msc,cellid);
+        ensure_cellid_critical(drd->dp->msgraph,cellid);
 
-        critpt_t *cp = msc->m_cps[msc->m_id_cp_map[cellid]];
+        critpt_t *cp = drd->dp->msgraph->m_cps[drd->dp->msgraph->m_id_cp_map[cellid]];
 
-        std::set<cellid_t> vset;
+        std::set<cellid_t> cset;
 
         for(uint j = 0 ; j < cp->contrib[dir].size();++j)
         {
-          critpt_t *cp_contrib = msc->m_cps[cp->contrib[dir][j]];
+          critpt_t *cp_contrib = drd->dp->msgraph->m_cps[cp->contrib[dir][j]];
 
           if(cp_contrib->index != cp->index)
             throw std::logic_error("contrib and cp must have same idx");
@@ -707,19 +681,52 @@ namespace grid
           {
             cellid_t c = cp_contrib->disc[dir][i];
 
-            if(vset.count(c) == 0)
-              vset.insert(c);
+            if(cset.count(c) == 0)
+              cset.insert(c);
           }
         }
 
-        std::vector<glutils::vertex_t> vlist(vset.size());
+        if(cp->index == 1)
+        {
+          glutils::line_idx_list_t e_idxs;
 
-        std::transform(vset.begin(),vset.end(),vlist.begin(),cell_to_vertex);
+          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
+          {
+            cellid_t pts[20];
 
-        ren[dir] = glutils::create_buffered_points_ren
-                   (glutils::make_buf_obj(vlist),
-                    glutils::make_buf_obj(),
-                    glutils::make_buf_obj());
+            drd->tri_cc.get_cell_points(*it,pts);
+
+            e_idxs.push_back(glutils::line_idx_t(pts[0],pts[1]));
+
+          }
+
+          ren[dir] = glutils::create_buffered_lines_ren
+                     (drd->cell_loc_bo,
+                      glutils::make_buf_obj(e_idxs),
+                      glutils::make_buf_obj());
+
+        }
+
+        if(cp->index == 2)
+        {
+          glutils::tri_idx_list_t t_idxs;
+
+          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
+          {
+            cellid_t pts[20];
+
+            drd->tri_cc.get_cell_points(*it,pts);
+
+            t_idxs.push_back(glutils::tri_idx_t(pts[0],pts[2],pts[1]));
+
+          }
+
+          ren[dir] = glutils::create_buffered_flat_triangles_ren
+                     (drd->cell_loc_bo,
+                      glutils::make_buf_obj(t_idxs),
+                      glutils::make_buf_obj());
+
+        }
 
       }
 

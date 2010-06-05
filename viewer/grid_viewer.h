@@ -11,6 +11,8 @@
 
 #include <aabb.h>
 
+#include <tri_edge.h>
+
 namespace grid
 {
   class datapiece_t ;
@@ -19,6 +21,8 @@ namespace grid
 
   typedef aabb::aabb_t<double,3>          rect_t;
   typedef aabb::aabb_t<double,3>::point_t point_t;
+
+  class octtree_piece_rendata;
 
   class disc_rendata_t
   {
@@ -35,7 +39,7 @@ namespace grid
     ~disc_rendata_t();
 
     void render();
-    bool update(mscomplex_t *);
+    bool update(octtree_piece_rendata *);
 
     static void init();
     static void cleanup();
@@ -71,17 +75,20 @@ namespace grid
     renderable_sp_t ren_canc_cp[gc_grid_dim+1];
     renderable_sp_t ren_canc_cp_conns[gc_grid_dim];
 
-    glutils::bufobj_ptr_t   cp_loc_bo;
+    // the triangulation
+
+    tri_cell_complex_t       tri_cc;
+
+    glutils::bufobj_ptr_t    cell_loc_bo;
 
     std::vector<boost::shared_ptr<disc_rendata_t> > disc_rds;
 
     disc_rendata_sp_set_t    active_disc_rens;
 
-
     void create_disc_rds();
     void update_active_disc_rens();
 
-    void create_cp_loc_bo();
+    void create_cell_loc_bo(const glutils::vertex_list_t &v);
     void create_cp_rens(const rect_t &roi);
     void create_canc_cp_rens(const rect_t &roi);
     void create_grad_rens(const rect_t &roi);
