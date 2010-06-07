@@ -100,15 +100,13 @@ namespace grid
 
   void grid_viewer_t::set_roi_dim_range_nrm(double l,double u,int dim)
   {
-    if(!(l<u && 0.0 <= l && u <=1.0 && 0<=dim && dim < 3))
+    if(!(l<=u && 0.0 <= l && u <=1.0 && 0<=dim && dim < 3))
       return;
 
-    rect_t roi  = m_extent;
+    double span = m_extent[dim].span();
 
-    double span = roi[dim].span();
-
-    m_roi[dim][0]  = (uint)(l*span);
-    m_roi[dim][1]  = (uint)(u*span);
+    m_roi[dim][0]  = m_extent[dim][0] + (uint)(l*span);
+    m_roi[dim][1]  = m_extent[dim][0] + (uint)(u*span);
 
     m_roi_base_pt  = ((m_roi.upper_corner() +  m_roi.lower_corner())/2);
   }
@@ -212,50 +210,46 @@ namespace grid
     }
   }
 
-  int grid_viewer_t::rows()
+  configurable_t::data_index_t grid_viewer_t::dim()
   {
-    return m_grid_piece_rens.size();
+    return data_index_t(10,m_grid_piece_rens.size());
   }
-  int grid_viewer_t::columns()
+
+  bool grid_viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
   {
-    return 10;
-  }
-  bool grid_viewer_t::exchange_data(const data_index_t &idx,boost::any &v)
-  {
+    octtree_piece_rendata * otprd = m_grid_piece_rens[idx[1]];
 
     switch(idx[0])
     {
-    case 0: return s_exchange_ro(m_grid_piece_rens[idx[1]]->dp->label(),v);
-    case 1: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowAllCps,v);
-    case 2: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowCps[0],v);
-    case 3: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowCps[1],v);
-    case 4: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowCps[2],v);
-    case 5: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowCpLabels,v);
-    case 6: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowMsGraph,v);
-    case 7: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowGrad,v);
-    case 8: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowCancCps,v);
-    case 9: return s_exchange_rw(m_grid_piece_rens[idx[1]]->m_bShowCancMsGraph,v);
+    case 0: return s_exchange_data_ro(otprd->dp->label(),v);
+    case 1: return s_exchange_data_rw(otprd->m_bShowAllCps,v);
+    case 2: return s_exchange_data_rw(otprd->m_bShowCps[0],v);
+    case 3: return s_exchange_data_rw(otprd->m_bShowCps[1],v);
+    case 4: return s_exchange_data_rw(otprd->m_bShowCps[2],v);
+    case 5: return s_exchange_data_rw(otprd->m_bShowCpLabels,v);
+    case 6: return s_exchange_data_rw(otprd->m_bShowMsGraph,v);
+    case 7: return s_exchange_data_rw(otprd->m_bShowGrad,v);
+    case 8: return s_exchange_data_rw(otprd->m_bShowCancCps,v);
+    case 9: return s_exchange_data_rw(otprd->m_bShowCancMsGraph,v);
     }
 
     throw std::logic_error("unknown index");
   }
-  boost::any grid_viewer_t::get_header(int i)
+  configurable_t::eFieldType grid_viewer_t::exchange_header(const int &i, boost::any &v)
   {
     switch(i)
     {
-
-    case 0: return std::string("oct tree piece");
-    case 1: return std::string("all cps");
-    case 2: return std::string("minima");
-    case 3: return std::string("1 saddle");
-    case 4: return std::string("maxima");
-    case 5: return std::string("cp labels");
-    case 6: return std::string("msgraph");
-    case 7: return std::string("gradient");
-    case 8: return std::string("cancelled cps");
-    case 9: return std::string("cancelled cp msgraph");
+    case 0: v = std::string("oct tree piece"); return EFT_DATA_RO;
+    case 1: v = std::string("all cps"); return EFT_DATA_RW;
+    case 2: v = std::string("minima"); return EFT_DATA_RW;
+    case 3: v = std::string("1 saddle"); return EFT_DATA_RW;
+    case 4: v = std::string("maxima"); return EFT_DATA_RW;
+    case 5: v = std::string("cp labels"); return EFT_DATA_RW;
+    case 6: v = std::string("msgraph");return EFT_DATA_RW;
+    case 7: v = std::string("gradient");return EFT_DATA_RW;
+    case 8: v = std::string("cancelled cps");return EFT_DATA_RW;
+    case 9: v = std::string("cancelled cp msgraph");return EFT_DATA_RW;
     }
-
     throw std::logic_error("unknown index");
   }
 
@@ -576,53 +570,80 @@ namespace grid
 
   }
 
-  int octtree_piece_rendata::rows()
+  struct random_color_assigner
   {
-    return disc_rds.size();
-  }
-  int octtree_piece_rendata::columns()
+    disc_rendata_sp_t m_drd;
+
+    int m_no;
+
+    static const uint MAX_RAND = 256;
+
+    random_color_assigner(disc_rendata_sp_t drd,int no):m_drd(drd),m_no(no){};
+
+    void operator()()
+    {
+      for(uint c = 0 ; c < 3 ; ++c)
+        m_drd->color[m_no][c] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+
+    }
+  };
+
+  configurable_t::data_index_t octtree_piece_rendata::dim()
   {
-    return 5;
+    return data_index_t(8,disc_rds.size());
   }
-  bool octtree_piece_rendata::exchange_data
+
+  bool octtree_piece_rendata::exchange_field
       (const data_index_t &idx,boost::any &v)
   {
-    bool need_update = false;
-
     bool is_read     = v.empty();
 
     int i = idx[0];
 
+    disc_rendata_sp_t drd = disc_rds[idx[1]];
+
     switch(i)
     {
     case 0:
-      return s_exchange_ro((int)disc_rds[idx[1]]->index,v);
+      return s_exchange_data_ro((int)drd->cellid,v);
     case 1:
+      return s_exchange_data_ro((int)drd->index,v);
     case 2:
-      need_update =  s_exchange_rw(disc_rds[idx[1]]->show[i%2],v);break;
     case 3:
+      {
+        bool need_update =  s_exchange_data_rw(drd->show[i%2],v);
+
+        if(need_update && is_read == false )
+          m_bNeedUpdateDiscRens = true;
+
+        return need_update;
+      }
     case 4:
-      return s_exchange_rw(disc_rds[idx[1]]->color[i%2],v);
+    case 5:
+      return s_exchange_data_rw(drd->color[i%2],v);
+    case 6:
+    case 7:
+      return s_exchange_action(random_color_assigner(drd,i%2),v);
     };
 
-    if(need_update && is_read == false )
-      m_bNeedUpdateDiscRens = true;
-
-    return need_update;
-
+     throw std::logic_error("octtree_piece_rendata::invalid index");
   }
 
-  boost::any octtree_piece_rendata::get_header(int i)
+  configurable_t::eFieldType octtree_piece_rendata::exchange_header
+      (const int &i,boost::any &v)
   {
     switch(i)
     {
-    case 0: return std::string("index");
-    case 1: return std::string("asc disc");
-    case 2: return std::string("des disc");
-    case 3: return std::string("asc disc color");
-    case 4: return std::string("des disc color");
+    case 0: v = std::string("cellid"); return EFT_DATA_RO;
+    case 1: v = std::string("index"); return EFT_DATA_RO;
+    case 2: v = std::string("des mfold"); return EFT_DATA_RW;
+    case 3: v = std::string("asc mfold"); return EFT_DATA_RW;
+    case 4: v = std::string("des mfold color"); return EFT_DATA_RW;
+    case 5: v = std::string("asc mfold color"); return EFT_DATA_RW;
+    case 6: v = std::string("rand des mflod color"); return EFT_ACTION;
+    case 7: v = std::string("rand asc mflod color"); return EFT_ACTION;
     }
-    throw std::logic_error("invalid index");
+    throw std::logic_error("octtree_piece_rendata::invalid index");
   }
 
   disc_rendata_t::disc_rendata_t(cellid_t c,uint i):cellid(c),index(i)

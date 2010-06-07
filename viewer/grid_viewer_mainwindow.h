@@ -113,19 +113,19 @@ namespace grid
 
   public:
 
-    boost::any              m_val;
-    int                     m_col;
-    configurable_t *        m_conf;
-    const QModelIndexList & m_rows;
+    std::vector<boost::any>  m_vals;
+    int                      m_col;
+    configurable_t *         m_conf;
+    const std::vector<int> & m_rows;
 
     configurable_ctx_menu_sig_collector
         (configurable_t * conf,
-         const boost::any & val,
+         const std::vector<boost::any> & vals,
          const int & col,
-         const QModelIndexList & rows,
+         const std::vector<int> & rows,
          QObject *par):
         m_conf(conf),
-        m_val(val),
+        m_vals(vals),
         m_col(col),
         m_rows(rows)
     {setParent(par);}
@@ -140,8 +140,16 @@ namespace grid
 
   public:
 
+    enum eColumnFilter
+    {CF_EFT_DATA_RO = 1,
+     CF_EFT_DATA_RW = 2,
+     CF_EFT_ACTION  = 4};
+
     configurable_item_model ( configurable_t *conf,QObject *parent = 0 ):
-        QAbstractTableModel ( parent ),m_conf(conf){}
+        QAbstractTableModel ( parent ),m_conf(conf)
+    {
+      setColumnFilter(CF_EFT_DATA_RO|CF_EFT_DATA_RW);
+    }
 
     QVariant data ( const QModelIndex &index, int role ) const;
 
@@ -154,9 +162,15 @@ namespace grid
 
     void reset_configurable(configurable_t *conf);
 
-    void force_reset(){reset();}
+    void force_reset(){setColumnFilter(m_column_filter);reset();}
+
+    void setColumnFilter(int columnFilter);
 
   private:
+
+    int m_column_filter;
+
+    std::vector<int> m_column_idxs;
 
     configurable_t * m_conf;
 

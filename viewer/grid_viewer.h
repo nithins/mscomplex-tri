@@ -45,13 +45,14 @@ namespace grid
     static void cleanup();
   };
 
+  typedef boost::shared_ptr<glutils::renderable_t> renderable_sp_t;
+  typedef boost::shared_ptr<disc_rendata_t>        disc_rendata_sp_t;
+  typedef std::set<disc_rendata_sp_t>              disc_rendata_sp_set_t;
+
   class octtree_piece_rendata:public configurable_t
   {
   public:
 
-    typedef boost::shared_ptr<glutils::renderable_t> renderable_sp_t;
-
-    typedef std::set<boost::shared_ptr<disc_rendata_t> > disc_rendata_sp_set_t;
 
     datapiece_t * dp;
 
@@ -81,7 +82,7 @@ namespace grid
 
     glutils::bufobj_ptr_t    cell_loc_bo;
 
-    std::vector<boost::shared_ptr<disc_rendata_t> > disc_rds;
+    std::vector<disc_rendata_sp_t> disc_rds;
 
     disc_rendata_sp_set_t    active_disc_rens;
 
@@ -102,10 +103,9 @@ namespace grid
 
     // configurable_t interface
   public:
-    int rows();
-    int columns();
-    bool exchange_data(const data_index_t &,boost::any &);
-    boost::any get_header(int i);
+    virtual data_index_t  dim();
+    virtual bool exchange_field(const data_index_t &,boost::any &);
+    virtual eFieldType exchange_header(const int &,boost::any &);
   };
 
   class data_manager_t;
@@ -150,10 +150,9 @@ namespace grid
 
     // configurable_t interface
   public:
-    int rows();
-    int columns();
-    bool exchange_data(const data_index_t &,boost::any &);
-    boost::any get_header(int i);
+    virtual data_index_t  dim();
+    virtual bool exchange_field(const data_index_t &,boost::any &);
+    virtual eFieldType exchange_header(const int &,boost::any &);
   };
 }
 #endif //VIEWER_H_INCLUDED

@@ -52,8 +52,6 @@ namespace grid
       else
         disconnect(this, SIGNAL(drawFinished(bool)),this, SLOT(saveSnapshot(bool)));
 
-      std::cout<<"Recording state::"<<m_is_recording<<"\n";
-
       handled = true;
     }
     else if ((e->key()==Qt::Key_B) && (modifiers==Qt::ControlModifier))
@@ -187,7 +185,8 @@ namespace grid
 
     m_viewer->resize(glviewer->size());
 
-    m_otp_model = new configurable_item_model (m_viewer->m_ren,this);
+    m_otp_model = new configurable_item_model
+                  (m_viewer->m_ren,this);
 
     datapiece_view->setModel ( m_otp_model );
 
@@ -232,14 +231,14 @@ namespace grid
     if ( !index.isValid() )
       return QVariant();
 
-    if(index.column() >= m_conf->columns())
+    if(index.column() >= m_column_idxs.size())
       return QVariant();
 
-    configurable_t::data_index_t idx(index.column(),index.row());
+    configurable_t::data_index_t idx(m_column_idxs[index.column()],index.row());
 
     boost::any val;
 
-    m_conf->exchange_data(idx,val);
+    m_conf->exchange_field(idx,val);
 
     if(role == Qt::DisplayRole)
     {
@@ -263,7 +262,7 @@ namespace grid
 
   int configurable_item_model::columnCount ( const QModelIndex &parent  ) const
   {
-    return m_conf->columns();
+    return m_column_idxs.size();
   }
 
   QVariant configurable_item_model::headerData
@@ -271,10 +270,11 @@ namespace grid
   {
     if ( orientation == Qt::Horizontal &&
          role == Qt::DisplayRole &&
-         section < m_conf->columns())
+         section < m_column_idxs.size())
     {
+      boost::any h;
 
-      boost::any h  = m_conf->get_header(section);
+      m_conf->exchange_header(m_column_idxs[section],h);
 
       if(h.type() == typeid(std::string))
         return (boost::any_cast<std::string>(h)).c_str();
@@ -284,7 +284,7 @@ namespace grid
 
   int configurable_item_model::rowCount ( const QModelIndex &parent ) const
   {
-    return m_conf->rows();
+    return m_conf->dim()[1];
   }
 
   void configurable_item_model::reset_configurable(configurable_t *conf)
@@ -293,7 +293,37 @@ namespace grid
       return;
     m_conf = conf;
 
-    reset();
+    force_reset();
+  }
+
+  void configurable_item_model::setColumnFilter(int columnFilter)
+  {
+    m_column_filter = columnFilter;
+
+    m_column_idxs.clear();
+
+    configurable_t::data_index_t idx = m_conf->dim();
+
+    boost::any val;
+
+    for(uint i = 0; i < idx[0] ; ++i)
+    {
+
+      bool col_usable = false;
+
+      switch(m_conf->exchange_header(i,val))
+      {
+      case configurable_t::EFT_DATA_RO:
+        col_usable = m_column_filter&CF_EFT_DATA_RO;break;
+      case configurable_t::EFT_DATA_RW:
+        col_usable = m_column_filter&CF_EFT_DATA_RW;break;
+      case configurable_t::EFT_ACTION:
+        col_usable = m_column_filter&CF_EFT_ACTION;break;
+      };
+
+      if(col_usable)
+        m_column_idxs.push_back(i);
+    }
   }
 
   void configurable_ctx_menu
@@ -305,21 +335,23 @@ namespace grid
     if(l.size() == 0)
       return;
 
-    uint first_row = l[0].row();
-
     QMenu m;
 
-    for(uint i = 0 ; i < c->columns();++i)
+    std::set<int> row_set;
+
+    for(uint i = 0 ; i < l.size(); ++i )
+      row_set.insert(l[i].row());
+
+    std::vector<int> rows(row_set.size());
+
+    std::copy(row_set.begin(),row_set.end(),rows.begin());
+
+    for(uint i = 0 ; i < c->dim()[0];++i)
     {
-      boost::any val;
+      boost::any h;
 
-      configurable_t::data_index_t idx(i,first_row);
-
-      bool is_rw = c->exchange_data(idx,val);
-
-      if(is_rw == false) continue;
-
-      boost::any h  = c->get_header(i);
+      if(c->exchange_header(i,h) == configurable_t::EFT_DATA_RO)
+        continue;
 
       std::string hdr("could not read column header");
 
@@ -328,14 +360,27 @@ namespace grid
 
       QAction * action  = m.addAction ( hdr.c_str());
 
-      if(val.type() == typeid(bool))
+      std::vector<boost::any> vals;
+
+      for(uint j = 0 ; j < rows.size();++j )
+      {
+        boost::any val;
+
+        configurable_t::data_index_t idx(i,rows[j]);
+
+        c->exchange_field(idx,val);
+
+        vals.push_back(val);
+      }
+
+      if(vals[0].type() == typeid(bool))
       {
         action->setCheckable(true);
-        action->setChecked(boost::any_cast<bool>(val));
+        action->setChecked(boost::any_cast<bool>(vals[0]));
       }
 
       configurable_ctx_menu_sig_collector * coll =
-          new configurable_ctx_menu_sig_collector(c,val,i,l,&m);
+          new configurable_ctx_menu_sig_collector(c,vals,i,rows,&m);
 
       m.connect(action,SIGNAL ( triggered ( bool ) ),
                     coll,SLOT(triggered ( bool )));
@@ -348,13 +393,12 @@ namespace grid
   {
     boost::any out_val;
 
-    if(m_val.type() == typeid(bool))
+    if(m_vals[0].type() == typeid(bool))
       out_val = boost::any(state);
 
-    if(m_val.type() == typeid(glutils::color_t))
+    if(m_vals[0].type() == typeid(glutils::color_t))
     {
-
-      glutils::color_t c = boost::any_cast<glutils::color_t>(m_val);
+      glutils::color_t c = boost::any_cast<glutils::color_t>(m_vals[0]);
 
       QColor ic = QColor::fromRgbF(c[0],c[1],c[2],1.0);
 
@@ -364,16 +408,22 @@ namespace grid
         out_val = glutils::color_t(qc.redF(),qc.greenF(),qc.blueF());
     }
 
+    if(m_vals[0].type() == typeid(configurable_t::action_callback_t))
+    {
+      for(uint i = 0 ; i < m_vals.size();++i)
+        boost::any_cast<configurable_t::action_callback_t>(m_vals[i])();
+    }
+
     if(out_val.empty())
       return;
 
     for(uint i = 0 ; i < m_rows.size();++i)
     {
       configurable_t::data_index_t idx;
-      idx[1] = m_rows[i].row();
+      idx[1] = m_rows[i];
       idx[0] = m_col;
 
-      m_conf->exchange_data(idx,out_val);
+      m_conf->exchange_field(idx,out_val);
     }
   }
 }
