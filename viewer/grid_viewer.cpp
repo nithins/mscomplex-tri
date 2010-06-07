@@ -678,10 +678,9 @@ namespace grid
 
   bool disc_rendata_t::update(octtree_piece_rendata *drd)
   {
-
     using namespace boost::lambda;
 
-    for(uint dir = 0 ; dir<1;++dir)
+    for(uint dir = 0 ; dir<2;++dir)
     {
       if(show[dir] && this->ren[dir] == NULL && drd->dp->msgraph)
       {
@@ -707,17 +706,17 @@ namespace grid
           }
         }
 
-        if(cp->index == 1)
+        if(cp->index == 1 && dir == 0)
         {
           glutils::line_idx_list_t e_idxs;
 
           for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
           {
-            cellid_t pts[20];
+            cellid_t pt[20];
 
-            drd->tri_cc.get_cell_points(*it,pts);
+            drd->tri_cc.get_cell_points(*it,pt);
 
-            e_idxs.push_back(glutils::line_idx_t(pts[0],pts[1]));
+            e_idxs.push_back(glutils::line_idx_t(pt[0],pt[1]));
 
           }
 
@@ -728,18 +727,67 @@ namespace grid
 
         }
 
-        if(cp->index == 2)
+        if(cp->index == 1 && dir == 1)
+        {
+          glutils::line_idx_list_t e_idxs;
+
+          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
+          {
+            cellid_t cf[20];
+
+            uint cf_ct = drd->tri_cc.get_cell_co_facets(*it,cf);
+
+            e_idxs.push_back(glutils::line_idx_t(*it,cf[0]));
+
+            if(cf_ct == 2)
+              e_idxs.push_back(glutils::line_idx_t(*it,cf[1]));
+
+          }
+
+          ren[dir] = glutils::create_buffered_lines_ren
+                     (drd->cell_loc_bo,
+                      glutils::make_buf_obj(e_idxs),
+                      glutils::make_buf_obj());
+
+        }
+
+        if(cp->index == 2 && dir == 0)
         {
           glutils::tri_idx_list_t t_idxs;
 
           for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
           {
-            cellid_t pts[20];
+            cellid_t pt[20];
 
-            drd->tri_cc.get_cell_points(*it,pts);
+            drd->tri_cc.get_cell_points(*it,pt);
 
-            t_idxs.push_back(glutils::tri_idx_t(pts[0],pts[2],pts[1]));
+            t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[2],pt[1]));
 
+          }
+
+          ren[dir] = glutils::create_buffered_flat_triangles_ren
+                     (drd->cell_loc_bo,
+                      glutils::make_buf_obj(t_idxs),
+                      glutils::make_buf_obj());
+        }
+
+        if(cp->index == 0 && dir == 1)
+        {
+          glutils::tri_idx_list_t t_idxs;
+
+          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
+          {
+            cellid_t st[40];
+
+            uint st_ct = drd->tri_cc.get_vert_star(*it,st);
+
+            for(uint i = 1; i < st_ct; i++)
+            {
+              t_idxs.push_back(glutils::tri_idx_t(st[i-1],*it,st[i]));
+            }
+
+            if(st_ct%2 == 0)
+              t_idxs.push_back(glutils::tri_idx_t(st[st_ct-1],*it,st[0]));
           }
 
           ren[dir] = glutils::create_buffered_flat_triangles_ren
