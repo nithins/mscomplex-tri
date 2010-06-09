@@ -1,7 +1,7 @@
 #ifndef GRID_VIEWER_MAINWINDOW_INCLUDED
 #define GRID_VIEWER_MAINWINDOW_INCLUDED
 
-#include <grid.h>
+#include <trimesh.h>
 
 #include <QDialog>
 #include <QAbstractItemModel>
@@ -14,7 +14,7 @@
 
 #include <QGLViewer/qglviewer.h>
 
-#include <ui_grid_viewer_mainwindow.h>
+#include <ui_trimesh_viewer_mainwindow.h>
 #include <boost/any.hpp>
 
 class configurable_t;

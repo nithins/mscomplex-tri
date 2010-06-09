@@ -23,7 +23,7 @@
 #define __GRID_DATASET_H_INCLUDED_
 
 #include <vector>
-#include <grid.h>
+#include <trimesh.h>
 
 namespace trimesh
 {

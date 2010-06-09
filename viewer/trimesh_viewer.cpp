@@ -13,11 +13,11 @@
 #include <GLSLProgram.h>
 #include <logutil.h>
 
-#include <grid_viewer.h>
-#include <grid_datamanager.h>
-#include <grid_mscomplex.h>
-#include <grid_mscomplex_ensure.h>
-#include <grid_dataset.h>
+#include <trimesh_viewer.h>
+#include <trimesh_datamanager.h>
+#include <trimesh_mscomplex.h>
+#include <trimesh_mscomplex_ensure.h>
+#include <trimesh_dataset.h>
 
 template<typename T> std::string to_string(const T & t)
 {

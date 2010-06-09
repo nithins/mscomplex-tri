@@ -1,8 +1,8 @@
 #include <exception>
 #include <string>
 
-#include <grid_viewer_mainwindow.h>
-#include <grid_datamanager.h>
+#include <trimesh_viewer_mainwindow.h>
+#include <trimesh_datamanager.h>
 
 #include <cpputils.h>
 

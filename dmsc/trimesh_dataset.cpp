@@ -1,5 +1,5 @@
-#include <grid_dataset.h>
-#include <grid_dataset_ensure.h>
+#include <trimesh_dataset.h>
+#include <trimesh_dataset_ensure.h>
 
 #include <vector>
 #include <queue>
@@ -9,7 +9,7 @@
 #include <QFile>
 #include <logutil.h>
 
-#include <grid_mscomplex.h>
+#include <trimesh_mscomplex.h>
 
 namespace trimesh
 {

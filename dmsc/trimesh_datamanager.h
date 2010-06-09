@@ -24,7 +24,7 @@
 #include <fstream>
 #include <vector>
 
-#include <grid_dataset.h>
+#include <trimesh.h>
 
 namespace boost
 {
@@ -34,6 +34,8 @@ namespace boost
 namespace trimesh
 {
   class  mscomplex_t;
+
+  class  dataset_t;
 
   struct datapiece_t
   {

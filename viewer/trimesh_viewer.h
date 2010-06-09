@@ -6,7 +6,7 @@
 #include <cpputils.h>
 #include <aabb.h>
 
-#include <grid.h>
+#include <trimesh.h>
 
 namespace trimesh
 {

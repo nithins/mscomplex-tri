@@ -1,7 +1,7 @@
 #ifndef GRID_MSCOMPLEX_ENSURE_H_INCLUDED
 #define GRID_MSCOMPLEX_ENSURE_H_INCLUDED
 
-#include <grid_mscomplex.h>
+#include <trimesh_mscomplex.h>
 
 // bunch of predicates that throw when I suspect something could be logically
 // wrong with the state of the MS complex.. to be disabled in release builds

@@ -29,44 +29,39 @@ find_package(PythonInterp REQUIRED)
 add_subdirectory(utls)
 
 set(dmsc_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset_ensure.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_dataset.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_dataset.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_dataset_ensure.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_dataset.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_mscomplex.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_mscomplex_ensure.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_mscomplex.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex_ensure.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_datamanager.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/grid_datamanager.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_datamanager.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_datamanager.cpp
   )
 
 set(viewer_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/aabb.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer_mainwindow.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer_mainwindow.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.cpp
   )
 
 QT4_WRAP_CPP(viewer_MOC_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer_mainwindow.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
   )
 
 set(viewer_UIS
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/grid_viewer_mainwindow.ui
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.ui
   )
 
 QT4_WRAP_UI(viewer_UI_SRCS ${viewer_UIS})
-
-set(viewer_shader_SRCS
-  ${CMAKE_CURRENT_BINARY_DIR}/viewer/shadersources.h
-  ${CMAKE_CURRENT_BINARY_DIR}/viewer/shadersources.cpp
-  )
 
 set(main_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp

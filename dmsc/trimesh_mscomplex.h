@@ -24,7 +24,7 @@
 #include <set>
 #include <map>
 
-#include <grid.h>
+#include <trimesh.h>
 
 namespace trimesh
 {

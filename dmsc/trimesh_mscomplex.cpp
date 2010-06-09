@@ -3,8 +3,8 @@
 
 #include <logutil.h>
 
-#include <grid_mscomplex.h>
-#include <grid_mscomplex_ensure.h>
+#include <trimesh_mscomplex.h>
+#include <trimesh_mscomplex_ensure.h>
 #include <limits>
 
 namespace trimesh

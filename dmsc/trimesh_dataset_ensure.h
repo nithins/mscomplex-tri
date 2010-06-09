@@ -1,7 +1,7 @@
 #ifndef GRID_DATASET_ENSURE_H_INCLUDED
 #define GRID_DATASET_ENSURE_H_INCLUDED
 
-#include <grid_dataset.h>
+#include <trimesh_dataset.h>
 
 // bunch of predicates that throw when I suspect something could be logically
 // wrong with the state of the dataset.. to be disabled in release builds

@@ -30,9 +30,10 @@
 #include <timer.h>
 #include <logutil.h>
 
-#include <grid_datamanager.h>
+#include <trimesh_datamanager.h>
 
-#include <grid_mscomplex.h>
+#include <trimesh_mscomplex.h>
+#include <trimesh_dataset.h>
 
 
 namespace trimesh
