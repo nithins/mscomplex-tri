@@ -35,7 +35,7 @@
 #include <grid_mscomplex.h>
 
 
-namespace grid
+namespace trimesh
 {
 
   using namespace std;

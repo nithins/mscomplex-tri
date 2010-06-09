@@ -19,7 +19,7 @@
 
 class configurable_t;
 
-namespace grid
+namespace trimesh
 {
 
 

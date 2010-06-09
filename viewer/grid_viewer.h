@@ -1,19 +1,14 @@
 #ifndef GRID_VIEWER_H_INCLUDED
 #define GRID_VIEWER_H_INCLUDED
-#include <grid.h>
 
 #include <set>
-
 #include <glutils.h>
 #include <cpputils.h>
-
-#include <boost/multi_array.hpp>
-
 #include <aabb.h>
 
-#include <tri_edge.h>
+#include <grid.h>
 
-namespace grid
+namespace trimesh
 {
   class datapiece_t ;
 
@@ -57,7 +52,7 @@ namespace grid
     datapiece_t * dp;
 
     // set externally to control what is rendered
-    bool m_bShowCps[gc_grid_dim+1];
+    bool m_bShowCps[gc_max_cell_dim+1];
     bool m_bShowAllCps;
     bool m_bShowCpLabels;
     bool m_bShowMsGraph;
@@ -68,13 +63,13 @@ namespace grid
     // set externally .. cleared by render
     bool m_bNeedUpdateDiscRens;
 
-    renderable_sp_t ren_grad[gc_grid_dim];
-    renderable_sp_t ren_cp_labels[gc_grid_dim+1];
-    renderable_sp_t ren_cp[gc_grid_dim+1];
-    renderable_sp_t ren_cp_conns[gc_grid_dim];
-    renderable_sp_t ren_canc_cp_labels[gc_grid_dim+1];
-    renderable_sp_t ren_canc_cp[gc_grid_dim+1];
-    renderable_sp_t ren_canc_cp_conns[gc_grid_dim];
+    renderable_sp_t ren_grad[gc_max_cell_dim];
+    renderable_sp_t ren_cp_labels[gc_max_cell_dim+1];
+    renderable_sp_t ren_cp[gc_max_cell_dim+1];
+    renderable_sp_t ren_cp_conns[gc_max_cell_dim];
+    renderable_sp_t ren_canc_cp_labels[gc_max_cell_dim+1];
+    renderable_sp_t ren_canc_cp[gc_max_cell_dim+1];
+    renderable_sp_t ren_canc_cp_conns[gc_max_cell_dim];
 
     // the triangulation
 

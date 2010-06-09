@@ -26,44 +26,44 @@ template<typename T> std::string to_string(const T & t)
   return ss.str();
 }
 
-glutils::color_t g_grid_cp_colors[grid::gc_grid_dim+1] =
+namespace trimesh
 {
-  glutils::color_t(0.0,0.0,1.0),
-  glutils::color_t(0.0,1.0,0.0),
-  glutils::color_t(1.0,0.0,0.0),
-};
-
-glutils::color_t g_grid_grad_colors[grid::gc_grid_dim] =
-{
-  glutils::color_t(0.0,0.5,0.5 ),
-  glutils::color_t(0.5,0.0,0.5 ),
-};
-
-glutils::color_t g_disc_colors[grid::GRADDIR_COUNT][grid::gc_grid_dim+1] =
-{
+  glutils::color_t g_grid_cp_colors[gc_max_cell_dim+1] =
   {
-    glutils::color_t(0.15,0.45,0.35 ),
-    glutils::color_t(0.85,0.65,0.75 ),
-    glutils::color_t(0.0,0.0,0.0 ),
-  },
+    glutils::color_t(0.0,0.0,1.0),
+    glutils::color_t(0.0,1.0,0.0),
+    glutils::color_t(1.0,0.0,0.0),
+  };
 
-{
-    glutils::color_t(0.0,0.0,0.0 ),
-    glutils::color_t(0.65,0.95,0.45 ),
-    glutils::color_t(0.15,0.25,0.75 ),
-  },
-};
+  glutils::color_t g_grid_grad_colors[gc_max_cell_dim] =
+  {
+    glutils::color_t(0.0,0.5,0.5 ),
+    glutils::color_t(0.5,0.0,0.5 ),
+  };
 
-glutils::color_t g_grid_cp_conn_colors[grid::gc_grid_dim] =
-{
-  glutils::color_t(0.0,0.5,0.5 ),
-  glutils::color_t(0.5,0.0,0.5 ),
-};
+  glutils::color_t g_disc_colors[GRADDIR_COUNT][gc_max_cell_dim+1] =
+  {
+    {
+      glutils::color_t(0.15,0.45,0.35 ),
+      glutils::color_t(0.85,0.65,0.75 ),
+      glutils::color_t(0.0,0.0,0.0 ),
+    },
 
-glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
+  {
+      glutils::color_t(0.0,0.0,0.0 ),
+      glutils::color_t(0.65,0.95,0.45 ),
+      glutils::color_t(0.15,0.25,0.75 ),
+    },
+  };
 
-namespace grid
-{
+  glutils::color_t g_grid_cp_conn_colors[gc_max_cell_dim] =
+  {
+    glutils::color_t(0.0,0.5,0.5 ),
+    glutils::color_t(0.5,0.0,0.5 ),
+  };
+
+  glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
+
   glutils::vertex_t cell_to_vertex(cellid_t c)
   {
 
@@ -266,7 +266,7 @@ namespace grid
   {
     using namespace boost::lambda;
 
-    std::for_each(m_bShowCps,m_bShowCps+gc_grid_dim+1,_1 = false);
+    std::for_each(m_bShowCps,m_bShowCps+gc_max_cell_dim+1,_1 = false);
 
   }
 
@@ -304,8 +304,8 @@ namespace grid
     if(dp->msgraph == NULL)
       return;
 
-    std::vector<glutils::point_idx_t>   crit_pt_idxs[gc_grid_dim+1];
-    std::vector<glutils::line_idx_t>    crit_conn_idxs[gc_grid_dim];
+    std::vector<glutils::point_idx_t>   crit_pt_idxs[gc_max_cell_dim+1];
+    std::vector<glutils::line_idx_t>    crit_conn_idxs[gc_max_cell_dim];
 
     for(uint i = 0; i < dp->msgraph->m_cps.size(); ++i)
     {
@@ -319,7 +319,7 @@ namespace grid
       crit_pt_idxs[index].push_back(c);
     }
 
-    for(uint i = 0 ; i < gc_grid_dim+1; ++i)
+    for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
     {
       ren_cp[i].reset(glutils::create_buffered_points_ren
                       (cell_loc_bo,
@@ -348,7 +348,7 @@ namespace grid
       }
     }
 
-    for(uint i = 0 ; i < gc_grid_dim; ++i)
+    for(uint i = 0 ; i < gc_max_cell_dim; ++i)
     {
       ren_cp_conns[i].reset(glutils::create_buffered_lines_ren
                             (cell_loc_bo,
@@ -363,8 +363,8 @@ namespace grid
     if(dp->msgraph == NULL)
       return;
 
-    std::vector<glutils::point_idx_t>   canc_cp_idxs[gc_grid_dim+1];
-    std::vector<glutils::line_idx_t>    canc_cp_conn_idxs[gc_grid_dim];
+    std::vector<glutils::point_idx_t>   canc_cp_idxs[gc_max_cell_dim+1];
+    std::vector<glutils::line_idx_t>    canc_cp_conn_idxs[gc_max_cell_dim];
 
     for(uint i = 0; i < dp->msgraph->m_cps.size(); ++i)
     {
@@ -379,7 +379,7 @@ namespace grid
 
     }
 
-    for(uint i = 0 ; i < gc_grid_dim+1; ++i)
+    for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
     {
       ren_canc_cp[i].reset(glutils::create_buffered_points_ren
                            (cell_loc_bo,
@@ -409,7 +409,7 @@ namespace grid
       }
     }
 
-    for(uint i = 0 ; i < gc_grid_dim; ++i)
+    for(uint i = 0 ; i < gc_max_cell_dim; ++i)
     {
       ren_canc_cp_conns[i].reset(glutils::create_buffered_lines_ren
                                  (cell_loc_bo,
@@ -471,7 +471,7 @@ namespace grid
 
     glPointSize ( 4.0 );
 
-    for(uint i = 0 ; i < gc_grid_dim+1;++i)
+    for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
     {
       if(ren_cp[i]&& (m_bShowCps[i]||m_bShowAllCps))
       {
@@ -487,7 +487,7 @@ namespace grid
 
     if ( m_bShowCancCps)
     {
-      for(uint i = 0 ; i < gc_grid_dim+1;++i)
+      for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
       {
         if(ren_canc_cp[i])
         {
@@ -504,7 +504,7 @@ namespace grid
 
     if (m_bShowMsGraph)
     {
-      for(uint i = 0 ; i < gc_grid_dim;++i)
+      for(uint i = 0 ; i < gc_max_cell_dim;++i)
       {
         if(ren_cp_conns[i])
         {
@@ -517,7 +517,7 @@ namespace grid
 
     if (m_bShowCancMsGraph)
     {
-      for(uint i = 0 ; i < gc_grid_dim;++i)
+      for(uint i = 0 ; i < gc_max_cell_dim;++i)
       {
         if(ren_canc_cp_conns[i])
         {
@@ -547,7 +547,7 @@ namespace grid
 
     if(m_bShowGrad)
     {
-      for(uint i = 0 ; i < gc_grid_dim; ++i)
+      for(uint i = 0 ; i < gc_max_cell_dim; ++i)
       {
         if(ren_grad[i])
         {

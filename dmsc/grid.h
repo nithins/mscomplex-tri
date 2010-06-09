@@ -4,13 +4,13 @@
 #include <vector>
 #include <cpputils.h>
 #include <glutils.h>
+#include <tri_edge.h>
 
-namespace grid
+namespace trimesh
 {
-  const uint gc_grid_dim = 2;
-
-  typedef double                 cell_fn_t;
-  typedef uint                   cellid_t;
+  const uint gc_max_cell_dim = tri_cell_complex_t::cc_dim;
+  typedef tri_cell_complex_t::cellid_t  cellid_t;
+  typedef double                        cell_fn_t;
 
   typedef std::vector<cellid_t>   cellid_list_t;
   typedef std::vector<cell_fn_t>  cell_fn_list_t;

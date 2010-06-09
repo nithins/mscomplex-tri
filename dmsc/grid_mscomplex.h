@@ -26,7 +26,7 @@
 
 #include <grid.h>
 
-namespace grid
+namespace trimesh
 {
 
   typedef std::vector<uint>         critpt_idx_list_t;

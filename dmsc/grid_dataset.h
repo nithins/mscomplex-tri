@@ -23,12 +23,9 @@
 #define __GRID_DATASET_H_INCLUDED_
 
 #include <vector>
-
-#include <tri_edge.h>
-
 #include <grid.h>
 
-namespace grid
+namespace trimesh
 {
 
   class mscomplex_t;

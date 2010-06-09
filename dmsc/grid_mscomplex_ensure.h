@@ -10,7 +10,7 @@
 #define USE_ENSURE_PREDICATES
 //#endif
 
-namespace grid
+namespace trimesh
 {
 
   inline void ensure_index_one_separation(mscomplex_t *msc,uint_pair_t e)

@@ -12,7 +12,7 @@
 
 const int g_roi_show_aabb_time_msec = 5*1000;
 
-namespace grid
+namespace trimesh
 {
 
   void glviewer_t::draw()

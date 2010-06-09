@@ -10,7 +10,7 @@
 #define USE_ENSURE_PREDICATES
 //#endif
 
-namespace grid
+namespace trimesh
 {
   inline void ensure_cell_paired(const dataset_t *ds,cellid_t c )
   {

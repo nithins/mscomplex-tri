@@ -67,7 +67,7 @@ int main(int ac , char **av)
   if (vm.count("gui"))
     gui = true;
 
-  grid::data_manager_t * gdm = new grid::data_manager_t
+  trimesh::data_manager_t * gdm = new trimesh::data_manager_t
       (tri_filename,bin_filename,bin_comp_no,simp_tresh);
 
   gdm->work();
@@ -76,7 +76,7 @@ int main(int ac , char **av)
   {
       QApplication application(ac,av);
 
-      grid::viewer_mainwindow gvmw(gdm);
+      trimesh::viewer_mainwindow gvmw(gdm);
 
       gvmw.setWindowTitle("ms complex vis");
 

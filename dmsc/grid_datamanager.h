@@ -31,7 +31,7 @@ namespace boost
   class thread;
 }
 
-namespace grid
+namespace trimesh
 {
   class  mscomplex_t;
 

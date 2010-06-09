@@ -7,7 +7,7 @@
 #include <grid_mscomplex_ensure.h>
 #include <limits>
 
-namespace grid
+namespace trimesh
 {
   void mark_cancel_pair(mscomplex_t *msc,uint_pair_t e)
   {
@@ -47,7 +47,7 @@ namespace grid
 
     ensure_index_one_separation(msc,e);
 
-    if(msc->m_cps[e[0]]->index == gc_grid_dim ||
+    if(msc->m_cps[e[0]]->index == gc_max_cell_dim ||
        msc->m_cps[e[1]]->index == 0)
       return true;
 

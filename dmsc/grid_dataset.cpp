@@ -11,7 +11,7 @@
 
 #include <grid_mscomplex.h>
 
-namespace grid
+namespace trimesh
 {
 
   class pt_comp_t
