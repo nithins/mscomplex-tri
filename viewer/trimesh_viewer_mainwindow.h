@@ -1,5 +1,5 @@
-#ifndef GRID_VIEWER_MAINWINDOW_INCLUDED
-#define GRID_VIEWER_MAINWINDOW_INCLUDED
+#ifndef TRIMESH_VIEWER_MAINWINDOW_INCLUDED
+#define TRIMESH_VIEWER_MAINWINDOW_INCLUDED
 
 #include <trimesh.h>
 
@@ -23,7 +23,7 @@ namespace trimesh
 {
 
 
-  class grid_viewer_t;
+  class viewer_t;
 
   class data_manager_t;
 
@@ -32,7 +32,7 @@ namespace trimesh
 
   public:
 
-    grid_viewer_t *m_ren;
+    viewer_t *m_ren;
 
     bool m_is_recording;
 
@@ -53,7 +53,7 @@ namespace trimesh
 
   class viewer_mainwindow:
       public QDialog,
-      public Ui::grid_viewer_mainwindow_Dialog
+      public Ui::viewer_mainwindow_Dialog
   {
 
   Q_OBJECT

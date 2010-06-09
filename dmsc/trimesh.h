@@ -1,5 +1,5 @@
-#ifndef GRID_H_INCLUDED
-#define GRID_H_INCLUDED
+#ifndef TRIMESH_H_INCLUDED
+#define TRIMESH_H_INCLUDED
 
 #include <vector>
 #include <cpputils.h>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>grid_viewer_mainwindow_Dialog</class>
- <widget class="QDialog" name="grid_viewer_mainwindow_Dialog">
+ <class>viewer_mainwindow_Dialog</class>
+ <widget class="QDialog" name="viewer_mainwindow_Dialog">
   <property name="geometry">
    <rect>
     <x>0</x>

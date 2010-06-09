@@ -28,14 +28,14 @@ template<typename T> std::string to_string(const T & t)
 
 namespace trimesh
 {
-  glutils::color_t g_grid_cp_colors[gc_max_cell_dim+1] =
+  glutils::color_t g_cp_colors[gc_max_cell_dim+1] =
   {
     glutils::color_t(0.0,0.0,1.0),
     glutils::color_t(0.0,1.0,0.0),
     glutils::color_t(1.0,0.0,0.0),
   };
 
-  glutils::color_t g_grid_grad_colors[gc_max_cell_dim] =
+  glutils::color_t g_grad_colors[gc_max_cell_dim] =
   {
     glutils::color_t(0.0,0.5,0.5 ),
     glutils::color_t(0.5,0.0,0.5 ),
@@ -56,7 +56,7 @@ namespace trimesh
     },
   };
 
-  glutils::color_t g_grid_cp_conn_colors[gc_max_cell_dim] =
+  glutils::color_t g_cp_conn_colors[gc_max_cell_dim] =
   {
     glutils::color_t(0.0,0.5,0.5 ),
     glutils::color_t(0.5,0.0,0.5 ),
@@ -78,27 +78,27 @@ namespace trimesh
     return glutils::vertex_t(0,0,0);
   }
 
-  grid_viewer_t::grid_viewer_t
+  viewer_t::viewer_t
       (data_manager_t * gdm):
       m_scale_factor(0),
       m_bRebuildRens(true),m_bShowRoiBB(false),m_bCenterToRoi(false),
       m_gdm(gdm)
   {
     for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
-      m_grid_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i)));
+      m_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i)));
   }
 
-  grid_viewer_t::~grid_viewer_t()
+  viewer_t::~viewer_t()
   {
-    for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
-      delete m_grid_piece_rens[i];
+    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
+      delete m_piece_rens[i];
 
-    m_grid_piece_rens.clear();
+    m_piece_rens.clear();
 
     delete m_gdm;
   }
 
-  void grid_viewer_t::set_roi_dim_range_nrm(double l,double u,int dim)
+  void viewer_t::set_roi_dim_range_nrm(double l,double u,int dim)
   {
     if(!(l<=u && 0.0 <= l && u <=1.0 && 0<=dim && dim < 3))
       return;
@@ -111,7 +111,7 @@ namespace trimesh
     m_roi_base_pt  = ((m_roi.upper_corner() +  m_roi.lower_corner())/2);
   }
 
-  int grid_viewer_t::render()
+  int viewer_t::render()
   {
     if(m_bRebuildRens)
     {
@@ -146,30 +146,30 @@ namespace trimesh
       glPopAttrib();
     }
 
-    for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
+    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
     {
-      m_grid_piece_rens[i]->render_msgraph_data();
+      m_piece_rens[i]->render_msgraph_data();
     }
 
-    for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
+    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
     {
-      m_grid_piece_rens[i]->render_dataset_data();
+      m_piece_rens[i]->render_dataset_data();
     }
 
     glPopAttrib();
   }
 
-  void grid_viewer_t::build_rens()
+  void viewer_t::build_rens()
   {
-    for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
+    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
     {
-      m_grid_piece_rens[i]->create_cp_rens(m_roi);
-      m_grid_piece_rens[i]->create_canc_cp_rens(m_roi);
-      m_grid_piece_rens[i]->create_grad_rens(m_roi);
+      m_piece_rens[i]->create_cp_rens(m_roi);
+      m_piece_rens[i]->create_canc_cp_rens(m_roi);
+      m_piece_rens[i]->create_grad_rens(m_roi);
     }
   }
 
-  void grid_viewer_t::init()
+  void viewer_t::init()
   {
     glutils::init();
 
@@ -201,23 +201,23 @@ namespace trimesh
 
     m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
 
-    m_grid_piece_rens[0]->tri_cc.get_tri_edge()->setup(tlist,vlist.size());
+    m_piece_rens[0]->tri_cc.get_tri_edge()->setup(tlist,vlist.size());
 
-    for ( uint i = 0 ; i < m_grid_piece_rens.size();i++ )
+    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
     {
-      m_grid_piece_rens[i]->create_cell_loc_bo(vlist);
-      m_grid_piece_rens[i]->create_disc_rds();
+      m_piece_rens[i]->create_cell_loc_bo(vlist);
+      m_piece_rens[i]->create_disc_rds();
     }
   }
 
-  configurable_t::data_index_t grid_viewer_t::dim()
+  configurable_t::data_index_t viewer_t::dim()
   {
-    return data_index_t(10,m_grid_piece_rens.size());
+    return data_index_t(10,m_piece_rens.size());
   }
 
-  bool grid_viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
+  bool viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
   {
-    octtree_piece_rendata * otprd = m_grid_piece_rens[idx[1]];
+    octtree_piece_rendata * otprd = m_piece_rens[idx[1]];
 
     switch(idx[0])
     {
@@ -235,7 +235,7 @@ namespace trimesh
 
     throw std::logic_error("unknown index");
   }
-  configurable_t::eFieldType grid_viewer_t::exchange_header(const int &i, boost::any &v)
+  configurable_t::eFieldType viewer_t::exchange_header(const int &i, boost::any &v)
   {
     switch(i)
     {
@@ -475,7 +475,7 @@ namespace trimesh
     {
       if(ren_cp[i]&& (m_bShowCps[i]||m_bShowAllCps))
       {
-        glColor3dv(g_grid_cp_colors[i].data());
+        glColor3dv(g_cp_colors[i].data());
 
         ren_cp[i]->render();
 
@@ -491,7 +491,7 @@ namespace trimesh
       {
         if(ren_canc_cp[i])
         {
-          glColor3dv(g_grid_cp_colors[i].data());
+          glColor3dv(g_cp_colors[i].data());
 
           ren_canc_cp[i]->render();
 
@@ -508,7 +508,7 @@ namespace trimesh
       {
         if(ren_cp_conns[i])
         {
-          glColor3dv(g_grid_cp_conn_colors[i].data());
+          glColor3dv(g_cp_conn_colors[i].data());
 
           ren_cp_conns[i]->render();
         }
@@ -521,7 +521,7 @@ namespace trimesh
       {
         if(ren_canc_cp_conns[i])
         {
-          glColor3dv(g_grid_cp_conn_colors[i].data());
+          glColor3dv(g_cp_conn_colors[i].data());
 
           ren_canc_cp_conns[i]->render();
         }
@@ -551,7 +551,7 @@ namespace trimesh
       {
         if(ren_grad[i])
         {
-          glColor3dv ( g_grid_grad_colors[i].data() );
+          glColor3dv ( g_grad_colors[i].data() );
 
           ren_grad[i]->render();
         }

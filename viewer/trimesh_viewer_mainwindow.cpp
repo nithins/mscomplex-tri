@@ -30,7 +30,7 @@ namespace trimesh
 
   glviewer_t::glviewer_t(data_manager_t * gdm):m_is_recording(false)
   {
-    m_ren = new grid_viewer_t(gdm);
+    m_ren = new viewer_t(gdm);
   }
 
   glviewer_t::~glviewer_t()
@@ -88,7 +88,7 @@ namespace trimesh
     QModelIndexList l = m_cp_model_proxy->mapSelectionToSource
                         (critpt_view->selectionModel()->selection()).indexes();
 
-    configurable_ctx_menu(m_viewer->m_ren->m_grid_piece_rens[m_active_otp_idx],
+    configurable_ctx_menu(m_viewer->m_ren->m_piece_rens[m_active_otp_idx],
                           l,critpt_view->mapToGlobal(p));
 
     m_viewer->updateGL();
@@ -102,7 +102,7 @@ namespace trimesh
     m_active_otp_idx = index.row();
 
     m_cp_model->reset_configurable
-        (m_viewer->m_ren->m_grid_piece_rens[m_active_otp_idx]);
+        (m_viewer->m_ren->m_piece_rens[m_active_otp_idx]);
   }
 
   inline double get_nrm_value(double d_val,double d_min,double d_max)
@@ -191,7 +191,7 @@ namespace trimesh
     datapiece_view->setModel ( m_otp_model );
 
     m_cp_model = new configurable_item_model
-                 (m_viewer->m_ren->m_grid_piece_rens[m_active_otp_idx],this);
+                 (m_viewer->m_ren->m_piece_rens[m_active_otp_idx],this);
 
     m_cp_model_proxy = new QSortFilterProxyModel(this);
 

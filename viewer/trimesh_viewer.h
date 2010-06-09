@@ -1,5 +1,5 @@
-#ifndef GRID_VIEWER_H_INCLUDED
-#define GRID_VIEWER_H_INCLUDED
+#ifndef TRIMESH_VIEWER_H_INCLUDED
+#define TRIMESH_VIEWER_H_INCLUDED
 
 #include <set>
 #include <glutils.h>
@@ -105,12 +105,12 @@ namespace trimesh
 
   class data_manager_t;
 
-  class grid_viewer_t:
+  class viewer_t:
       public glutils::renderable_t,
       public configurable_t
   {
   public:
-    std::vector<octtree_piece_rendata * >  m_grid_piece_rens;
+    std::vector<octtree_piece_rendata * >  m_piece_rens;
     rect_t                                 m_roi;
     rect_t                                 m_extent;
     double                                 m_scale_factor;
@@ -125,9 +125,9 @@ namespace trimesh
 
   public:
 
-    grid_viewer_t(data_manager_t * );
+    viewer_t(data_manager_t * );
 
-    ~grid_viewer_t();
+    ~viewer_t();
 
     // ensure normalization of l and u, l < u , dim in {0,1,2}
     void set_roi_dim_range_nrm(double l,double u,int dim);

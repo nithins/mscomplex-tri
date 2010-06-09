@@ -18,8 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __GRID_MSCOMPLEX_H_INCLUDED_
-#define __GRID_MSCOMPLEX_H_INCLUDED_
+#ifndef TRIMESH_MSCOMPLEX_H_INCLUDED
+#define TRIMESH_MSCOMPLEX_H_INCLUDED
 
 #include <set>
 #include <map>

@@ -19,8 +19,8 @@
  ***************************************************************************/
 
 
-#ifndef __GRID_DATASET_H_INCLUDED_
-#define __GRID_DATASET_H_INCLUDED_
+#ifndef TRIMESH_DATASET_H_INCLUDED
+#define TRIMESH_DATASET_H_INCLUDED
 
 #include <vector>
 #include <trimesh.h>
