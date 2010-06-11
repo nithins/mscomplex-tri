@@ -46,8 +46,6 @@ namespace trimesh
 
   inline std::string idx_to_string(mscomplex_t *msc,uint i)
   {
-#warning "idx_to_string not implemented correctly"
-
     std::stringstream ss;
 
     ss<<msc->m_cps[i]->cellid;

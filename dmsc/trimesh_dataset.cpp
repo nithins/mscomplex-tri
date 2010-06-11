@@ -250,7 +250,7 @@ namespace trimesh
 
     std::copy(vert_fns.begin(),vert_fns.end(),m_vert_fns.begin());
 
-    m_tri_cc.get_tri_edge()->setup(trilist,vert_fns.size());
+    m_tri_cc.init(trilist,vert_fns.size());
 
     m_cell_flags.resize(m_tri_cc.get_num_cells(),0);
 
@@ -269,7 +269,7 @@ namespace trimesh
 
     m_cell_pairs.clear();
 
-    m_tri_cc.get_tri_edge()->destroy();
+    m_tri_cc.clear();
 
     m_critical_cells.clear();
   }

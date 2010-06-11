@@ -73,7 +73,7 @@ namespace trimesh
 
     // the triangulation
 
-    tri_cell_complex_t       tri_cc;
+    tri_cc_t        tri_cc;
 
     glutils::bufobj_ptr_t    cell_loc_bo;
 

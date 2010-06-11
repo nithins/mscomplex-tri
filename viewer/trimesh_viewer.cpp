@@ -64,20 +64,6 @@ namespace trimesh
 
   glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
 
-  glutils::vertex_t cell_to_vertex(cellid_t c)
-  {
-
-#warning "cell to vertex not implemented"
-    return glutils::vertex_t(0,0,0);
-  }
-
-  glutils::vertex_t cp_to_vertex(mscomplex_t *msc,uint i)
-  {
-
-#warning "cp to vertex not implemented"
-    return glutils::vertex_t(0,0,0);
-  }
-
   viewer_t::viewer_t
       (data_manager_t * gdm):
       m_scale_factor(0),
@@ -201,7 +187,7 @@ namespace trimesh
 
     m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
 
-    m_piece_rens[0]->tri_cc.get_tri_edge()->setup(tlist,vlist.size());
+    m_piece_rens[0]->tri_cc.init(tlist,vlist.size());
 
     for ( uint i = 0 ; i < m_piece_rens.size();i++ )
     {
@@ -423,7 +409,6 @@ namespace trimesh
   {
 #warning "create_grad_rens not implemented"
   }
-
 
   void octtree_piece_rendata::create_disc_rds()
   {

@@ -53,7 +53,7 @@ namespace trimesh
     std::vector<uchar>  m_cell_flags;
 
     pt_comp_t*          m_ptcomp;
-    tri_cell_complex_t  m_tri_cc;
+    tri_cc_t            m_tri_cc;
 
   public:
 
