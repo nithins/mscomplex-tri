@@ -64,6 +64,8 @@ namespace trimesh
 
   glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
 
+  glutils::color_t g_normals_color = glutils::color_t(0.85,0.75,0.65);
+
   viewer_t::viewer_t
       (data_manager_t * gdm):
       m_scale_factor(0),
@@ -162,12 +164,6 @@ namespace trimesh
     if(m_extent.eff_dim() == 0)
       throw std::runtime_error("NULL extent for viewer");
 
-    float pos[4] = {-1.0, -0.5, -1.0, 0.0};
-
-    glLightfv(GL_LIGHT0, GL_POSITION, pos);
-
-    glEnable(GL_LIGHT0);
-
     glutils::tri_idx_list_t tlist;
 
     glutils::vertex_list_t  vlist;
@@ -191,7 +187,7 @@ namespace trimesh
 
   configurable_t::data_index_t viewer_t::dim()
   {
-    return data_index_t(10,m_piece_rens.size());
+    return data_index_t(11,m_piece_rens.size());
   }
 
   bool viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
@@ -210,6 +206,7 @@ namespace trimesh
     case 7: return s_exchange_data_rw(otprd->m_bShowGrad,v);
     case 8: return s_exchange_data_rw(otprd->m_bShowCancCps,v);
     case 9: return s_exchange_data_rw(otprd->m_bShowCancMsGraph,v);
+    case 10: return s_exchange_data_rw(otprd->m_bShowCellNormals,v);
     }
 
     throw std::logic_error("unknown index");
@@ -228,6 +225,7 @@ namespace trimesh
     case 7: v = std::string("gradient");return EFT_DATA_RW;
     case 8: v = std::string("cancelled cps");return EFT_DATA_RW;
     case 9: v = std::string("cancelled cp msgraph");return EFT_DATA_RW;
+    case 10: v = std::string("cell normals");return EFT_DATA_RW;
     }
     throw std::logic_error("unknown index");
   }
@@ -241,6 +239,7 @@ namespace trimesh
       m_bShowCancCps(false),
       m_bShowCancMsGraph(false),
       m_bNeedUpdateDiscRens(false),
+      m_bShowCellNormals(false),
       dp(_dp)
   {
     using namespace boost::lambda;
@@ -258,6 +257,13 @@ namespace trimesh
     cell_pos_bo = glutils::make_buf_obj(tcc_geom.get_cell_positions());
 
     cell_nrm_bo = glutils::make_buf_obj(tcc_geom.get_cell_normals());
+
+    ren_cell_normals.reset(glutils::create_buffered_normals_ren
+                           (cell_pos_bo,
+                            glutils::make_buf_obj(),
+                            glutils::make_buf_obj(),
+                            cell_nrm_bo,
+                            tcc_geom.get_average_edge_length()/2));
   }
 
   void  octtree_piece_rendata::create_cp_rens(const rect_t & roi)
@@ -524,7 +530,6 @@ namespace trimesh
       (*it)->render();
     }
 
-
     glEnable ( GL_LIGHTING );
 
     for(disc_rendata_sp_set_t::iterator it = active_disc_rens[0].begin();
@@ -538,6 +543,11 @@ namespace trimesh
     {
       (*it)->render();
     }
+
+    glColor3dv(g_normals_color.data());
+
+    if(m_bShowCellNormals && ren_cell_normals)
+      ren_cell_normals->render();
 
     glPopAttrib();
     glPopMatrix();

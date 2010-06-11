@@ -59,6 +59,7 @@ namespace trimesh
     bool m_bShowGrad;
     bool m_bShowCancCps;
     bool m_bShowCancMsGraph;
+    bool m_bShowCellNormals;
 
     // set externally .. cleared by render
     bool m_bNeedUpdateDiscRens;
@@ -70,6 +71,7 @@ namespace trimesh
     renderable_sp_t ren_canc_cp_labels[gc_max_cell_dim+1];
     renderable_sp_t ren_canc_cp[gc_max_cell_dim+1];
     renderable_sp_t ren_canc_cp_conns[gc_max_cell_dim];
+    renderable_sp_t ren_cell_normals;
 
     // the triangulation
 
