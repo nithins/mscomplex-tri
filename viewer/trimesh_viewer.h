@@ -73,18 +73,20 @@ namespace trimesh
 
     // the triangulation
 
-    tri_cc_t        tri_cc;
+    tri_cc_ptr_t             tri_cc;
 
-    glutils::bufobj_ptr_t    cell_loc_bo;
+    glutils::bufobj_ptr_t    cell_pos_bo;
+
+    glutils::bufobj_ptr_t    cell_nrm_bo;
 
     std::vector<disc_rendata_sp_t> disc_rds;
 
-    disc_rendata_sp_set_t    active_disc_rens;
+    disc_rendata_sp_set_t    active_disc_rens[gc_max_cell_dim + 1];
 
     void create_disc_rds();
     void update_active_disc_rens();
 
-    void create_cell_loc_bo(const glutils::vertex_list_t &v);
+    void create_cell_pos_nrm_bo(const glutils::vertex_list_t &v);
     void create_cp_rens(const rect_t &roi);
     void create_canc_cp_rens(const rect_t &roi);
     void create_grad_rens(const rect_t &roi);

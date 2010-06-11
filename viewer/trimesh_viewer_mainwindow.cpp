@@ -23,12 +23,24 @@ namespace trimesh
   void glviewer_t::init()
   {
     setSnapshotFormat("PNG");
+
     setSnapshotQuality(100);
+
+    glEnable ( GL_CULL_FACE );
+
+    glCullFace ( GL_BACK );
+
+    glPolygonMode ( GL_FRONT, GL_FILL );
+
+    glPolygonMode ( GL_BACK, GL_LINE );
 
     m_ren->init();
   }
 
-  glviewer_t::glviewer_t(data_manager_t * gdm):m_is_recording(false)
+  glviewer_t::glviewer_t(data_manager_t * gdm):
+      m_is_recording(false),
+      m_bf_cull(true),
+      m_wireframe(false)
   {
     m_ren = new viewer_t(gdm);
   }
@@ -42,8 +54,7 @@ namespace trimesh
   {
     const Qt::KeyboardModifiers modifiers = e->modifiers();
 
-    bool handled = false;
-    if ((e->key()==Qt::Key_R) && (modifiers==Qt::ControlModifier))
+    if ((e->key()==Qt::Key_C) && (modifiers==Qt::ControlModifier))
     {
       m_is_recording = !m_is_recording;
 
@@ -51,20 +62,39 @@ namespace trimesh
         connect(this, SIGNAL(drawFinished(bool)),this, SLOT(saveSnapshot(bool)));
       else
         disconnect(this, SIGNAL(drawFinished(bool)),this, SLOT(saveSnapshot(bool)));
-
-      handled = true;
+    }
+    else if ((e->key()==Qt::Key_R) && (modifiers==Qt::ControlModifier))
+    {
+      m_ren->m_bShowRoiBB = !m_ren->m_bShowRoiBB;
     }
     else if ((e->key()==Qt::Key_B) && (modifiers==Qt::ControlModifier))
     {
-      m_ren->m_bShowRoiBB = !m_ren->m_bShowRoiBB;
-      handled = true;
+      m_bf_cull = !m_bf_cull;
+
+      if(m_bf_cull)
+        glEnable ( GL_CULL_FACE );
+      else
+        glDisable ( GL_CULL_FACE );
+    }
+    else if ((e->key()==Qt::Key_W) && (modifiers==Qt::ControlModifier))
+    {
+      m_wireframe = !m_wireframe;
+
+      if(m_wireframe)
+        glPolygonMode ( GL_FRONT_AND_BACK, GL_LINE );
+      else
+      {
+        glPolygonMode ( GL_FRONT, GL_FILL );
+        glPolygonMode ( GL_BACK, GL_LINE );
+
+      }
+    }
+    else
+    {
+      QGLViewer::keyPressEvent(e);
     }
 
-    if (handled)
-      updateGL();
-    else
-      QGLViewer::keyPressEvent(e);
-
+    updateGL();
   }
 
   QString glviewer_t::helpString() const

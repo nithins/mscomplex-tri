@@ -35,6 +35,8 @@ namespace trimesh
     viewer_t *m_ren;
 
     bool m_is_recording;
+    bool m_bf_cull;
+    bool m_wireframe;
 
     glviewer_t(data_manager_t * p);
 

@@ -108,7 +108,7 @@ namespace trimesh
 
     glPushAttrib(GL_ENABLE_BIT);
 
-    glEnable(GL_NORMALIZE);
+    glEnable(GL_RESCALE_NORMAL);
 
     glScalef(m_scale_factor,m_scale_factor,m_scale_factor);
 
@@ -162,16 +162,11 @@ namespace trimesh
     if(m_extent.eff_dim() == 0)
       throw std::runtime_error("NULL extent for viewer");
 
-    /*turn back face culling off */
-    glEnable ( GL_CULL_FACE );
+    float pos[4] = {-1.0, -0.5, -1.0, 0.0};
 
-    /*cull backface */
-    glCullFace ( GL_BACK );
+    glLightfv(GL_LIGHT0, GL_POSITION, pos);
 
-    /*polymode */
-    glPolygonMode ( GL_FRONT, GL_FILL );
-
-    glPolygonMode ( GL_BACK, GL_LINE );
+    glEnable(GL_LIGHT0);
 
     glutils::tri_idx_list_t tlist;
 
@@ -187,13 +182,11 @@ namespace trimesh
 
     m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
 
-    m_piece_rens[0]->tri_cc.init(tlist,vlist.size());
+    m_piece_rens[0]->tri_cc.reset(new tri_cc_t);
+    m_piece_rens[0]->tri_cc->init(tlist,vlist.size());
+    m_piece_rens[0]->create_cell_pos_nrm_bo(vlist);
+    m_piece_rens[0]->create_disc_rds();
 
-    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
-    {
-      m_piece_rens[i]->create_cell_loc_bo(vlist);
-      m_piece_rens[i]->create_disc_rds();
-    }
   }
 
   configurable_t::data_index_t viewer_t::dim()
@@ -256,33 +249,15 @@ namespace trimesh
 
   }
 
-  void octtree_piece_rendata::create_cell_loc_bo(const glutils::vertex_list_t &vlist)
+  void octtree_piece_rendata::create_cell_pos_nrm_bo(const glutils::vertex_list_t &vlist)
   {
-    using namespace boost::lambda;
+    tri_cc_geom_t tcc_geom;
 
-    if(vlist.size() != tri_cc.get_num_cells_dim(0))
-      throw std::runtime_error("vlist and tri_cc have incorrect num verts");
+    tcc_geom.init(tri_cc,vlist);
 
-    glutils::vertex_list_t  cell_loc(vlist.begin(),vlist.end());
+    cell_pos_bo = glutils::make_buf_obj(tcc_geom.get_cell_positions());
 
-    for(uint i = tri_cc.get_num_cells_dim(0); i < tri_cc.get_num_cells(); ++i)
-    {
-      cellid_t pts[20];
-
-      uint pt_ct = tri_cc.get_cell_points(i,pts);
-
-      glutils::vertex_t v(glutils::vertex_t::zero);
-
-      for(uint j = 0 ; j < pt_ct; ++j)
-      {
-        v += vlist[pts[j]];
-      }
-      v /= pt_ct;
-
-      cell_loc.push_back(v);
-    }
-
-    cell_loc_bo = glutils::make_buf_obj(cell_loc);
+    cell_nrm_bo = glutils::make_buf_obj(tcc_geom.get_cell_normals());
   }
 
   void  octtree_piece_rendata::create_cp_rens(const rect_t & roi)
@@ -308,7 +283,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
     {
       ren_cp[i].reset(glutils::create_buffered_points_ren
-                      (cell_loc_bo,
+                      (cell_pos_bo,
                        glutils::make_buf_obj(crit_pt_idxs[i]),
                        glutils::make_buf_obj()));
     }
@@ -337,7 +312,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim; ++i)
     {
       ren_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                            (cell_loc_bo,
+                            (cell_pos_bo,
                              glutils::make_buf_obj(crit_conn_idxs[i]),
                              glutils::make_buf_obj()));
     }
@@ -368,7 +343,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
     {
       ren_canc_cp[i].reset(glutils::create_buffered_points_ren
-                           (cell_loc_bo,
+                           (cell_pos_bo,
                             glutils::make_buf_obj(canc_cp_idxs[i]),
                             glutils::make_buf_obj()));
     }
@@ -398,7 +373,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim; ++i)
     {
       ren_canc_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                                 (cell_loc_bo,
+                                 (cell_pos_bo,
                                   glutils::make_buf_obj(canc_cp_conn_idxs[i]),
                                   glutils::make_buf_obj()));
     }
@@ -438,11 +413,11 @@ namespace trimesh
     {
       if(disc_rds[i]->update(this))
       {
-        active_disc_rens.insert(disc_rds[i]);
+        active_disc_rens[disc_rds[i]->index].insert(disc_rds[i]);
       }
       else
       {
-        active_disc_rens.erase(disc_rds[i]);
+        active_disc_rens[disc_rds[i]->index].erase(disc_rds[i]);
       }
     }
   }
@@ -543,9 +518,23 @@ namespace trimesh
       }
     }
 
+    for(disc_rendata_sp_set_t::iterator it = active_disc_rens[1].begin();
+        it != active_disc_rens[1].end() ; ++it)
+    {
+      (*it)->render();
+    }
 
-    for(disc_rendata_sp_set_t::iterator it = active_disc_rens.begin();
-        it != active_disc_rens.end() ; ++it)
+
+    glEnable ( GL_LIGHTING );
+
+    for(disc_rendata_sp_set_t::iterator it = active_disc_rens[0].begin();
+        it != active_disc_rens[0].end() ; ++it)
+    {
+      (*it)->render();
+    }
+
+    for(disc_rendata_sp_set_t::iterator it = active_disc_rens[2].begin();
+        it != active_disc_rens[2].end() ; ++it)
     {
       (*it)->render();
     }
@@ -699,14 +688,14 @@ namespace trimesh
           {
             cellid_t pt[20];
 
-            drd->tri_cc.get_cell_points(*it,pt);
+            drd->tri_cc->get_cell_points(*it,pt);
 
             e_idxs.push_back(glutils::line_idx_t(pt[0],pt[1]));
 
           }
 
           ren[dir] = glutils::create_buffered_lines_ren
-                     (drd->cell_loc_bo,
+                     (drd->cell_pos_bo,
                       glutils::make_buf_obj(e_idxs),
                       glutils::make_buf_obj());
 
@@ -720,7 +709,7 @@ namespace trimesh
           {
             cellid_t cf[20];
 
-            uint cf_ct = drd->tri_cc.get_cell_co_facets(*it,cf);
+            uint cf_ct = drd->tri_cc->get_cell_co_facets(*it,cf);
 
             e_idxs.push_back(glutils::line_idx_t(*it,cf[0]));
 
@@ -730,7 +719,7 @@ namespace trimesh
           }
 
           ren[dir] = glutils::create_buffered_lines_ren
-                     (drd->cell_loc_bo,
+                     (drd->cell_pos_bo,
                       glutils::make_buf_obj(e_idxs),
                       glutils::make_buf_obj());
 
@@ -744,16 +733,17 @@ namespace trimesh
           {
             cellid_t pt[20];
 
-            drd->tri_cc.get_cell_points(*it,pt);
+            drd->tri_cc->get_cell_points(*it,pt);
 
             t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[2],pt[1]));
 
           }
 
-          ren[dir] = glutils::create_buffered_flat_triangles_ren
-                     (drd->cell_loc_bo,
+          ren[dir] = glutils::create_buffered_triangles_ren
+                     (drd->cell_pos_bo,
                       glutils::make_buf_obj(t_idxs),
-                      glutils::make_buf_obj());
+                      glutils::make_buf_obj(),
+                      drd->cell_nrm_bo);
         }
 
         if(cp->index == 0 && dir == 1)
@@ -764,7 +754,7 @@ namespace trimesh
           {
             cellid_t st[40];
 
-            uint st_ct = drd->tri_cc.get_vert_star(*it,st);
+            uint st_ct = drd->tri_cc->get_vert_star(*it,st);
 
             for(uint i = 1; i < st_ct; i++)
             {
@@ -775,10 +765,11 @@ namespace trimesh
               t_idxs.push_back(glutils::tri_idx_t(st[st_ct-1],*it,st[0]));
           }
 
-          ren[dir] = glutils::create_buffered_flat_triangles_ren
-                     (drd->cell_loc_bo,
+          ren[dir] = glutils::create_buffered_triangles_ren
+                     (drd->cell_pos_bo,
                       glutils::make_buf_obj(t_idxs),
-                      glutils::make_buf_obj());
+                      glutils::make_buf_obj(),
+                      drd->cell_nrm_bo);
 
         }
 
