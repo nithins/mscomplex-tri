@@ -14,7 +14,6 @@
 
 #include <QGLViewer/qglviewer.h>
 
-#include <ui_trimesh_viewer_mainwindow.h>
 #include <boost/any.hpp>
 
 class configurable_t;
@@ -38,7 +37,9 @@ namespace trimesh
     bool m_bf_cull;
     bool m_wireframe;
 
-    glviewer_t(data_manager_t * p);
+    glviewer_t(QWidget *par);
+
+    void setup(data_manager_t *dm);
 
     ~glviewer_t();
 
@@ -53,6 +54,13 @@ namespace trimesh
 
   class configurable_item_model;
 
+}
+
+#include <ui_trimesh_viewer_mainwindow.h>
+
+namespace trimesh
+{
+
   class viewer_mainwindow:
       public QDialog,
       public Ui::viewer_mainwindow_Dialog
@@ -62,7 +70,6 @@ namespace trimesh
 
   public:
 
-    glviewer_t              *m_viewer;
     uint                     m_active_otp_idx;
 
     QSortFilterProxyModel   *m_cp_model_proxy;

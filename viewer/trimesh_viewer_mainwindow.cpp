@@ -37,17 +37,24 @@ namespace trimesh
     m_ren->init();
   }
 
-  glviewer_t::glviewer_t(data_manager_t * gdm):
+  glviewer_t::glviewer_t(QWidget * par):
       m_is_recording(false),
       m_bf_cull(true),
-      m_wireframe(false)
+      m_wireframe(false),
+      m_ren(NULL)
   {
-    m_ren = new viewer_t(gdm);
+    setParent(par);
+  }
+
+  void glviewer_t::setup(data_manager_t *dm)
+  {
+    m_ren = new viewer_t(dm);
   }
 
   glviewer_t::~glviewer_t()
   {
-    delete m_ren;
+    if(m_ren != NULL)
+      delete m_ren;
   }
 
   void glviewer_t::keyPressEvent(QKeyEvent *e)
@@ -107,9 +114,9 @@ namespace trimesh
   {
     QModelIndexList l =  datapiece_view->selectionModel()->selectedIndexes();
 
-    configurable_ctx_menu(m_viewer->m_ren,l,datapiece_view->mapToGlobal(p));
+    configurable_ctx_menu(glviewer->m_ren,l,datapiece_view->mapToGlobal(p));
 
-    m_viewer->updateGL();
+    glviewer->updateGL();
   }
 
   void viewer_mainwindow::on_critpt_view_customContextMenuRequested ( const QPoint &p )
@@ -118,10 +125,10 @@ namespace trimesh
     QModelIndexList l = m_cp_model_proxy->mapSelectionToSource
                         (critpt_view->selectionModel()->selection()).indexes();
 
-    configurable_ctx_menu(m_viewer->m_ren->m_piece_rens[m_active_otp_idx],
+    configurable_ctx_menu(glviewer->m_ren->m_piece_rens[m_active_otp_idx],
                           l,critpt_view->mapToGlobal(p));
 
-    m_viewer->updateGL();
+    glviewer->updateGL();
   }
 
   void viewer_mainwindow::on_datapiece_view_activated ( const QModelIndex & index  )
@@ -132,7 +139,7 @@ namespace trimesh
     m_active_otp_idx = index.row();
 
     m_cp_model->reset_configurable
-        (m_viewer->m_ren->m_piece_rens[m_active_otp_idx]);
+        (glviewer->m_ren->m_piece_rens[m_active_otp_idx]);
   }
 
   inline double get_nrm_value(double d_val,double d_min,double d_max)
@@ -142,17 +149,17 @@ namespace trimesh
 
   void viewer_mainwindow::update_roi_box(double l,double u,uint dim)
   {
-    m_viewer->m_ren->set_roi_dim_range_nrm(l,u,dim);
+    glviewer->m_ren->set_roi_dim_range_nrm(l,u,dim);
 
     if (m_clear_roi_aabb_timer->isActive() ||
-        m_viewer->m_ren->m_bShowRoiBB == false)
+        glviewer->m_ren->m_bShowRoiBB == false)
     {
-      m_viewer->m_ren->m_bShowRoiBB = true;
+      glviewer->m_ren->m_bShowRoiBB = true;
 
       m_clear_roi_aabb_timer->start();
     }
 
-    m_viewer->updateGL();
+    glviewer->updateGL();
   }
 
   void viewer_mainwindow::on_xroi_spanslider_spanChanged(int l , int u )
@@ -184,23 +191,23 @@ namespace trimesh
 
   void viewer_mainwindow::on_update_roi_pushButton_clicked(bool)
   {
-    m_viewer->m_ren->m_bRebuildRens = true;
+    glviewer->m_ren->m_bRebuildRens = true;
 
-    m_viewer->updateGL();
+    glviewer->updateGL();
   }
 
   void viewer_mainwindow::on_center_to_roi_checkBox_clicked(bool state)
   {
-    m_viewer->m_ren->m_bCenterToRoi = state;
+    glviewer->m_ren->m_bCenterToRoi = state;
 
-    m_viewer->updateGL();
+    glviewer->updateGL();
   }
 
   void viewer_mainwindow::clear_roi_aabb()
   {
-    m_viewer->m_ren->m_bShowRoiBB = false;
+    glviewer->m_ren->m_bShowRoiBB = false;
 
-    m_viewer->updateGL();
+    glviewer->updateGL();
   }
 
   viewer_mainwindow::viewer_mainwindow
@@ -209,19 +216,15 @@ namespace trimesh
   {
     setupUi (this);
 
-    m_viewer = new glviewer_t(gdm);
-
-    m_viewer->setParent(glviewer);
-
-    m_viewer->resize(glviewer->size());
+    glviewer->setup(gdm);
 
     m_otp_model = new configurable_item_model
-                  (m_viewer->m_ren,this);
+                  (glviewer->m_ren,this);
 
     datapiece_view->setModel ( m_otp_model );
 
     m_cp_model = new configurable_item_model
-                 (m_viewer->m_ren->m_piece_rens[m_active_otp_idx],this);
+                 (glviewer->m_ren->m_piece_rens[m_active_otp_idx],this);
 
     m_cp_model_proxy = new QSortFilterProxyModel(this);
 
