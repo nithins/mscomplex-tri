@@ -49,8 +49,6 @@ set(spin_SRCS
 )
 
 set(viewer_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/aabb.h
-
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.cpp
 
