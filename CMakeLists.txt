@@ -43,6 +43,11 @@ set(dmsc_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_datamanager.cpp
   )
 
+set(spin_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
+)
+
 set(viewer_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/aabb.h
 
@@ -69,6 +74,7 @@ set(main_SRCS
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/
+  ${CMAKE_CURRENT_SOURCE_DIR}/spin/
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/
   ${CMAKE_CURRENT_BINARY_DIR}/viewer/
   ${utls_SOURCE_DIR}/include
@@ -82,6 +88,7 @@ include_directories(
 add_executable(${PROJECT_NAME}
   ${dmsc_SRCS}
   ${dmsc_RC_SRCS}
+  ${spin_SRCS}
   ${viewer_SRCS}
   ${viewer_MOC_SRCS}
   ${viewer_UI_SRCS}

@@ -54,7 +54,7 @@ namespace aabb
       return range_t(std::min(r[0],(*this)[0]),std::max(r[1],(*this)[1]));
     }
 
-    inline coord_type span()
+    inline coord_type span() const
     {
       return ((*this)[1]-(*this)[0]);
     }
@@ -180,7 +180,7 @@ namespace aabb
       return c;
     }
 
-    inline point_t span()
+    inline point_t span() const
     {
       point_t c;
 
