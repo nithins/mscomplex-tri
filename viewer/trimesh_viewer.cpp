@@ -73,7 +73,7 @@ namespace trimesh
       m_gdm(gdm)
   {
     for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
-      m_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i)));
+      m_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i),this));
   }
 
   viewer_t::~viewer_t()
@@ -170,19 +170,15 @@ namespace trimesh
 
     glutils::read_tri_file(m_gdm->m_tri_filename.c_str(),vlist,tlist);
 
-    glutils::compute_extent(vlist,m_extent.data()->data());
+    m_piece_rens[0]->init(tlist,vlist);
+
+    m_extent = m_piece_rens[0]->m_extent;
 
     m_roi = m_extent;
 
     point_t s = m_extent.span();
 
     m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
-
-    m_piece_rens[0]->tri_cc.reset(new tri_cc_t);
-    m_piece_rens[0]->tri_cc->init(tlist,vlist.size());
-    m_piece_rens[0]->create_cell_pos_nrm_bo(vlist);
-    m_piece_rens[0]->create_disc_rds();
-
   }
 
   configurable_t::data_index_t viewer_t::dim()
@@ -231,7 +227,7 @@ namespace trimesh
   }
 
 
-  octtree_piece_rendata::octtree_piece_rendata (datapiece_t * _dp):
+  octtree_piece_rendata::octtree_piece_rendata (datapiece_t * _dp,viewer_t *v):
       m_bShowAllCps(false),
       m_bShowCpLabels ( false ),
       m_bShowMsGraph ( false ),
@@ -240,7 +236,8 @@ namespace trimesh
       m_bShowCancMsGraph(false),
       m_bNeedUpdateDiscRens(false),
       m_bShowCellNormals(false),
-      dp(_dp)
+      dp(_dp),
+      m_viewer(v)
   {
     using namespace boost::lambda;
 
@@ -248,22 +245,28 @@ namespace trimesh
 
   }
 
-  void octtree_piece_rendata::create_cell_pos_nrm_bo(const glutils::vertex_list_t &vlist)
+  void octtree_piece_rendata::init(const tri_idx_list_t &t,const vertex_list_t &v)
   {
-    tri_cc_geom_t tcc_geom;
+    tri_cc_geom.reset(new tri_cc_geom_t);
+    tri_cc_geom->init(t,v);
+    create_cell_pos_nrm_bo();
+    create_disc_rds();
 
-    tcc_geom.init(tri_cc,vlist);
+    glutils::compute_extent(v,m_extent.data()->data());
+  }
 
-    cell_pos_bo = glutils::make_buf_obj(tcc_geom.get_cell_positions());
+  void octtree_piece_rendata::create_cell_pos_nrm_bo()
+  {
+    cell_pos_bo = glutils::make_buf_obj(tri_cc_geom->get_cell_positions());
 
-    cell_nrm_bo = glutils::make_buf_obj(tcc_geom.get_cell_normals());
+    cell_nrm_bo = glutils::make_buf_obj(tri_cc_geom->get_cell_normals());
 
     ren_cell_normals.reset(glutils::create_buffered_normals_ren
                            (cell_pos_bo,
                             glutils::make_buf_obj(),
                             glutils::make_buf_obj(),
                             cell_nrm_bo,
-                            tcc_geom.get_average_edge_length()/2));
+                            tri_cc_geom->get_average_edge_length()/2));
   }
 
   void  octtree_piece_rendata::create_cp_rens(const rect_t & roi)
@@ -572,9 +575,26 @@ namespace trimesh
     }
   };
 
+  struct spin_image_creator
+  {
+    disc_rendata_sp_t m_drd;
+
+    datapiece_rendata_ptr_t m_dprd;
+
+    int m_dir;
+
+    spin_image_creator(disc_rendata_sp_t drd,datapiece_rendata_ptr_t dprd,int dir)
+      :m_drd(drd),m_dprd(dprd),m_dir(dir){};
+
+    void operator()()
+    {
+      m_dprd->m_viewer->m_spin_image = m_drd->compute_spin_image(m_dprd,m_dir);
+    }
+  };
+
   configurable_t::data_index_t octtree_piece_rendata::dim()
   {
-    return data_index_t(8,disc_rds.size());
+    return data_index_t(10,disc_rds.size());
   }
 
   bool octtree_piece_rendata::exchange_field
@@ -608,6 +628,10 @@ namespace trimesh
     case 6:
     case 7:
       return s_exchange_action(random_color_assigner(drd,i%2),v);
+    case 8:
+    case 9:
+      return s_exchange_action(spin_image_creator(drd,this,i%2),v);
+
     };
 
      throw std::logic_error("octtree_piece_rendata::invalid index");
@@ -626,6 +650,9 @@ namespace trimesh
     case 5: v = std::string("asc mfold color"); return EFT_DATA_RW;
     case 6: v = std::string("rand des mflod color"); return EFT_ACTION;
     case 7: v = std::string("rand asc mflod color"); return EFT_ACTION;
+    case 8: v = std::string("create des spin img"); return EFT_ACTION;
+    case 9: v = std::string("create asc spin img"); return EFT_ACTION;
+
     }
     throw std::logic_error("octtree_piece_rendata::invalid index");
   }
@@ -660,6 +687,66 @@ namespace trimesh
     }
   }
 
+  void get_disc_cells
+      (mscomplex_t * msgraph,uint cidx,uint dir,std::set<cellid_t> & cset)
+  {
+
+    critpt_t *cp = msgraph->m_cps[cidx];
+
+    for(uint j = 0 ; j < cp->contrib[dir].size();++j)
+    {
+      critpt_t *cp_contrib = msgraph->m_cps[cp->contrib[dir][j]];
+
+      if(cp_contrib->index != cp->index)
+        throw std::logic_error("contrib and cp must have same idx");
+
+      for(uint i = 0; i < cp_contrib->disc[dir].size(); ++i)
+      {
+        cellid_t c = cp_contrib->disc[dir][i];
+
+        if(cset.count(c) == 0)
+          cset.insert(c);
+      }
+    }
+  }
+
+  spin::spin_image_ptr_t disc_rendata_t::compute_spin_image
+      (octtree_piece_rendata *drd,uint dir)
+  {    
+    using namespace spin;
+
+    spin_image_ptr_t si(new spin_image_t);
+
+    oriented_point_t si_bp(drd->tri_cc_geom->get_cell_position(cellid),
+                              drd->tri_cc_geom->get_cell_normal(cellid));
+
+
+    rect_t  extent = drd->m_extent;
+
+    si_scalar_t  max_pt_dist = euclid_distance(extent.lower_corner(),extent.upper_corner());
+
+    si_extent_t si_extent(si_extent_t::range_t(0,max_pt_dist),
+                          si_extent_t::range_t(-max_pt_dist,max_pt_dist));
+
+    si_point_t  si_res(drd->tri_cc_geom->get_average_edge_length()/2.0,
+                        drd->tri_cc_geom->get_average_edge_length()/2.0);
+
+    si->init(si_bp,si_extent,si_res,M_PI_2);
+
+    std::set<cellid_t> cset;
+
+    typedef typeof(cset) cset_t;
+
+    get_disc_cells(drd->dp->msgraph,drd->dp->msgraph->m_id_cp_map[cellid],dir,cset);
+
+    for(cset_t::iterator it = cset.begin(); it!= cset.end(); ++it)
+    {
+      si->accumulate_point(drd->tri_cc_geom->get_cell_position(*it));
+    }
+
+    return si;
+  }
+
   bool disc_rendata_t::update(octtree_piece_rendata *drd)
   {
     using namespace boost::lambda;
@@ -670,27 +757,11 @@ namespace trimesh
       {
         ensure_cellid_critical(drd->dp->msgraph,cellid);
 
-        critpt_t *cp = drd->dp->msgraph->m_cps[drd->dp->msgraph->m_id_cp_map[cellid]];
-
         std::set<cellid_t> cset;
 
-        for(uint j = 0 ; j < cp->contrib[dir].size();++j)
-        {
-          critpt_t *cp_contrib = drd->dp->msgraph->m_cps[cp->contrib[dir][j]];
+        get_disc_cells(drd->dp->msgraph,drd->dp->msgraph->m_id_cp_map[cellid],dir,cset);
 
-          if(cp_contrib->index != cp->index)
-            throw std::logic_error("contrib and cp must have same idx");
-
-          for(uint i = 0; i < cp_contrib->disc[dir].size(); ++i)
-          {
-            cellid_t c = cp_contrib->disc[dir][i];
-
-            if(cset.count(c) == 0)
-              cset.insert(c);
-          }
-        }
-
-        if(cp->index == 1 && dir == 0)
+        if(index == 1 && dir == 0)
         {
           glutils::line_idx_list_t e_idxs;
 
@@ -698,7 +769,7 @@ namespace trimesh
           {
             cellid_t pt[20];
 
-            drd->tri_cc->get_cell_points(*it,pt);
+            drd->tri_cc_geom->get_cell_points(*it,pt);
 
             e_idxs.push_back(glutils::line_idx_t(pt[0],pt[1]));
 
@@ -711,7 +782,7 @@ namespace trimesh
 
         }
 
-        if(cp->index == 1 && dir == 1)
+        if(index == 1 && dir == 1)
         {
           glutils::line_idx_list_t e_idxs;
 
@@ -719,7 +790,7 @@ namespace trimesh
           {
             cellid_t cf[20];
 
-            uint cf_ct = drd->tri_cc->get_cell_co_facets(*it,cf);
+            uint cf_ct = drd->tri_cc_geom->get_cell_co_facets(*it,cf);
 
             e_idxs.push_back(glutils::line_idx_t(*it,cf[0]));
 
@@ -735,7 +806,7 @@ namespace trimesh
 
         }
 
-        if(cp->index == 2 && dir == 0)
+        if(index == 2 && dir == 0)
         {
           glutils::tri_idx_list_t t_idxs;
 
@@ -743,7 +814,7 @@ namespace trimesh
           {
             cellid_t pt[20];
 
-            drd->tri_cc->get_cell_points(*it,pt);
+            drd->tri_cc_geom->get_cell_points(*it,pt);
 
             t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[2],pt[1]));
 
@@ -756,7 +827,7 @@ namespace trimesh
                       drd->cell_nrm_bo);
         }
 
-        if(cp->index == 0 && dir == 1)
+        if(index == 0 && dir == 1)
         {
           glutils::tri_idx_list_t t_idxs;
 
@@ -764,7 +835,7 @@ namespace trimesh
           {
             cellid_t st[40];
 
-            uint st_ct = drd->tri_cc->get_vert_star(*it,st);
+            uint st_ct = drd->tri_cc_geom->get_vert_star(*it,st);
 
             for(uint i = 1; i < st_ct; i++)
             {

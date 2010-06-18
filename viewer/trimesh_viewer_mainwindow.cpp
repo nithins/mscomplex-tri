@@ -221,6 +221,10 @@ namespace trimesh
     m_otp_model = new configurable_item_model
                   (glviewer->m_ren,this);
 
+    spinviewer->setScene(new QGraphicsScene(this));
+
+    spinviewer->scene()->addItem(new spin::si_graphics_item_t(glviewer->m_ren));
+
     datapiece_view->setModel ( m_otp_model );
 
     m_cp_model = new configurable_item_model
@@ -458,5 +462,66 @@ namespace trimesh
 
       m_conf->exchange_field(idx,out_val);
     }
+  }
+
+}
+
+namespace spin
+{
+  QRectF si_graphics_item_t::boundingRect() const
+  {
+    QRectF r;
+
+    if(!m_si) return r;
+
+    si_point_t si_lc = m_si->m_iextent.lower_corner();
+    si_point_t si_uc = m_si->m_iextent.upper_corner();
+
+    r.setBottomLeft(to_qpointf(si_lc));
+    r.setTopRight(to_qpointf(si_uc));
+
+    return r;
+  }
+
+
+  QRgb to_qrgb(si_scalar_t c)
+  {
+    c*= 20;
+
+    return qRgb(c,c,c);
+  }
+
+  void si_graphics_item_t::update_image()
+  {
+    if(m_si == m_viewer->m_spin_image) return;
+
+    m_si = m_viewer->m_spin_image;
+
+    if(!m_si) return;
+
+    si_point_t sz = m_si->m_iextent.span();
+
+    si_point_t lc = m_si->m_iextent.lower_corner();
+
+    m_image = new QImage(QSize(sz[0],sz[1]),QImage::Format_RGB888);
+
+    for(uint y = 0 ; y < sz[1]; ++y)
+      for(uint x = 0 ; x < sz[0]; ++x)
+        m_image->setPixel( x,y,to_qrgb((*m_si->m_image)(lc + si_ipoint_t(x,y))));
+
+  }
+
+  void si_graphics_item_t::paint
+      (QPainter *painter,
+       const QStyleOptionGraphicsItem *option,
+       QWidget *widget)
+  {
+    update_image();
+
+    if(!m_si) return;
+
+    si_point_t lc = m_si->m_iextent.lower_corner();
+
+    painter->drawImage(QPoint(lc[0],lc[1]),*m_image);
   }
 }

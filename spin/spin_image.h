@@ -59,7 +59,7 @@ namespace spin
 
     si_point_t       m_resolution;
 
-    si_extent_t      m_extent;
+    si_iextent_t     m_iextent;
 
   public:
 
@@ -100,35 +100,5 @@ namespace spin
     return boost::tuples::get<1>(op);
   }
 
-}
-
-#include <QGraphicsItem>
-#include <QPainter>
-namespace spin
-{
-  inline QPointF to_qpointf(const si_point_t &p)
-  {
-    return QPointF(p[0],p[1]);
-  }
-
-  inline QPoint to_qpoint(const si_ipoint_t &p)
-  {
-    return QPoint(p[0],p[1]);
-  }
-
-  class si_graphics_item_t : public QGraphicsItem
-  {
-  private:
-    spin_image_ptr_t m_si;
-
-  public:
-
-    si_graphics_item_t(spin_image_ptr_t si):m_si(si){};
-
-    QRectF boundingRect() const;
-
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
-               QWidget *widget);
-  };
 }
 #endif

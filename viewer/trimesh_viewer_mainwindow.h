@@ -185,6 +185,44 @@ namespace trimesh
 
   };
 }
+#include <spin_image.h>
+
+#include <QGraphicsItem>
+#include <QPainter>
+namespace spin
+{
+  inline QPointF to_qpointf(const si_point_t &p)
+  {
+    return QPointF(p[0],p[1]);
+  }
+
+  inline QPoint to_qpoint(const si_ipoint_t &p)
+  {
+    return QPoint(p[0],p[1]);
+  }
+
+  class si_graphics_item_t : public QGraphicsItem
+  {
+  private:
+    trimesh::viewer_t * m_viewer;
+
+    QImage             *m_image;
+    spin_image_ptr_t    m_si;
+
+  public:
+
+    si_graphics_item_t(trimesh::viewer_t* v):m_viewer(v){m_image = NULL;};
+
+    void update_image();
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+               QWidget *widget);
+  };
+
+  typedef boost::shared_ptr<si_graphics_item_t> si_graphics_item_ptr_t;
+}
 
 
 

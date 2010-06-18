@@ -7,6 +7,7 @@
 #include <aabb.h>
 
 #include <trimesh.h>
+#include <spin_image.h>
 
 namespace trimesh
 {
@@ -18,6 +19,8 @@ namespace trimesh
   typedef aabb::aabb_t<double,3>::point_t point_t;
 
   class octtree_piece_rendata;
+
+  class viewer_t;
 
   class disc_rendata_t
   {
@@ -36,6 +39,8 @@ namespace trimesh
     void render();
     bool update(octtree_piece_rendata *);
 
+    spin::spin_image_ptr_t compute_spin_image(octtree_piece_rendata *,uint dir);
+
     static void init();
     static void cleanup();
   };
@@ -48,7 +53,7 @@ namespace trimesh
   {
   public:
 
-
+    viewer_t    * m_viewer;
     datapiece_t * dp;
 
     // set externally to control what is rendered
@@ -75,7 +80,7 @@ namespace trimesh
 
     // the triangulation
 
-    tri_cc_ptr_t             tri_cc;
+    tri_cc_geom_ptr_t        tri_cc_geom;
 
     glutils::bufobj_ptr_t    cell_pos_bo;
 
@@ -85,20 +90,21 @@ namespace trimesh
 
     disc_rendata_sp_set_t    active_disc_rens[gc_max_cell_dim + 1];
 
+    rect_t                              m_extent;
+
     void create_disc_rds();
     void update_active_disc_rens();
 
-    void create_cell_pos_nrm_bo(const glutils::vertex_list_t &v);
+    void create_cell_pos_nrm_bo();
     void create_cp_rens(const rect_t &roi);
     void create_canc_cp_rens(const rect_t &roi);
     void create_grad_rens(const rect_t &roi);
 
     void render_msgraph_data() ;
-
     void render_dataset_data() ;
 
-    octtree_piece_rendata(datapiece_t *);
-
+    octtree_piece_rendata(datapiece_t *,viewer_t *);
+    void init(const tri_idx_list_t &,const vertex_list_t &);
 
     // configurable_t interface
   public:
@@ -106,6 +112,8 @@ namespace trimesh
     virtual bool exchange_field(const data_index_t &,boost::any &);
     virtual eFieldType exchange_header(const int &,boost::any &);
   };
+
+  typedef octtree_piece_rendata * datapiece_rendata_ptr_t;
 
   class data_manager_t;
 
@@ -127,6 +135,7 @@ namespace trimesh
 
     data_manager_t *                       m_gdm;
 
+    spin::spin_image_ptr_t                 m_spin_image;
   public:
 
     viewer_t(data_manager_t * );
