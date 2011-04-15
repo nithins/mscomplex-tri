@@ -9,6 +9,10 @@
 #include <QFile>
 #include <logutil.h>
 
+#include <boost/lambda/lambda.hpp>
+#include <boost/lambda/bind.hpp>
+#include <boost/typeof/typeof.hpp>
+
 #include <trimesh_mscomplex.h>
 
 namespace trimesh
@@ -123,64 +127,6 @@ namespace trimesh
   }
 
 
-  inline bool lowestPairableCoFacet
-      (dataset_t *dataset,cellid_t cellId,cellid_t& pairid
-       )
-  {
-    cellid_t cofacets[20];
-    bool    cofacet_usable[20];
-
-    uint cofacet_count = dataset->getCellCofacets ( cellId,cofacets );
-
-    bool isTrueBoundryCell = dataset->isBoundryCell ( cellId ) ;
-
-    // for each co facet
-    for ( uint i = 0 ; i < cofacet_count ; i++ )
-    {
-      cellid_t facets[20];
-      uint facet_count = dataset->getCellFacets ( cofacets[i],facets );
-
-      cofacet_usable[i] = true;
-
-      if ( isTrueBoundryCell &&
-           !dataset->isBoundryCell ( cofacets[i] ) )
-      {
-        cofacet_usable[i] = false;
-        continue;
-      }
-
-      for ( uint j = 0 ; j < facet_count ; j++ )
-      {
-        if ( dataset->compareCells ( cellId,facets[j] ))
-        {
-          cofacet_usable[i] = false;
-          break;
-        }
-      }
-    }
-
-    bool pairid_usable = false;
-
-    for ( uint i =0 ; i < cofacet_count;i++ )
-    {
-      if ( cofacet_usable[i] == false )
-        continue;
-
-      if(pairid_usable == false)
-      {
-        pairid_usable = true;
-        pairid = cofacets[i];
-        continue;
-      }
-
-      if ( dataset->compareCells ( cofacets[i],pairid ) )
-        pairid = cofacets[i];
-
-    }
-    return pairid_usable;
-  }
-
-
   void track_gradient_tree_bfs
       (dataset_t *dataset,cellid_t start_cellId,eGradientDirection gradient_dir)
   {
@@ -272,6 +218,8 @@ namespace trimesh
     m_tri_cc.clear();
 
     m_critical_cells.clear();
+
+    m_critical_cells_vert.clear();
   }
 
   cellid_t   dataset_t::getCellPairId (cellid_t c) const
@@ -283,8 +231,11 @@ namespace trimesh
 
   bool dataset_t::compareCells( cellid_t c1,cellid_t  c2 ) const
   {
-    if(getCellDim(c1) == 0)
-      return ptLt(c1,c2);
+    bool is_c1_bndry = isBoundryCell(c1);
+    bool is_c2_bndry = isBoundryCell(c2);
+
+    if(is_c1_bndry != is_c2_bndry)
+      return is_c1_bndry;
 
     cellid_t pts1[20];
     cellid_t pts2[20];
@@ -294,6 +245,9 @@ namespace trimesh
 
     std::sort ( pts1,pts1+pts1_ct,*m_ptcomp );
     std::sort ( pts2,pts2+pts2_ct,*m_ptcomp);
+
+    std::reverse(pts1,pts1+pts1_ct);
+    std::reverse(pts2,pts2+pts2_ct);
 
     return std::lexicographical_compare
         ( pts1,pts1+pts1_ct,pts2,pts2+pts2_ct,*m_ptcomp );
@@ -400,49 +354,84 @@ namespace trimesh
   {
     assignGradients();
 
-    collateCriticalPoints();
-
     assignCellOwnerExtrema();
   }
 
   void  dataset_t::assignGradients()
   {
-    // determine all the pairings of all cells in m_rect
+    int num_verts = m_tri_cc.get_num_cells_dim(0);
 
-    uint num_cells      = m_tri_cc.get_num_cells();
+    using namespace boost::lambda;
 
-    uint num_cells_ltmd = m_tri_cc.get_num_cells_max_dim(m_tri_cc.get_dim() -1);
+    BOOST_AUTO(cmp,bind(&dataset_t::compareCells,this,_1,_2));
 
-    for(uint i = 0 ; i < num_cells_ltmd; ++i)
+    // assuming max degree is 20 adjust if necessary.
+
+    uint est[40];
+
+    for(int i = 0 ; i < num_verts; ++i)
     {
-      cellid_t c = i,p;
+      int est_ct = m_tri_cc.get_vert_star(i,est+1);
 
-      if (isCellMarked (c))
-        continue;
+      est[0] = i; est_ct++;
 
-      if (lowestPairableCoFacet (this,c,p))
-        pairCells (c,p);
-    }
+      std::sort(est,est+est_ct,cmp);
 
-    for(uint i = 0 ; i < num_cells;++i)
-    {
-      cellid_t c = i;
+      for(int j = 0 ; j < est_ct ; ++j)
+      {
+        cellid_t vert[4];
 
-      if (!isCellMarked (c))
-        markCellCritical (c);
-    }
-  }
+        int vert_ct = getCellPoints(est[j],vert);
 
-  void  dataset_t::collateCriticalPoints()
-  {
-    uint num_cells = m_tri_cc.get_num_cells();
+        std::sort(vert,vert+vert_ct,*m_ptcomp);
 
-    for(uint i = 0 ; i < num_cells;++i )
-    {
-      cellid_t c = i;
+        std::reverse(vert,vert+vert_ct);
 
-      if (isCellCritical (c))
-        m_critical_cells.push_back(c);
+        if(vert[0] != i)
+        {
+          est_ct = j;
+          break;
+        }
+      }
+
+      for(int pass = 0 ; pass < 2; ++pass)
+      {
+        int pos = 0;
+
+        bool is_last_cell_paired = false;
+
+        for( int j = 0 ; j < est_ct-1; ++j)
+        {
+          bool is_adj        = m_tri_cc.is_adjacent(est[j],est[j+1]);
+          bool is_same_bndry = (isBoundryCell(est[j]) == isBoundryCell(est[j+1]));
+
+          if(is_adj && is_same_bndry)
+          {
+            pairCells(est[j],est[j+1]);
+            is_last_cell_paired = ((j+2) == est_ct);
+
+            ++j;
+          }
+          else
+          {
+            est[pos++] = est[j];
+          }
+        }
+
+        if(is_last_cell_paired == false && est_ct >0)
+          est[pos++] = est[est_ct-1];
+
+        est_ct = pos;
+      }
+
+      for(int j = 0 ; j < est_ct ; ++j)
+      {
+        markCellCritical(est[j]);
+
+        m_critical_cells.push_back(est[j]);
+
+        m_critical_cells_vert.push_back(i);
+      }
     }
   }
 
@@ -475,24 +464,26 @@ namespace trimesh
 
     for (uint i = 0 ; i <m_critical_cells.size(); ++i)
     {
-      cellid_t &c = m_critical_cells[i];
+      cellid_t c  = m_critical_cells[i];
 
-      msgraph->add_critpt(c,getCellDim(c),get_cell_fn(c),isBoundryCell(c));
+      uint     vi = m_critical_cells_vert[i];
+
+      msgraph->add_critpt(c,getCellDim(c),get_cell_fn(c),isBoundryCell(c),vi);
     }
 
-    for (uint i = 0 ; i <m_critical_cells.size(); ++i)
-    {
-      cellid_t &c = m_critical_cells[i];
+//    for (uint i = 0 ; i <m_critical_cells.size(); ++i)
+//    {
+//      cellid_t &c = m_critical_cells[i];
 
-      if(!isCellPaired(c))  continue;
+//      if(!isCellPaired(c))  continue;
 
-      uint cp_idx = i;
+//      uint cp_idx = i;
 
-      msgraph->m_cps[cp_idx]->is_paired = true;
+//      msgraph->m_cps[cp_idx]->is_paired = true;
 
-      msgraph->m_cps[cp_idx]->pair_idx =
-          msgraph->m_id_cp_map[getCellPairId(c)];
-    }
+//      msgraph->m_cps[cp_idx]->pair_idx =
+//          msgraph->m_id_cp_map[getCellPairId(c)];
+//    }
 
     for (cellid_list_t::iterator it = m_critical_cells.begin() ;
     it != m_critical_cells.end();++it)
@@ -523,6 +514,24 @@ namespace trimesh
         }
       }
     }
+  }
+
+  std::string dataset_t::to_string(cellid_t c) const
+  {
+    std::stringstream ss;
+
+    cellid_t c_verts[4];
+
+    uint pt_ct = getCellPoints(c,c_verts);
+
+    ss<<"(";
+
+    for(uint i = 0 ; i < pt_ct;++i)
+      ss<<c_verts[i]<<",";
+
+    ss<<")";
+
+    return ss.str();
   }
 
   void dataset_t::log_flags()

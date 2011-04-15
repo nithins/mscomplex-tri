@@ -50,6 +50,7 @@ namespace trimesh
     cellid_list_t       m_cell_own;
     cellid_list_t       m_cell_pairs;
     cellid_list_t       m_critical_cells;
+    cellid_list_t       m_critical_cells_vert;
     std::vector<uchar>  m_cell_flags;
 
     pt_comp_t*          m_ptcomp;
@@ -98,6 +99,8 @@ namespace trimesh
 
     uint   getCellCofacets ( cellid_t ,cellid_t * ) const;
 
+    uint   getCellEst( cellid_t ,cellid_t * ) const;
+
     bool   isPairOrientationCorrect ( cellid_t c, cellid_t p ) const;
 
     bool   isCellMarked ( cellid_t c ) const;
@@ -124,6 +127,8 @@ namespace trimesh
     void log_flags();
 
     void log_pairs();
+
+    std::string to_string(cellid_t c) const;
 
     // return fn at point .. averge of points for higher dims
     cell_fn_t get_cell_fn ( cellid_t c ) const;

@@ -22,13 +22,14 @@ namespace trimesh
 
   }
 
-  void mscomplex_t::add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg)
+  void mscomplex_t::add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg,uint vert_idx)
   {
     critpt_t * cp  = new critpt_t;
     cp->cellid     = c;
     cp->index      = i;
     cp->fn         = f;
     cp->is_boundry = bflg;
+    cp->vert_idx   = vert_idx;
     m_id_cp_map.insert(std::make_pair(c,m_cps.size()));
     m_cps.push_back(cp);
   }

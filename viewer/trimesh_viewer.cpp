@@ -263,8 +263,8 @@ namespace trimesh
 
     ren_cell_normals.reset(glutils::create_buffered_normals_ren
                            (cell_pos_bo,
-                            glutils::make_buf_obj(),
-                            glutils::make_buf_obj(),
+                            glutils::bufobj_ptr_t(),
+                            glutils::bufobj_ptr_t(),
                             cell_nrm_bo,
                             tri_cc_geom->get_average_edge_length()/2));
   }
@@ -292,9 +292,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
     {
       ren_cp[i].reset(glutils::create_buffered_points_ren
-                      (cell_pos_bo,
-                       glutils::make_buf_obj(crit_pt_idxs[i]),
-                       glutils::make_buf_obj()));
+                      (cell_pos_bo,glutils::make_buf_obj(crit_pt_idxs[i])));
     }
 
     for(uint i = 0 ; i < dp->msgraph->m_cps.size(); ++i)
@@ -321,9 +319,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim; ++i)
     {
       ren_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                            (cell_pos_bo,
-                             glutils::make_buf_obj(crit_conn_idxs[i]),
-                             glutils::make_buf_obj()));
+                            (cell_pos_bo,glutils::make_buf_obj(crit_conn_idxs[i])));
     }
 
   }
@@ -352,9 +348,7 @@ namespace trimesh
     for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
     {
       ren_canc_cp[i].reset(glutils::create_buffered_points_ren
-                           (cell_pos_bo,
-                            glutils::make_buf_obj(canc_cp_idxs[i]),
-                            glutils::make_buf_obj()));
+                           (cell_pos_bo,glutils::make_buf_obj(canc_cp_idxs[i])));
     }
 
     for(uint i = 0 ; i < dp->msgraph->m_cps.size(); ++i)
@@ -383,8 +377,7 @@ namespace trimesh
     {
       ren_canc_cp_conns[i].reset(glutils::create_buffered_lines_ren
                                  (cell_pos_bo,
-                                  glutils::make_buf_obj(canc_cp_conn_idxs[i]),
-                                  glutils::make_buf_obj()));
+                                  glutils::make_buf_obj(canc_cp_conn_idxs[i])));
     }
 
   }
@@ -712,7 +705,7 @@ namespace trimesh
 
   spin::spin_image_ptr_t disc_rendata_t::compute_spin_image
       (octtree_piece_rendata *drd,uint dir)
-  {    
+  {
     using namespace spin;
 
     spin_image_ptr_t si(new spin_image_t);
@@ -777,8 +770,7 @@ namespace trimesh
 
           ren[dir] = glutils::create_buffered_lines_ren
                      (drd->cell_pos_bo,
-                      glutils::make_buf_obj(e_idxs),
-                      glutils::make_buf_obj());
+                      glutils::make_buf_obj(e_idxs));
 
         }
 
@@ -801,8 +793,7 @@ namespace trimesh
 
           ren[dir] = glutils::create_buffered_lines_ren
                      (drd->cell_pos_bo,
-                      glutils::make_buf_obj(e_idxs),
-                      glutils::make_buf_obj());
+                      glutils::make_buf_obj(e_idxs));
 
         }
 
@@ -821,10 +812,7 @@ namespace trimesh
           }
 
           ren[dir] = glutils::create_buffered_triangles_ren
-                     (drd->cell_pos_bo,
-                      glutils::make_buf_obj(t_idxs),
-                      glutils::make_buf_obj(),
-                      drd->cell_nrm_bo);
+                     (drd->cell_pos_bo,glutils::make_buf_obj(t_idxs),drd->cell_nrm_bo);
         }
 
         if(index == 0 && dir == 1)
@@ -849,7 +837,6 @@ namespace trimesh
           ren[dir] = glutils::create_buffered_triangles_ren
                      (drd->cell_pos_bo,
                       glutils::make_buf_obj(t_idxs),
-                      glutils::make_buf_obj(),
                       drd->cell_nrm_bo);
 
         }

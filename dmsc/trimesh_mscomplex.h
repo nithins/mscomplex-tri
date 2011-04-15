@@ -42,6 +42,7 @@ namespace trimesh
 
     cellid_t     cellid;
     uint         pair_idx;
+    uint         vert_idx;
     cell_fn_t    fn;
     uchar        index;
 
@@ -54,6 +55,7 @@ namespace trimesh
       isCancelled           = false;
       is_paired             = false;
       pair_idx              = -1;
+      vert_idx              = -1;
     }
 
     // list of idx's of cancelled cps that contribute their disc to this cp
@@ -78,7 +80,7 @@ namespace trimesh
 
     void connect_cps(uint_pair_t p);
 
-    void add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg);
+    void add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg,uint vert_idx);
 
     void simplify(uint_pair_list_t &,double simplification_treshold);
 
