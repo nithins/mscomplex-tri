@@ -15,6 +15,8 @@
 
 #include <trimesh_mscomplex.h>
 
+#include <list>
+
 namespace trimesh
 {
 
@@ -394,41 +396,40 @@ namespace trimesh
         }
       }
 
-      for(int pass = 0 ; pass < 2; ++pass)
+      typedef std::list<cellid_t> cellid_llist_t;
+
+      cellid_llist_t est_list(est,est+est_ct);
+
+      for(cellid_llist_t::iterator j = est_list.begin(); j != est_list.end();)
       {
-        int pos = 0;
+        cellid_llist_t::iterator c_it = j,p_it = j;
 
-        bool is_last_cell_paired = false;
+        ++j;
 
-        for( int j = 0 ; j < est_ct-1; ++j)
+        while( p_it != est_list.begin())
         {
-          bool is_adj        = m_tri_cc.is_adjacent(est[j],est[j+1]);
-          bool is_same_bndry = (isBoundryCell(est[j]) == isBoundryCell(est[j+1]));
+          p_it--;
+
+          bool is_adj        = m_tri_cc.is_adjacent(*c_it,*p_it);
+          bool is_same_bndry = (isBoundryCell(*c_it) == isBoundryCell(*p_it));
 
           if(is_adj && is_same_bndry)
           {
-            pairCells(est[j],est[j+1]);
-            is_last_cell_paired = ((j+2) == est_ct);
-
-            ++j;
-          }
-          else
-          {
-            est[pos++] = est[j];
+            pairCells(*c_it,*p_it);
+            est_list.erase(c_it);
+            est_list.erase(p_it);
+            break;
           }
         }
 
-        if(is_last_cell_paired == false && est_ct >0)
-          est[pos++] = est[est_ct-1];
-
-        est_ct = pos;
       }
 
-      for(int j = 0 ; j < est_ct ; ++j)
-      {
-        markCellCritical(est[j]);
 
-        m_critical_cells.push_back(est[j]);
+      for(cellid_llist_t::iterator j = est_list.begin() ; j != est_list.end() ; ++j)
+      {
+        markCellCritical(*j);
+
+        m_critical_cells.push_back(*j);
 
         m_critical_cells_vert.push_back(i);
       }
@@ -520,14 +521,18 @@ namespace trimesh
   {
     std::stringstream ss;
 
-    cellid_t c_verts[4];
+    cellid_t vert[4];
 
-    uint pt_ct = getCellPoints(c,c_verts);
+    uint vert_ct = getCellPoints(c,vert);
+
+    std::sort(vert,vert+vert_ct,*m_ptcomp);
+
+    std::reverse(vert,vert+vert_ct);
 
     ss<<"(";
 
-    for(uint i = 0 ; i < pt_ct;++i)
-      ss<<c_verts[i]<<",";
+    for(uint i = 0 ; i < vert_ct;++i)
+      ss<<vert[i]<<",";
 
     ss<<")";
 
