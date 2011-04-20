@@ -156,8 +156,7 @@ namespace trimesh
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
 
-    if(m_simp_tresh > 0.0)
-      dp->msgraph->simplify_un_simplify(m_simp_tresh);
+    dp->msgraph->simplify_un_simplify(m_simp_tresh);
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
 
@@ -167,6 +166,18 @@ namespace trimesh
     _LOG ( "-------------------" );
     _LOG ( "Finished Processing" );
     _LOG ( "===================" );
+
+    {
+      std::fstream f("msgraph.txt",fstream::out);
+      dp->msgraph->save(f);
+      f.close();
+    }
+
+    {
+      std::fstream f("msmfolds.txt",fstream::out);
+      dp->msgraph->save_manifolds(f);
+      f.close();
+    }
   }
 
 
@@ -187,37 +198,6 @@ namespace trimesh
   data_manager_t::~data_manager_t()
   {
     destroyDataPieces();
-  }
-
-  void data_manager_t ::logAllConnections(const std::string &prefix)
-  {
-
-    for(uint i = 0 ; i <m_pieces.size();++i)
-    {
-      datapiece_t *dp = m_pieces[i];
-
-      std::string filename(prefix+dp->label()+string(".txt"));
-
-      ofstream outfile;
-      outfile.open(filename.c_str(),  std::ios::out|std::ios::trunc);
-
-      if(outfile.is_open() == false )
-      {
-        _LOG("failed to open log file");
-        break;
-      }
-
-      std::stringstream ss;
-
-      dp->msgraph->print_connections( (ostream&)ss);
-
-      outfile<<ss.str();
-    }
-
-  }
-
-  void data_manager_t::logAllCancelPairs(const std::string &prefix)
-  {
   }
 
   datapiece_t::datapiece_t (uint pno):

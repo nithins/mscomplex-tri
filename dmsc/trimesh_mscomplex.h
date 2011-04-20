@@ -98,7 +98,9 @@ namespace trimesh
 
     void write_discs(const std::string &fn_prefix);
 
-    void print_connections(std::ostream & os);
+    void save(std::ostream & os);
+
+    void save_manifolds(std::ostream & os);
   };
 
   typedef mscomplex_t::critpt_list_t           critpt_list_t;

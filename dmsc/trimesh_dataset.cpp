@@ -469,7 +469,7 @@ namespace trimesh
 
       uint     vi = m_critical_cells_vert[i];
 
-      msgraph->add_critpt(c,getCellDim(c),get_cell_fn(c),isBoundryCell(c),vi);
+      msgraph->add_critpt(c,getCellDim(c),m_vert_fns[vi],isBoundryCell(c),vi);
     }
 
 //    for (uint i = 0 ; i <m_critical_cells.size(); ++i)

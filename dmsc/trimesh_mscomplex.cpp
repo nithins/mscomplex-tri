@@ -175,57 +175,108 @@ namespace trimesh
     }
   }
 
-  void print_cp_connections(std::ostream & os,const mscomplex_t &msc,
-                            const conn_set_t &conn)
+  void mscomplex_t::save(std::ostream & os)
   {
+    os<<"# Num Cps"<<std::endl;
 
-    os<<"{ ";
-    for(conn_iter_t it = conn.begin(); it != conn.end(); ++it)
-    {
-      if(msc.m_cps[*it]->is_paired)
-        os<<"*";
-      os<<msc.m_cps[*it]->cellid;
-      os<<", ";
-    }
-    os<<"}";
-  }
+    os<<m_cps.size()<<std::endl;
 
-  void print_cp_contrib(std::ostream & os,const mscomplex_t &msc,
-                            const disc_contrib_t &contrib)
-  {
-    os<<"{ ";
-    for(disc_contrib_t::const_iterator it = contrib.begin(); it != contrib.end(); ++it)
-    {
-      if(msc.m_cps[*it]->is_paired)
-        os<<"*";
-      os<<msc.m_cps[*it]->cellid;
-      os<<", ";
-    }
-    os<<"}";
-  }
-
-
-
-  void mscomplex_t::print_connections(std::ostream & os)
-  {
-    const char *conn_dir_txt[] = {"des","asc"};
-
-    const char *contrib_dir_txt[] = {"des_contrib","asc_contrib"};
+    os<<"# SL.No  cpIdx  vertNo isPaired"<<std::endl;
 
     for(uint i = 0 ; i < m_cps.size();++i)
     {
-      if(m_cps[i]->is_paired)
-        os<<"*";
+      critpt_t * cp = m_cps[i];
 
-      os<<"cellid = "<<m_cps[i]->cellid<<"\n";
+      os<<i<<" ";
+      os<<(int)cp->index<<" ";
+      os<<cp->vert_idx<<" ";
+      os<<(bool)cp->is_paired<<" ";
+      os<<std::endl;
+    }
+
+    os<<"# numDes numAsc connList"<<std::endl;
+
+    for(uint i = 0 ; i < m_cps.size();++i)
+    {
+      critpt_t * cp = m_cps[i];
+
+      if(cp->is_paired == true)
+      {
+        os<<"0 0"<<std::endl;
+        continue;
+      }
+
+      os<<(int)cp->conn[0].size()<<" ";
+      os<<(int)cp->conn[1].size()<<" ";
 
       for(uint dir = 0 ; dir <2 ;++dir)
       {
-        os<<conn_dir_txt[dir]<<"=";
-        print_cp_connections(os,*this,m_cps[i]->conn[dir]);
-        os<<'\n';
+        conn_set_t &conn = cp->conn[dir];
+
+        for(conn_iter_t it = conn.begin(); it != conn.end(); ++it)
+        {
+          os<<*it<<" ";
+        }
       }
-      os<<'\n';
+      os<<std::endl;
+    }
+  }
+
+  void mscomplex_t::save_manifolds(std::ostream & os)
+  {
+    os<<"#SL.No cpIdx vertNo desCellCt ascCellCt"<<std::endl;
+    os<<"#cellid list (newline separated)"<<std::endl;
+
+    for(uint i = 0 ; i < m_cps.size();++i)
+    {
+      critpt_t * cp = m_cps[i];
+
+      cellid_list_t mfold_list[2];
+
+      for(int dir = 0 ; dir < GRADDIR_COUNT; ++dir)
+      {
+        std::set<cellid_t> cset;
+
+        for(uint j = 0 ; j < cp->contrib[dir].size();++j)
+        {
+          critpt_t *cp_contrib = m_cps[cp->contrib[dir][j]];
+
+          if(cp_contrib->index != cp->index)
+            throw std::logic_error("contrib and cp must have same idx");
+
+          for(uint k = 0; k < cp_contrib->disc[dir].size(); ++k)
+          {
+            cellid_t c = cp_contrib->disc[dir][k];
+
+            if(cset.count(c) == 0)
+              cset.insert(c);
+          }
+        }
+
+        mfold_list[dir].insert(mfold_list[dir].begin(),cset.begin(),cset.end());
+      }
+
+      switch(cp->index)
+      {
+      case 0: mfold_list[0].clear();break;
+      case 2: mfold_list[1].clear();break;
+      };
+
+      os<<i<<" ";
+      os<<(int)cp->index<<" ";
+      os<<cp->vert_idx<<" ";
+      os<<mfold_list[0].size()<<" ";
+      os<<mfold_list[1].size()<<" ";
+      os<<std::endl;
+
+      for(int dir = 0 ; dir < GRADDIR_COUNT; ++dir)
+      {
+        for(int j = 0 ; j < mfold_list[dir].size();++j)
+        {
+          os<<mfold_list[dir][j]<<std::endl;
+        }
+      }
+      os<<std::endl;
     }
   }
 
@@ -264,35 +315,59 @@ namespace trimesh
 
     persistence_comparator_t(mscomplex_t *m):m_msc(m){}
 
-    bool operator()(const uint_pair_t & p1, const uint_pair_t &p2)
+    bool operator()(const uint_pair_t & p0, const uint_pair_t &p1)
     {
-      cell_fn_t f1 = m_msc->m_cps[p1[0]]->fn;
-      cell_fn_t f2 = m_msc->m_cps[p1[1]]->fn;
-      cell_fn_t f3 = m_msc->m_cps[p2[0]]->fn;
-      cell_fn_t f4 = m_msc->m_cps[p2[1]]->fn;
+      return cmp_lt(p1,p0);
+    }
 
-      cell_fn_t d1 = std::abs(f2-f1);
-      cell_fn_t d2 = std::abs(f4-f3);
+    bool cmp_lt(uint_pair_t p0, uint_pair_t p1)
+    {
+      order_pr_by_cp_index(m_msc,p0);
+      order_pr_by_cp_index(m_msc,p1);
+
+      int v00 = m_msc->m_cps[p0[0]]->vert_idx;
+      int v01 = m_msc->m_cps[p0[1]]->vert_idx;
+      int v10 = m_msc->m_cps[p1[0]]->vert_idx;
+      int v11 = m_msc->m_cps[p1[1]]->vert_idx;
+
+      cellid_t c00 = m_msc->m_cps[p0[0]]->cellid;
+      cellid_t c01 = m_msc->m_cps[p0[1]]->cellid;
+      cellid_t c10 = m_msc->m_cps[p1[0]]->cellid;
+      cellid_t c11 = m_msc->m_cps[p1[1]]->cellid;
+
+      if( (v00 == v01 ) != (v10 == v11))
+        return (v00 == v01 );
+
+      if( (v00 == v01 ) &&(v10 == v11))
+      {
+        if(v00 == v10)
+        {
+          if(c00 != c10)
+            return c00 < c10;
+          else
+            return c01 < c11;
+        }
+        else
+        {
+          return (v00 < v10);
+        }
+      }
+
+      cell_fn_t f00 = m_msc->m_cps[p0[0]]->fn;
+      cell_fn_t f01 = m_msc->m_cps[p0[1]]->fn;
+      cell_fn_t f10 = m_msc->m_cps[p1[0]]->fn;
+      cell_fn_t f11 = m_msc->m_cps[p1[1]]->fn;
+
+      cell_fn_t d1 = std::abs(f01-f00);
+      cell_fn_t d2 = std::abs(f11-f10);
 
       if(d1 != d2)
-        return d1>d2;
+        return d1 < d2;
 
-      cellid_t c1 = m_msc->m_cps[p1[0]]->cellid;
-      cellid_t c2 = m_msc->m_cps[p1[1]]->cellid;
+      if(c00 != c10)
+        return c00 < c10;
 
-      cellid_t c3 = m_msc->m_cps[p2[0]]->cellid;
-      cellid_t c4 = m_msc->m_cps[p2[1]]->cellid;
-
-      if(c1 > c2)
-        std::swap(c1,c2);
-
-      if(c3 > c4)
-        std::swap(c3,c4);
-
-      if(c1 != c3)
-        return c1 > c3;
-
-      return c2 > c4;
+      return c01 < c11;
     }
   };
 
@@ -310,12 +385,16 @@ namespace trimesh
       if(!cp[dir]->is_boundry && cp[dir^1]->is_boundry)
         return false;
 
-
     for(uint dir = 0 ; dir < 2; ++dir)
       if(cp[dir]->conn[dir].count(e[dir^1]) != 1)
         return false;
 
     return true;
+  }
+
+  bool is_epsilon_persistent(mscomplex_t *msc,uint_pair_t e )
+  {
+    return (msc->m_cps[e[0]]->vert_idx == msc->m_cps[e[1]]->vert_idx);
   }
 
   void mscomplex_t::simplify(uint_pair_list_t & canc_pairs_list,
@@ -329,7 +408,7 @@ namespace trimesh
 
     canc_pair_priq_t  canc_pair_priq(comp);
 
-    cell_fn_t max_persistence = 0.0;
+
 
     cell_fn_t max_val = std::numeric_limits<cell_fn_t>::min();
     cell_fn_t min_val = std::numeric_limits<cell_fn_t>::max();
@@ -349,9 +428,7 @@ namespace trimesh
       }
     }
 
-    max_persistence = max_val - min_val;
-
-    _LOG_VAR(max_persistence);
+    double max_persistence = max_val - min_val;
 
     uint num_cancellations = 0;
 
@@ -361,10 +438,13 @@ namespace trimesh
 
       canc_pair_priq.pop();
 
-      cell_fn_t persistence = std::abs(m_cps[pr[0]]->fn-m_cps[pr[1]]->fn);
+      if(is_epsilon_persistent(this,pr) == false)
+      {
+        double persistence = std::abs(m_cps[pr[0]]->fn-m_cps[pr[1]]->fn)/max_persistence;
 
-      if((double)persistence/(double)max_persistence > simplification_treshold)
-        break;
+        if(persistence >= simplification_treshold)
+          break;
+      }
 
       if(is_valid_canc_edge(this,pr) == false)
         continue;

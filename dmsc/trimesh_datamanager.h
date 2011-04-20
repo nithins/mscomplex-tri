@@ -83,10 +83,6 @@ namespace trimesh
 
     void init();
 
-    void logAllConnections(const std::string &prefix);
-
-    void logAllCancelPairs(const std::string &prefix);
-
   };
 }
 
