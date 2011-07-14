@@ -26,6 +26,12 @@ namespace trimesh
     GRADDIR_ASCENDING,
     GRADDIR_COUNT,
   };
+
+  class  dataset_t;
+  class  mscomplex_t;
+
+  typedef boost::shared_ptr<dataset_t>   dataset_ptr_t;
+  typedef boost::shared_ptr<mscomplex_t> mscomplex_ptr_t;
 }
 
 #endif

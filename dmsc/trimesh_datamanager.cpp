@@ -41,43 +41,24 @@ namespace trimesh
 
   using namespace std;
 
-  void data_manager_t::init()
+  typedef float bin_data_type_t;
+
+  const   uint bin_fnname_max_size = 32;
+
+  template <typename T>
+  void read_bin_file(std::vector<T> &cell_fns, const string & fname,int compno)
   {
-    tri_idx_list_t tlist;
-    vertex_list_t  vlist;
-
-    glutils::read_tri_file(m_tri_filename.c_str(),vlist,tlist);
-
-    cell_fn_list_t cell_fns;
-
-    cell_fns.resize(vlist.size());
-
-
-    // read in function values
-
-    const   uint fnname_max_size = 32;
-
-    typedef float bin_data_type_t;
-
-    fstream fnfile ( m_bin_filename.c_str(), fstream::in | fstream::binary );
+    fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
 
     int num_bin_values, num_bin_comps;
 
     fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
     fnfile.read ( reinterpret_cast<char *> ( &num_bin_comps ), sizeof ( int ) );
 
-    if(num_bin_values != vlist.size())
-      throw std::runtime_error("tri / bin file num verts mismatch");
+    cell_fns.resize(num_bin_values,-1);
 
-    if(!(m_bin_comp_no < num_bin_comps))
-      throw std::runtime_error("selected scalar component does not exist");
-
-    char *fnnames = new char[num_bin_comps * fnname_max_size];
-
-    for ( uint i = 0; i < ( uint ) num_bin_comps; i++ )
-      fnfile.read ( fnnames + i * fnname_max_size, fnname_max_size );
-
-    fnfile.seekg ( sizeof ( bin_data_type_t ) * m_bin_comp_no, ios::cur );
+    fnfile.seekg ( bin_fnname_max_size*num_bin_comps, ios::cur );
+    fnfile.seekg ( sizeof ( bin_data_type_t ) * compno, ios::cur );
 
     for ( uint i = 0; i < ( uint ) num_bin_values; i++ )
     {
@@ -90,55 +71,53 @@ namespace trimesh
     }
 
     fnfile.close();
+  }
 
-    _LOG("------------------------");
-    _LOG(" scalar component names ");
-    _LOG("------------------------");
+  void print_bin_info(const string & fname)
+  {
+    fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
+
+    int num_bin_values, num_bin_comps;
+
+    fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
+    fnfile.read ( reinterpret_cast<char *> ( &num_bin_comps ), sizeof ( int ) );
+
+    char compname[bin_fnname_max_size];
+
+    _LOG ( " component names   ");
+    _LOG ( "-------------------" );
+
     for(uint i = 0 ; i < num_bin_comps;++i)
     {
-      _LOG(fnnames + i * fnname_max_size);
+      fnfile.read ( compname, bin_fnname_max_size );
+      _LOG(i<<") "<<compname);
     }
-    _LOG("------------------------");
-    _LOG("selected comp = "<< fnnames + m_bin_comp_no * fnname_max_size);
-    _LOG("------------------------");
-
-
-    delete fnnames;
-
-    datapiece_t * dp = m_pieces[0];
-
-    dp->dataset->init(cell_fns,tlist);
+    _LOG ( "-------------------" );
   }
 
-  void data_manager_t::createDataPieces()
+  void data_manager_t::init()
   {
-    datapiece_t * dp = new datapiece_t(0);
+    tri_idx_list_t tlist;
+    vertex_list_t  vlist;
+    cell_fn_list_t cell_fns;
 
-    dp->dataset = new dataset_t();
-    dp->msgraph = new mscomplex_t();
+    glutils::read_tri_file(m_tri_filename.c_str(),vlist,tlist);
 
-    m_pieces.push_back(dp);
-  }
+    print_bin_info(m_bin_filename);
 
-  void data_manager_t::destroyDataPieces()
-  {
-    for(uint i = 0 ; i < m_pieces.size(); ++i)
-    {
-      datapiece_t * dp = m_pieces[i];
+    read_bin_file(cell_fns,m_bin_filename,m_bin_comp_no);
 
-      delete dp->msgraph;
-      delete dp->dataset;
-      delete dp;
-    }
-    m_pieces.clear();
+    _LOG ( "selected comp = "<<m_bin_comp_no);
+    _LOG ( "-------------------" );
+
+
+    m_dataset->init(cell_fns,tlist);
   }
 
   void data_manager_t::work()
   {
     Timer t;
     t.start();
-
-    datapiece_t * dp = m_pieces[0];
 
     _LOG ( "===================" );
     _LOG ( "Starting Processing" );
@@ -148,36 +127,57 @@ namespace trimesh
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
 
-    dp->dataset->work();
+    m_dataset->work();
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
 
-    dp->dataset->writeout_connectivity(dp->msgraph);
+    m_dataset->writeout_connectivity(m_msgraph.get());
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
 
-    dp->msgraph->simplify_un_simplify(m_simp_tresh);
+    m_msgraph->simplify_un_simplify(m_simp_tresh);
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
 
-    dp->dataset->postMergeFillDiscs(dp->msgraph);
+    m_dataset->postMergeFillDiscs(m_msgraph.get());
 
     _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
     _LOG ( "-------------------" );
     _LOG ( "Finished Processing" );
     _LOG ( "===================" );
 
+  }
+
+  void data_manager_t::save()
+  {
+    _LOG ( "===================" );
+    _LOG ( " Saving Results    " );
+    _LOG ( "-------------------" );
+
+    _LOG ( " msgraph.txt       " );
+    _LOG ( "-------------------" );
     {
       std::fstream f("msgraph.txt",fstream::out);
-      dp->msgraph->save(f);
+      m_msgraph->save(f);
       f.close();
     }
 
+    _LOG ( " msmfolds.txt      " );
+    _LOG ( "-------------------" );
     {
+      vertex_list_t  vlist;
+      tri_cc_geom_t  geom;
+
+      glutils::read_tri_file(m_tri_filename.c_str(),vlist);
+      geom.init(m_dataset->m_tri_cc,vlist);
+
       std::fstream f("msmfolds.txt",fstream::out);
-      dp->msgraph->save_manifolds(f);
+      m_msgraph->save_manifolds(f,geom);
       f.close();
     }
+
+    _LOG ( " Finished Saving   " );
+    _LOG ( "===================" );
   }
 
 
@@ -190,29 +190,29 @@ namespace trimesh
       m_tri_filename(tri_file),
       m_bin_filename(bin_file),
       m_bin_comp_no(bin_comp),
-      m_simp_tresh(simp_tresh)
+      m_simp_tresh(simp_tresh),
+      m_dataset(new dataset_t),
+      m_msgraph(new mscomplex_t)
   {
-    createDataPieces();
   }
 
   data_manager_t::~data_manager_t()
   {
-    destroyDataPieces();
   }
 
-  datapiece_t::datapiece_t (uint pno):
-      dataset(NULL),
-      msgraph(NULL),
-      level(0),
-      m_pieceno(pno)
-  {
-  }
+//  datapiece_t::datapiece_t (uint pno):
+//      dataset(NULL),
+//      msgraph(NULL),
+//      level(0),
+//      m_pieceno(pno)
+//  {
+//  }
 
-  std::string datapiece_t::label()
-  {
-    std::stringstream ss;
-    ss<<m_pieceno;
+//  std::string datapiece_t::label()
+//  {
+//    std::stringstream ss;
+//    ss<<m_pieceno;
 
-    return ss.str();
-  }
+//    return ss.str();
+//  }
 }

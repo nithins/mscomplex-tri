@@ -33,31 +33,28 @@ namespace boost
 
 namespace trimesh
 {
-  class  mscomplex_t;
+//  struct datapiece_t
+//  {
+//    dataset_t   *dataset;
+//    mscomplex_t *msgraph;
 
-  class  dataset_t;
+//    uint level;
 
-  struct datapiece_t
-  {
-    dataset_t   *dataset;
-    mscomplex_t *msgraph;
+//    uint m_pieceno;
 
-    uint level;
+//    datapiece_t (uint l);
 
-    uint m_pieceno;
-
-    datapiece_t (uint l);
-
-    std::string label();
-  };
+//    std::string label();
+//  };
 
   class data_manager_t
   {
-    typedef std::vector<datapiece_t *> pieces_list_t;
 
   public:
 
-    pieces_list_t  m_pieces;
+    dataset_ptr_t   m_dataset;
+    mscomplex_ptr_t m_msgraph;
+
 
     std::string    m_tri_filename;
     std::string    m_bin_filename;
@@ -75,13 +72,11 @@ namespace trimesh
 
     ~data_manager_t ();
 
+    void init();
+
     void work();
 
-    void createDataPieces();
-
-    void destroyDataPieces();
-
-    void init();
+    void save();
 
   };
 }

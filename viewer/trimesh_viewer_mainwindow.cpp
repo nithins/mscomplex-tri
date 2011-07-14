@@ -203,6 +203,13 @@ namespace trimesh
     glviewer->updateGL();
   }
 
+  void viewer_mainwindow::on_show_surface_checkBox_clicked(bool state)
+  {
+    glviewer->m_ren->m_bShowSurface = state;
+
+    glviewer->updateGL();
+  }
+
   void viewer_mainwindow::clear_roi_aabb()
   {
     glviewer->m_ren->m_bShowRoiBB = false;

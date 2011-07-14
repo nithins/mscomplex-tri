@@ -26,6 +26,8 @@ template<typename T> std::string to_string(const T & t)
   return ss.str();
 }
 
+using namespace glutils;
+
 namespace trimesh
 {
   glutils::color_t g_cp_colors[gc_max_cell_dim+1] =
@@ -70,10 +72,11 @@ namespace trimesh
       (data_manager_t * gdm):
       m_scale_factor(0),
       m_bRebuildRens(true),m_bShowRoiBB(false),m_bCenterToRoi(false),
+      m_bShowSurface(false),
       m_gdm(gdm)
   {
-    for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
-      m_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_pieces.at(i),this));
+    //for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
+    m_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_dataset,m_gdm->m_msgraph,this));
   }
 
   viewer_t::~viewer_t()
@@ -112,7 +115,7 @@ namespace trimesh
 
     glEnable(GL_RESCALE_NORMAL);
 
-    glScalef(m_scale_factor,m_scale_factor,m_scale_factor);
+    glScalef(m_scale_factor,m_scale_factor,m_scale_factor*5);
 
     point_t s = ((m_extent.upper_corner() +  m_extent.lower_corner())/2);
 
@@ -144,6 +147,9 @@ namespace trimesh
       m_piece_rens[i]->render_dataset_data();
     }
 
+    if(m_bShowSurface)
+      m_surf_ren->render();
+
     glPopAttrib();
   }
 
@@ -161,8 +167,8 @@ namespace trimesh
   {
     glutils::init();
 
-    if(m_extent.eff_dim() == 0)
-      throw std::runtime_error("NULL extent for viewer");
+//    if(m_extent.eff_dim() == 0)
+//      throw std::runtime_error("NULL extent for viewer");
 
     glutils::tri_idx_list_t tlist;
 
@@ -179,6 +185,8 @@ namespace trimesh
     point_t s = m_extent.span();
 
     m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
+
+    m_surf_ren.reset(create_buffered_flat_triangles_ren(make_buf_obj(vlist),make_buf_obj(tlist)));
   }
 
   configurable_t::data_index_t viewer_t::dim()
@@ -192,7 +200,7 @@ namespace trimesh
 
     switch(idx[0])
     {
-    case 0: return s_exchange_data_ro(otprd->dp->label(),v);
+    case 0: return s_exchange_data_ro(std::string("0"),v);
     case 1: return s_exchange_data_rw(otprd->m_bShowAllCps,v);
     case 2: return s_exchange_data_rw(otprd->m_bShowCps[0],v);
     case 3: return s_exchange_data_rw(otprd->m_bShowCps[1],v);
@@ -227,7 +235,8 @@ namespace trimesh
   }
 
 
-  octtree_piece_rendata::octtree_piece_rendata (datapiece_t * _dp,viewer_t *v):
+  octtree_piece_rendata::octtree_piece_rendata
+      (dataset_ptr_t d,mscomplex_ptr_t m,viewer_t *v):
       m_bShowAllCps(false),
       m_bShowCpLabels ( false ),
       m_bShowMsGraph ( false ),
@@ -236,7 +245,8 @@ namespace trimesh
       m_bShowCancMsGraph(false),
       m_bNeedUpdateDiscRens(false),
       m_bShowCellNormals(false),
-      dp(_dp),
+      m_dataset(d),
+      m_msgraph(m),
       m_viewer(v)
   {
     using namespace boost::lambda;
@@ -271,20 +281,20 @@ namespace trimesh
 
   void  octtree_piece_rendata::create_cp_rens(const rect_t & roi)
   {
-    if(dp->msgraph == NULL)
+    if(m_msgraph == NULL)
       return;
 
     std::vector<glutils::point_idx_t>   crit_pt_idxs[gc_max_cell_dim+1];
     std::vector<glutils::line_idx_t>    crit_conn_idxs[gc_max_cell_dim];
 
-    for(uint i = 0; i < dp->msgraph->m_cps.size(); ++i)
+    for(uint i = 0; i < m_msgraph->m_cps.size(); ++i)
     {
-      if(dp->msgraph->m_cps[i]->is_paired)
+      if(m_msgraph->m_cps[i]->is_paired)
         continue;
 
-      cellid_t c = (dp->msgraph->m_cps[i]->cellid);
+      cellid_t c = (m_msgraph->m_cps[i]->cellid);
 
-      uint index = dp->msgraph->m_cps[i]->index;
+      uint index = m_msgraph->m_cps[i]->index;
 
       crit_pt_idxs[index].push_back(c);
     }
@@ -295,22 +305,22 @@ namespace trimesh
                       (cell_pos_bo,glutils::make_buf_obj(crit_pt_idxs[i])));
     }
 
-    for(uint i = 0 ; i < dp->msgraph->m_cps.size(); ++i)
+    for(uint i = 0 ; i < m_msgraph->m_cps.size(); ++i)
     {
-      if(dp->msgraph->m_cps[i]->isCancelled)
+      if(m_msgraph->m_cps[i]->isCancelled)
         continue;
 
-      if(dp->msgraph->m_cps[i]->is_paired)
+      if(m_msgraph->m_cps[i]->is_paired)
         continue;
 
-      cellid_t c = (dp->msgraph->m_cps[i]->cellid);
+      cellid_t c = (m_msgraph->m_cps[i]->cellid);
 
-      uint index = dp->msgraph->m_cps[i]->index;
+      uint index = m_msgraph->m_cps[i]->index;
 
-      for(conn_iter_t it  = dp->msgraph->m_cps[i]->conn[0].begin();
-      it != dp->msgraph->m_cps[i]->conn[0].end(); ++it)
+      for(conn_iter_t it  = m_msgraph->m_cps[i]->conn[0].begin();
+      it != m_msgraph->m_cps[i]->conn[0].end(); ++it)
       {
-        cellid_t c_ = dp->msgraph->m_cps[*it]->cellid;
+        cellid_t c_ = m_msgraph->m_cps[*it]->cellid;
 
         crit_conn_idxs[index-1].push_back(glutils::line_idx_t(c,c_));
       }
@@ -326,20 +336,20 @@ namespace trimesh
 
   void  octtree_piece_rendata::create_canc_cp_rens(const rect_t & roi)
   {
-    if(dp->msgraph == NULL)
+    if(m_msgraph == NULL)
       return;
 
     std::vector<glutils::point_idx_t>   canc_cp_idxs[gc_max_cell_dim+1];
     std::vector<glutils::line_idx_t>    canc_cp_conn_idxs[gc_max_cell_dim];
 
-    for(uint i = 0; i < dp->msgraph->m_cps.size(); ++i)
+    for(uint i = 0; i < m_msgraph->m_cps.size(); ++i)
     {
-      if(!dp->msgraph->m_cps[i]->is_paired)
+      if(!m_msgraph->m_cps[i]->is_paired)
         continue;
 
-      cellid_t c = (dp->msgraph->m_cps[i]->cellid);
+      cellid_t c = (m_msgraph->m_cps[i]->cellid);
 
-      uint index = dp->msgraph->m_cps[i]->index;
+      uint index = m_msgraph->m_cps[i]->index;
 
       canc_cp_idxs[index].push_back(c);
 
@@ -351,21 +361,21 @@ namespace trimesh
                            (cell_pos_bo,glutils::make_buf_obj(canc_cp_idxs[i])));
     }
 
-    for(uint i = 0 ; i < dp->msgraph->m_cps.size(); ++i)
+    for(uint i = 0 ; i < m_msgraph->m_cps.size(); ++i)
     {
-      if(!dp->msgraph->m_cps[i]->is_paired)
+      if(!m_msgraph->m_cps[i]->is_paired)
         continue;
 
-      cellid_t c = (dp->msgraph->m_cps[i]->cellid);
+      cellid_t c = (m_msgraph->m_cps[i]->cellid);
 
-      uint index = dp->msgraph->m_cps[i]->index;
+      uint index = m_msgraph->m_cps[i]->index;
 
       for(uint dir = 0 ; dir <2 ;++dir)
       {
-        for(conn_iter_t it  = dp->msgraph->m_cps[i]->conn[dir].begin();
-        it != dp->msgraph->m_cps[i]->conn[dir].end(); ++it)
+        for(conn_iter_t it  = m_msgraph->m_cps[i]->conn[dir].begin();
+        it != m_msgraph->m_cps[i]->conn[dir].end(); ++it)
         {
-          cellid_t c_ = dp->msgraph->m_cps[*it]->cellid;
+          cellid_t c_ = m_msgraph->m_cps[*it]->cellid;
 
           canc_cp_conn_idxs[index-(dir^1)].push_back
               (glutils::line_idx_t(c,c_));
@@ -389,14 +399,14 @@ namespace trimesh
 
   void octtree_piece_rendata::create_disc_rds()
   {
-    if(dp->msgraph == NULL)
+    if(m_msgraph == NULL)
       return;
 
     boost::shared_ptr<disc_rendata_t> sptr;
 
-    for(uint i = 0 ; i < dp->msgraph->m_cps.size();++i)
+    for(uint i = 0 ; i < m_msgraph->m_cps.size();++i)
     {
-      critpt_t * cp = dp->msgraph->m_cps[i];
+      critpt_t * cp = m_msgraph->m_cps[i];
 
       if(cp->is_paired) continue;
 
@@ -408,7 +418,7 @@ namespace trimesh
 
   void octtree_piece_rendata::update_active_disc_rens()
   {
-    if(dp->msgraph == NULL)
+    if(m_msgraph == NULL)
       return;
 
     for(uint i = 0 ; i < disc_rds.size();++i)
@@ -681,7 +691,7 @@ namespace trimesh
   }
 
   void get_disc_cells
-      (mscomplex_t * msgraph,uint cidx,uint dir,std::set<cellid_t> & cset)
+      (mscomplex_ptr_t msgraph,uint cidx,uint dir,std::set<cellid_t> & cset)
   {
 
     critpt_t *cp = msgraph->m_cps[cidx];
@@ -730,7 +740,7 @@ namespace trimesh
 
     typedef typeof(cset) cset_t;
 
-    get_disc_cells(drd->dp->msgraph,drd->dp->msgraph->m_id_cp_map[cellid],dir,cset);
+    get_disc_cells(drd->m_msgraph,drd->m_msgraph->m_id_cp_map[cellid],dir,cset);
 
     for(cset_t::iterator it = cset.begin(); it!= cset.end(); ++it)
     {
@@ -746,13 +756,13 @@ namespace trimesh
 
     for(uint dir = 0 ; dir<2;++dir)
     {
-      if(show[dir] && this->ren[dir] == NULL && drd->dp->msgraph)
+      if(show[dir] && this->ren[dir] == NULL && drd->m_msgraph)
       {
-        ensure_cellid_critical(drd->dp->msgraph,cellid);
+        ensure_cellid_critical(drd->m_msgraph.get(),cellid);
 
         std::set<cellid_t> cset;
 
-        get_disc_cells(drd->dp->msgraph,drd->dp->msgraph->m_id_cp_map[cellid],dir,cset);
+        get_disc_cells(drd->m_msgraph,drd->m_msgraph->m_id_cp_map[cellid],dir,cset);
 
         if(index == 1 && dir == 0)
         {

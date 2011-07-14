@@ -17,6 +17,8 @@
 
 #include <list>
 
+using namespace std;
+
 namespace trimesh
 {
 
@@ -179,7 +181,8 @@ namespace trimesh
 
 
   dataset_t::dataset_t () :
-      m_ptcomp(new pt_comp_t(this))
+      m_ptcomp(new pt_comp_t(this)),
+      m_tri_cc(new tri_cc_t)
   {
   }
 
@@ -198,13 +201,13 @@ namespace trimesh
 
     std::copy(vert_fns.begin(),vert_fns.end(),m_vert_fns.begin());
 
-    m_tri_cc.init(trilist,vert_fns.size());
+    m_tri_cc->init(trilist,vert_fns.size());
 
-    m_cell_flags.resize(m_tri_cc.get_num_cells(),0);
+    m_cell_flags.resize(m_tri_cc->get_num_cells(),0);
 
-    m_cell_pairs.resize(m_tri_cc.get_num_cells(),-1);
+    m_cell_pairs.resize(m_tri_cc->get_num_cells(),-1);
 
-    m_cell_own.resize(m_tri_cc.get_num_cells(),-1);
+    m_cell_own.resize(m_tri_cc->get_num_cells(),-1);
   }
 
   void  dataset_t::clear()
@@ -217,7 +220,7 @@ namespace trimesh
 
     m_cell_pairs.clear();
 
-    m_tri_cc.clear();
+    m_tri_cc->clear();
 
     m_critical_cells.clear();
 
@@ -274,17 +277,17 @@ namespace trimesh
 
   uint dataset_t::getCellPoints (cellid_t c,cellid_t  *p) const
   {
-    return m_tri_cc.get_cell_points(c,p);
+    return m_tri_cc->get_cell_points(c,p);
   }
 
   uint dataset_t::getCellFacets (cellid_t c,cellid_t *f) const
   {
-    return m_tri_cc.get_cell_facets(c,f);
+    return m_tri_cc->get_cell_facets(c,f);
   }
 
   uint dataset_t::getCellCofacets (cellid_t c,cellid_t *cf) const
   {
-    return m_tri_cc.get_cell_co_facets(c,cf);
+    return m_tri_cc->get_cell_co_facets(c,cf);
   }
 
   bool dataset_t::isPairOrientationCorrect (cellid_t c, cellid_t p) const
@@ -318,7 +321,7 @@ namespace trimesh
 
   uint dataset_t::getCellDim ( cellid_t c ) const
   {
-    return m_tri_cc.get_cell_dim(c);
+    return m_tri_cc->get_cell_dim(c);
   }
 
   void dataset_t::markCellCritical (cellid_t c)
@@ -328,7 +331,7 @@ namespace trimesh
 
   bool dataset_t::isBoundryCell (cellid_t c) const
   {
-    return m_tri_cc.is_cell_boundry(c);
+    return m_tri_cc->is_cell_boundry(c);
   }
 
   std::string dataset_t::getCellFunctionDescription (cellid_t c) const
@@ -359,11 +362,22 @@ namespace trimesh
     assignCellOwnerExtrema();
   }
 
+  template<typename est_it_t>
+  void log_est(dataset_t *ds,est_it_t begin, est_it_t end)
+  {
+    for(; begin != end;begin++)
+      cout<<ds->to_string(*begin);
+
+    cout<<endl;
+  }
+
   void  dataset_t::assignGradients()
   {
-    int num_verts = m_tri_cc.get_num_cells_dim(0);
-
     using namespace boost::lambda;
+
+    typedef std::list<cellid_t> cellid_llist_t;
+
+    int num_verts = m_tri_cc->get_num_cells_dim(0);
 
     BOOST_AUTO(cmp,bind(&dataset_t::compareCells,this,_1,_2));
 
@@ -373,13 +387,13 @@ namespace trimesh
 
     for(int i = 0 ; i < num_verts; ++i)
     {
-      int est_ct = m_tri_cc.get_vert_star(i,est+1);
+      int star_ct = m_tri_cc->get_vert_star(i,est+1);
+
+      int est_ct = 0;
 
       est[0] = i; est_ct++;
 
-      std::sort(est,est+est_ct,cmp);
-
-      for(int j = 0 ; j < est_ct ; ++j)
+      for(int j = 1 ; j < star_ct+1; ++j )
       {
         cellid_t vert[4];
 
@@ -389,14 +403,11 @@ namespace trimesh
 
         std::reverse(vert,vert+vert_ct);
 
-        if(vert[0] != i)
-        {
-          est_ct = j;
-          break;
-        }
+        if(vert[0] == i)
+          est[est_ct++] = est[j];
       }
 
-      typedef std::list<cellid_t> cellid_llist_t;
+      std::sort(est,est+est_ct,cmp);
 
       cellid_llist_t est_list(est,est+est_ct);
 
@@ -410,7 +421,7 @@ namespace trimesh
         {
           p_it--;
 
-          bool is_adj        = m_tri_cc.is_adjacent(*c_it,*p_it);
+          bool is_adj        = m_tri_cc->is_adjacent(*c_it,*p_it);
           bool is_same_bndry = (isBoundryCell(*c_it) == isBoundryCell(*p_it));
 
           if(is_adj && is_same_bndry)

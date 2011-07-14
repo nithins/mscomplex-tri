@@ -181,6 +181,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="show_surface_checkBox">
+              <property name="text">
+               <string>Show Surface</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
           <widget class="QTableView" name="datapiece_view">

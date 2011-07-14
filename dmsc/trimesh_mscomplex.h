@@ -100,7 +100,7 @@ namespace trimesh
 
     void save(std::ostream & os);
 
-    void save_manifolds(std::ostream & os);
+    void save_manifolds(std::ostream & os,const tri_cc_geom_t &geom);
   };
 
   typedef mscomplex_t::critpt_list_t           critpt_list_t;

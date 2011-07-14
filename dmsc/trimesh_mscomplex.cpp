@@ -7,6 +7,8 @@
 #include <trimesh_mscomplex_ensure.h>
 #include <limits>
 
+using namespace std;
+
 namespace trimesh
 {
   void mark_cancel_pair(mscomplex_t *msc,uint_pair_t e)
@@ -222,10 +224,48 @@ namespace trimesh
     }
   }
 
-  void mscomplex_t::save_manifolds(std::ostream & os)
+  void mscomplex_t::save_manifolds(ostream & os,const tri_cc_geom_t &geom)
   {
-    os<<"#SL.No cpIdx vertNo desCellCt ascCellCt"<<std::endl;
-    os<<"#cellid list (newline separated)"<<std::endl;
+    os<<"# Ascending and descending manifolds of critical points "<<endl;
+    os<<"# ------------------------------------------------------"<<endl;
+    os<<"# des manifold of a maximum is a set of tri indices.    "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"# des manifold of a saddle is a set of edges ..         "<<endl;
+    os<<"# ..edges are written as u v..                          "<<endl;
+    os<<"# ..(u,v) are the pair of vertices they separate.       "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"# asc manifold of a minimum is a set of vert indices.   "<<endl;
+    os<<"# ..verts are written as v n v0 t0 v1 t1 .. vn tn [vn+1]"<<endl;
+    os<<"# ..v is the vertex                                     "<<endl;
+    os<<"# ..n is number of vi,ti pairs                          "<<endl;
+    os<<"# ..vi ti are the verts of the edge (v,vi) and          "<<endl;
+    os<<"#   tri ti in the star of v                             "<<endl;
+    os<<"# ..[vn+1] is present if v is on boundry.               "<<endl;
+    os<<"# ..(v,vn+1) is the final edge of the star              "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"# asc manifold of a saddle is a set of edges            "<<endl;
+    os<<"# ..edges are written as u v t1 v1 [t2 v2]              "<<endl;
+    os<<"# ..(u,v) the pair of vertices they separate            "<<endl;
+    os<<"# ..t1,v1 tri adjacent to edge and the vert opposite    "<<endl;
+    os<<"# ..[t2,v2] other incident tri and opp vert  .          "<<endl;
+    os<<"# ..[t2,v2] will not exist only for edges on boundry.   "<<endl;
+    os<<"# ..if [t2,v2] does not exist then cell is critical.    "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"# All indices are w.r.t original tri file and 0 based   "<<endl;
+    os<<"#-------------------------------------------------------"<<endl;
+    os<<"#Num Cps                                                "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"#SL.No cpIdx vertNo isPaired desCellCt ascCellCt        "<<endl;
+    os<<"#descending cells (newline separated)                   "<<endl;
+    os<<"#ascending cells  (newline separated)                   "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"#SL.No cpIdx vertNo isPaired desCellCt ascCellCt        "<<endl;
+    os<<"#descending cells (newline separated)                   "<<endl;
+    os<<"#ascending cells  (newline separated)                   "<<endl;
+    os<<"#                                                       "<<endl;
+    os<<"#...                                                    "<<endl;
+
+    int tri_offset = geom.get_num_cells_max_dim(1);
 
     for(uint i = 0 ; i < m_cps.size();++i)
     {
@@ -233,27 +273,30 @@ namespace trimesh
 
       cellid_list_t mfold_list[2];
 
-      for(int dir = 0 ; dir < GRADDIR_COUNT; ++dir)
+      if(cp->is_paired == false)
       {
-        std::set<cellid_t> cset;
-
-        for(uint j = 0 ; j < cp->contrib[dir].size();++j)
+        for(int dir = 0 ; dir < GRADDIR_COUNT; ++dir)
         {
-          critpt_t *cp_contrib = m_cps[cp->contrib[dir][j]];
+          set<cellid_t> cset;
 
-          if(cp_contrib->index != cp->index)
-            throw std::logic_error("contrib and cp must have same idx");
-
-          for(uint k = 0; k < cp_contrib->disc[dir].size(); ++k)
+          for(uint j = 0 ; j < cp->contrib[dir].size();++j)
           {
-            cellid_t c = cp_contrib->disc[dir][k];
+            critpt_t *cp_contrib = m_cps[cp->contrib[dir][j]];
 
-            if(cset.count(c) == 0)
-              cset.insert(c);
+            if(cp_contrib->index != cp->index)
+              throw logic_error("contrib and cp must have same idx");
+
+            for(uint k = 0; k < cp_contrib->disc[dir].size(); ++k)
+            {
+              cellid_t c = cp_contrib->disc[dir][k];
+
+              if(cset.count(c) == 0)
+                cset.insert(c);
+            }
           }
-        }
 
-        mfold_list[dir].insert(mfold_list[dir].begin(),cset.begin(),cset.end());
+          mfold_list[dir].insert(mfold_list[dir].begin(),cset.begin(),cset.end());
+        }
       }
 
       switch(cp->index)
@@ -262,21 +305,116 @@ namespace trimesh
       case 2: mfold_list[1].clear();break;
       };
 
-      os<<i<<" ";
-      os<<(int)cp->index<<" ";
-      os<<cp->vert_idx<<" ";
+      os<<i                   <<" ";
+      os<<(int)cp->index      <<" ";
+      os<<cp->vert_idx        <<" ";
+      os<<(bool)cp->is_paired <<" ";
       os<<mfold_list[0].size()<<" ";
       os<<mfold_list[1].size()<<" ";
-      os<<std::endl;
+      os<<endl;
 
-      for(int dir = 0 ; dir < GRADDIR_COUNT; ++dir)
+      switch(cp->index)
       {
-        for(int j = 0 ; j < mfold_list[dir].size();++j)
+      case 0:
         {
-          os<<mfold_list[dir][j]<<std::endl;
+          for(int j = 0 ; j < mfold_list[GRADDIR_ASCENDING].size();++j)
+          {
+            cellid_t c = mfold_list[GRADDIR_ASCENDING][j];
+
+            cellid_t star[40];
+
+            int star_ct = geom.get_vert_star(c,star);
+
+            os<<c<<" "<<(int)(star_ct/2)<<" ";
+
+            for(int k = 0 ; k < star_ct;++k)
+            {
+              if(k%2 == 0)
+              {
+                cellid_t fct[2];
+
+                if(geom.get_cell_facets(star[k],fct) != 2)
+                  throw std::runtime_error("unexpected facet ct for edge");
+
+                cellid_t ov =fct[0];
+
+                if(ov == c)
+                  ov = fct[1];
+
+                os<<ov<<" ";
+              }
+              else
+              {
+                os<<(int)(star[k] - tri_offset)<<" ";
+              }
+            }
+            os<<endl;
+          }
+          break;
+        }
+      case 2:
+        {
+          for(int j = 0 ; j < mfold_list[GRADDIR_DESCENDING].size();++j)
+          {
+            os<<(mfold_list[GRADDIR_DESCENDING][j]-tri_offset)<<endl;
+          }
+          break;
+        }
+      case 1:
+        {
+          for(int j = 0 ; j < mfold_list[GRADDIR_DESCENDING].size();++j)
+          {
+            cellid_t fct[10];
+
+            cellid_t c = mfold_list[GRADDIR_DESCENDING][j];
+
+            if(geom.get_cell_facets(c,fct) != 2)
+              throw std::runtime_error("incorrect cofacet count");
+
+            os<<fct[0]<<" "<<fct[1]<<endl;
+          }
+
+          for(int j = 0 ; j < mfold_list[GRADDIR_ASCENDING].size();++j)
+          {
+            cellid_t fct[10],cfct[10],pt[10],op_pt[10];
+
+            cellid_t c = mfold_list[GRADDIR_ASCENDING][j];
+
+            if(geom.get_cell_facets(c,fct) != 2)
+              throw std::runtime_error("incorrect facet count");
+
+            uint cfct_ct = geom.get_cell_co_facets(c,cfct);
+
+            if(((cfct_ct == 2) || ((cfct_ct == 1) && (c == cp->cellid)))==false)
+              throw std::runtime_error("incorrect cofacet count");
+
+            for (int k = 0 ; k < cfct_ct; ++k)
+            {
+              if(geom.get_cell_points(cfct[k],pt) != 3 )
+                throw std::runtime_error("invalid pt count");
+
+              op_pt[k] = pt[0];
+
+              if(op_pt[k] == fct[0] ||op_pt[k] == fct[1])
+                op_pt[k] = pt[1];
+
+              if(op_pt[k] == fct[0]||op_pt[k] == fct[1])
+                op_pt[k] = pt[2];
+
+              cfct[k] -= tri_offset;
+            }
+
+          os<<fct[0]<<" "<<fct[1]<<" "<<cfct[0]<<" "<<op_pt[0]<<" ";
+
+          if(cfct_ct == 2)
+            os<<cfct[0]<<" "<<op_pt[0]<<" ";
+
+          os<<endl;
+          }
         }
       }
-      os<<std::endl;
+
+      os<<endl;
     }
   }
 

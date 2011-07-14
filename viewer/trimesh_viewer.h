@@ -11,10 +11,6 @@
 
 namespace trimesh
 {
-  class datapiece_t ;
-
-  class mscomplex_t;
-
   typedef aabb::aabb_t<double,3>          rect_t;
   typedef aabb::aabb_t<double,3>::point_t point_t;
 
@@ -53,8 +49,9 @@ namespace trimesh
   {
   public:
 
-    viewer_t    * m_viewer;
-    datapiece_t * dp;
+    viewer_t      * m_viewer;
+    dataset_ptr_t   m_dataset;
+    mscomplex_ptr_t m_msgraph;
 
     // set externally to control what is rendered
     bool m_bShowCps[gc_max_cell_dim+1];
@@ -103,7 +100,7 @@ namespace trimesh
     void render_msgraph_data() ;
     void render_dataset_data() ;
 
-    octtree_piece_rendata(datapiece_t *,viewer_t *);
+    octtree_piece_rendata(dataset_ptr_t, mscomplex_ptr_t,viewer_t *);
     void init(const tri_idx_list_t &,const vertex_list_t &);
 
     // configurable_t interface
@@ -127,11 +124,13 @@ namespace trimesh
     rect_t                                 m_extent;
     double                                 m_scale_factor;
     point_t                                m_roi_base_pt;
+    renderable_sp_t                        m_surf_ren;
 
   public:
-    bool                                   m_bShowRoiBB;
-    bool                                   m_bRebuildRens;
-    bool                                   m_bCenterToRoi;
+    bool m_bShowRoiBB;
+    bool m_bRebuildRens;
+    bool m_bCenterToRoi;
+    bool m_bShowSurface;
 
     data_manager_t *                       m_gdm;
 

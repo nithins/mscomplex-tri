@@ -27,6 +27,8 @@ int main(int ac , char **av)
 
   bool   gui = false;
 
+  bool write =  false;
+
   bpo::options_description desc("Allowed options");
   desc.add_options()
       ("help,h", "produce help message")
@@ -35,6 +37,7 @@ int main(int ac , char **av)
       ("simp-tresh,s",bpo::value<double>(),"simplification treshold")
       ("bin-file-comp,c",bpo::value<int>(),"scalar component number")
       ("gui,g","show gui")
+      ("write,w","save results to msgraph.txt and msmfolds.txt")
       ;
 
 
@@ -67,10 +70,16 @@ int main(int ac , char **av)
   if (vm.count("gui"))
     gui = true;
 
+  if(vm.count("write"))
+    write = true;
+
   trimesh::data_manager_t * gdm = new trimesh::data_manager_t
       (tri_filename,bin_filename,bin_comp_no,simp_tresh);
 
   gdm->work();
+
+  if(write)
+    gdm->save();
 
   if(gui)
   {
