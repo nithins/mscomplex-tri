@@ -24,12 +24,13 @@ namespace trimesh
 
     cellid_t               cellid;
     uint                   index;
+    cellid_t               vert_no;
 
     glutils::renderable_t *ren[GRADDIR_COUNT];
     bool                   show[GRADDIR_COUNT];
     glutils::color_t       color[GRADDIR_COUNT];
 
-    disc_rendata_t(cellid_t c,uint i);
+    disc_rendata_t(cellid_t c,uint i,cellid_t vno);
     ~disc_rendata_t();
 
     void render();

@@ -410,7 +410,7 @@ namespace trimesh
 
       if(cp->is_paired) continue;
 
-      sptr.reset(new disc_rendata_t(cp->cellid,cp->index));
+      sptr.reset(new disc_rendata_t(cp->cellid,cp->index,cp->vert_idx));
 
       disc_rds.push_back(sptr);
     }
@@ -597,7 +597,7 @@ namespace trimesh
 
   configurable_t::data_index_t octtree_piece_rendata::dim()
   {
-    return data_index_t(10,disc_rds.size());
+    return data_index_t(11,disc_rds.size());
   }
 
   bool octtree_piece_rendata::exchange_field
@@ -634,7 +634,8 @@ namespace trimesh
     case 8:
     case 9:
       return s_exchange_action(spin_image_creator(drd,this,i%2),v);
-
+    case 10:
+      return s_exchange_data_ro((int)drd->vert_no,v);
     };
 
      throw std::logic_error("octtree_piece_rendata::invalid index");
@@ -655,12 +656,14 @@ namespace trimesh
     case 7: v = std::string("rand asc mflod color"); return EFT_ACTION;
     case 8: v = std::string("create des spin img"); return EFT_ACTION;
     case 9: v = std::string("create asc spin img"); return EFT_ACTION;
+    case 10: v = std::string("vert no"); return EFT_DATA_RO;
 
     }
     throw std::logic_error("octtree_piece_rendata::invalid index");
   }
 
-  disc_rendata_t::disc_rendata_t(cellid_t c,uint i):cellid(c),index(i)
+  disc_rendata_t::disc_rendata_t(cellid_t c,uint i,cellid_t v_no):
+      cellid(c),index(i),vert_no(v_no)
   {
     color[0] = g_disc_colors[1][index];
     color[1] = g_disc_colors[0][index];
