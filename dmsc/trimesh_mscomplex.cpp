@@ -183,7 +183,7 @@ namespace trimesh
 
     os<<m_cps.size()<<std::endl;
 
-    os<<"# SL.No  cpIdx  vertNo isPaired"<<std::endl;
+    os<<"# SL.No  cpIdx isPaired pair_idx vertNo fn "<<std::endl;
 
     for(uint i = 0 ; i < m_cps.size();++i)
     {
@@ -191,23 +191,27 @@ namespace trimesh
 
       os<<i<<" ";
       os<<(int)cp->index<<" ";
-      os<<cp->vert_idx<<" ";
       os<<(bool)cp->is_paired<<" ";
+      os<<(int)cp->pair_idx<<" ";
+      os<<cp->vert_idx<<" ";
+      os<<(cell_fn_t)cp->fn<<" ";
+
       os<<std::endl;
     }
 
-    os<<"# numDes numAsc connList"<<std::endl;
+    os<<"#slno numDes numAsc connList"<<std::endl;
 
     for(uint i = 0 ; i < m_cps.size();++i)
     {
       critpt_t * cp = m_cps[i];
+
+      os<<(int)i<<" ";
 
       if(cp->is_paired == true)
       {
         os<<"0 0"<<std::endl;
         continue;
       }
-
       os<<(int)cp->conn[0].size()<<" ";
       os<<(int)cp->conn[1].size()<<" ";
 
@@ -255,17 +259,15 @@ namespace trimesh
     os<<"#-------------------------------------------------------"<<endl;
     os<<"#Num Cps                                                "<<endl;
     os<<"#                                                       "<<endl;
-    os<<"#SL.No cpIdx vertNo isPaired desCellCt ascCellCt        "<<endl;
-    os<<"#descending cells (newline separated)                   "<<endl;
-    os<<"#ascending cells  (newline separated)                   "<<endl;
-    os<<"#                                                       "<<endl;
-    os<<"#SL.No cpIdx vertNo isPaired desCellCt ascCellCt        "<<endl;
+    os<<"#cpIdx isPaired pair_idx vertNo fn desCellCt ascCellCt  "<<endl;
     os<<"#descending cells (newline separated)                   "<<endl;
     os<<"#ascending cells  (newline separated)                   "<<endl;
     os<<"#                                                       "<<endl;
     os<<"#...                                                    "<<endl;
 
     int tri_offset = geom.get_num_cells_max_dim(1);
+
+    os<<m_cps.size()<<endl;
 
     for(uint i = 0 ; i < m_cps.size();++i)
     {
@@ -305,10 +307,13 @@ namespace trimesh
       case 2: mfold_list[1].clear();break;
       };
 
-      os<<i                   <<" ";
-      os<<(int)cp->index      <<" ";
-      os<<cp->vert_idx        <<" ";
-      os<<(bool)cp->is_paired <<" ";
+      os<<i<<" ";
+      os<<(int)cp->index<<" ";
+      os<<(bool)cp->is_paired<<" ";
+      os<<(int)cp->pair_idx<<" ";
+      os<<cp->vert_idx<<" ";
+      os<<(cell_fn_t)cp->fn<<" ";
+
       os<<mfold_list[0].size()<<" ";
       os<<mfold_list[1].size()<<" ";
       os<<endl;
@@ -407,14 +412,13 @@ namespace trimesh
           os<<fct[0]<<" "<<fct[1]<<" "<<cfct[0]<<" "<<op_pt[0]<<" ";
 
           if(cfct_ct == 2)
-            os<<cfct[0]<<" "<<op_pt[0]<<" ";
+            os<<cfct[1]<<" "<<op_pt[1]<<" ";
 
           os<<endl;
           }
         }
       }
 
-      os<<endl;
     }
   }
 
@@ -576,6 +580,8 @@ namespace trimesh
 
       canc_pair_priq.pop();
 
+      if(is_valid_canc_edge(this,pr) == false)
+        continue;
       if(is_epsilon_persistent(this,pr) == false)
       {
         double persistence = std::abs(m_cps[pr[0]]->fn-m_cps[pr[1]]->fn)/max_persistence;
@@ -583,9 +589,6 @@ namespace trimesh
         if(persistence >= simplification_treshold)
           break;
       }
-
-      if(is_valid_canc_edge(this,pr) == false)
-        continue;
 
       uint_pair_list_t new_edges;
 

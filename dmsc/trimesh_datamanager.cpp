@@ -84,15 +84,15 @@ namespace trimesh
 
     char compname[bin_fnname_max_size];
 
-    _LOG ( " component names   ");
-    _LOG ( "-------------------" );
+    cout<<"        component names             "<<endl;
+    cout<<"------------------------------------"<<endl;
 
     for(uint i = 0 ; i < num_bin_comps;++i)
     {
       fnfile.read ( compname, bin_fnname_max_size );
-      _LOG(i<<") "<<compname);
+      cout<<i<<". "<<compname<<endl;
     }
-    _LOG ( "-------------------" );
+    cout<<"------------------------------------"<<endl;
   }
 
   void data_manager_t::init()
@@ -107,9 +107,8 @@ namespace trimesh
 
     read_bin_file(cell_fns,m_bin_filename,m_bin_comp_no);
 
-    _LOG ( "selected comp = "<<m_bin_comp_no);
-    _LOG ( "-------------------" );
-
+    cout<<"selected comp = "<<m_bin_comp_no<<endl;
+    cout<<"------------------------------------"<<endl;
 
     m_dataset->init(cell_fns,tlist);
   }
@@ -119,38 +118,59 @@ namespace trimesh
     Timer t;
     t.start();
 
-    _LOG ( "===================" );
-    _LOG ( "Starting Processing" );
-    _LOG ( "-------------------" );
+    cout<<"===================================="<<endl;
+    cout<<"         Starting Processing        "<<endl;
+    cout<<"------------------------------------"<<endl;
 
     init();
-
-    _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
+    cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     m_dataset->work();
-
-    _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
+    cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
     m_dataset->writeout_connectivity(m_msgraph.get());
+    cout<<"msgraph done ------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
+    {
+      std::fstream f((m_tri_filename+".full.graph.txt").c_str(),fstream::out);
+      m_msgraph->save(f);
+      f.close();
+    }
+    cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     m_msgraph->simplify_un_simplify(m_simp_tresh);
+    cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
+    {
+      std::fstream f((m_tri_filename+".graph.txt").c_str(),fstream::out);
+      m_msgraph->save(f);
+      f.close();
+    }
+    cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     m_dataset->postMergeFillDiscs(m_msgraph.get());
+    {
+      vertex_list_t  vlist;
+      tri_cc_geom_t  geom;
 
-    _LOG ("timer_time = "<<t.getElapsedTimeInMilliSec());
-    _LOG ( "-------------------" );
-    _LOG ( "Finished Processing" );
-    _LOG ( "===================" );
+      glutils::read_tri_file(m_tri_filename.c_str(),vlist);
+      geom.init(m_dataset->m_tri_cc,vlist);
+
+      std::fstream f((m_tri_filename+".mfold.txt").c_str(),fstream::out);
+      m_msgraph->save_manifolds(f,geom);
+      f.close();
+    }
+    cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
+
+    cout<<"------------------------------------"<<endl;
+    cout<<"        Finished Processing         "<<endl;
+    cout<<"===================================="<<endl;
 
   }
 
   void data_manager_t::save()
   {
-    _LOG ( "===================" );
+/*    _LOG ( "===================" );
     _LOG ( " Saving Results    " );
     _LOG ( "-------------------" );
 
@@ -177,9 +197,8 @@ namespace trimesh
     }
 
     _LOG ( " Finished Saving   " );
-    _LOG ( "===================" );
+    _LOG ( "===================" );*/
   }
-
 
   data_manager_t::data_manager_t(
       std::string tri_file,
