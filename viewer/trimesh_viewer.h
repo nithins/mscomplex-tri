@@ -5,6 +5,7 @@
 #include <glutils.h>
 #include <cpputils.h>
 #include <aabb.h>
+#include <configurable.h>
 
 #include <trimesh.h>
 #include <spin_image.h>
