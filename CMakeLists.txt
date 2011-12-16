@@ -28,6 +28,8 @@ find_package(PythonInterp REQUIRED)
 
 add_subdirectory(utls)
 
+option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
+
 set(dmsc_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh.h
 
@@ -77,11 +79,14 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/viewer/
   ${utls_SOURCE_DIR}/include
   ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/utls/
   ${QT_ADDITIONAL_INCLUDE_PATHS}
   ${QGLVIEWER_INCLUDE_DIR}
   ${Boost_INCLUDE_DIRS}
   ${QXT_INCLUDE_DIRS}
   )
+
+configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
 
 add_executable(${PROJECT_NAME}
   ${dmsc_SRCS}

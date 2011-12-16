@@ -1,0 +1,2 @@
+#cmakedefine NO_GUI
+#cmakedefine VIEWER_RENDER_AWESOME

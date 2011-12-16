@@ -34,7 +34,7 @@ namespace trimesh
     disc_rendata_t(cellid_t c,uint i,cellid_t vno);
     ~disc_rendata_t();
 
-    void render();
+    void render(double data_dia);
     bool update(octtree_piece_rendata *);
 
     spin::spin_image_ptr_t compute_spin_image(octtree_piece_rendata *,uint dir);
@@ -124,7 +124,7 @@ namespace trimesh
     std::vector<octtree_piece_rendata * >  m_piece_rens;
     rect_t                                 m_roi;
     rect_t                                 m_extent;
-    double                                 m_scale_factor;
+    double                                 m_data_dia;
     point_t                                m_roi_base_pt;
     renderable_sp_t                        m_surf_ren;
 

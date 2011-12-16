@@ -19,6 +19,16 @@
 #include <trimesh_mscomplex_ensure.h>
 #include <trimesh_dataset.h>
 
+#include <config.h>
+
+#ifndef VIEWER_RENDER_AWESOME
+double g_max_cp_size  = 8.0;
+#else
+double g_max_cp_size  = 0.025;
+#endif
+
+double g_max_cp_raise = 0.1;
+
 template<typename T> std::string to_string(const T & t)
 {
   std::stringstream ss;
@@ -70,7 +80,7 @@ namespace trimesh
 
   viewer_t::viewer_t
       (data_manager_t * gdm):
-      m_scale_factor(0),
+      m_data_dia(0),
       m_bRebuildRens(true),m_bShowRoiBB(false),m_bCenterToRoi(false),
       m_bShowSurface(false),
       m_gdm(gdm)
@@ -115,7 +125,7 @@ namespace trimesh
 
     glEnable(GL_RESCALE_NORMAL);
 
-    glScalef(m_scale_factor,m_scale_factor,m_scale_factor*5);
+    glScalef(1.0/m_data_dia,1.0/m_data_dia,1.0/m_data_dia);
 
     point_t s = ((m_extent.upper_corner() +  m_extent.lower_corner())/2);
 
@@ -165,6 +175,7 @@ namespace trimesh
 
   void viewer_t::init()
   {
+
     glutils::init();
 
 //    if(m_extent.eff_dim() == 0)
@@ -184,7 +195,7 @@ namespace trimesh
 
     point_t s = m_extent.span();
 
-    m_scale_factor =1.0/ *std::max_element(s.begin(),s.end());
+    m_data_dia = *std::max_element(s.begin(),s.end());
 
     m_surf_ren.reset(create_buffered_flat_triangles_ren(make_buf_obj(vlist),make_buf_obj(tlist)));
   }
@@ -441,7 +452,15 @@ namespace trimesh
 
     glDisable ( GL_LIGHTING );
 
-    glPointSize ( 4.0 );
+#ifndef VIEWER_RENDER_AWESOME
+    glPointSize ( g_max_cp_size );
+
+    glEnable(GL_POINT_SMOOTH);
+#else
+    g_sphere_shader->use();
+
+    g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size*m_viewer->m_data_dia));
+#endif
 
     for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
     {
@@ -456,6 +475,9 @@ namespace trimesh
       }
     }
 
+#ifdef VIEWER_RENDER_AWESOME
+    g_sphere_shader->sendUniform("g_wc_radius",(float)g_max_cp_size*2/3);
+#endif
 
     if ( m_bShowCancCps)
     {
@@ -473,6 +495,10 @@ namespace trimesh
         }
       }
     }
+
+#ifdef VIEWER_RENDER_AWESOME
+    g_sphere_shader->disable();
+#endif
 
     if (m_bShowMsGraph)
     {
@@ -533,7 +559,7 @@ namespace trimesh
     for(disc_rendata_sp_set_t::iterator it = active_disc_rens[1].begin();
         it != active_disc_rens[1].end() ; ++it)
     {
-      (*it)->render();
+      (*it)->render(m_viewer->m_data_dia);
     }
 
     glEnable ( GL_LIGHTING );
@@ -541,13 +567,13 @@ namespace trimesh
     for(disc_rendata_sp_set_t::iterator it = active_disc_rens[0].begin();
         it != active_disc_rens[0].end() ; ++it)
     {
-      (*it)->render();
+      (*it)->render(m_viewer->m_data_dia);
     }
 
     for(disc_rendata_sp_set_t::iterator it = active_disc_rens[2].begin();
         it != active_disc_rens[2].end() ; ++it)
     {
-      (*it)->render();
+      (*it)->render(m_viewer->m_data_dia);
     }
 
     glColor3dv(g_normals_color.data());
@@ -681,14 +707,30 @@ namespace trimesh
 
   }
 
-  void disc_rendata_t::render()
+  void disc_rendata_t::render(double data_dia)
   {
     for(uint dir = 0 ; dir<2;++dir)
     {
       if(show[dir] && ren[dir])
       {
+#ifdef VIEWER_RENDER_AWESOME
+        if(index == 1)
+        {
+          g_cylinder_shader->use();
+
+          g_cylinder_shader->sendUniform("ug_cylinder_radius",float(g_max_cp_size*data_dia/3.0));
+        }
+#endif
         glColor3dv(color[dir].data());
         ren[dir]->render();
+
+#ifdef VIEWER_RENDER_AWESOME
+        if(index == 1)
+        {
+          g_cylinder_shader->disable();
+        }
+#endif
+
       }
     }
   }
@@ -820,7 +862,7 @@ namespace trimesh
 
             drd->tri_cc_geom->get_cell_points(*it,pt);
 
-            t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[2],pt[1]));
+            t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[1],pt[2]));
 
           }
 
