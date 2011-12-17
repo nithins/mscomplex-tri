@@ -37,6 +37,7 @@ template<typename T> std::string to_string(const T & t)
 }
 
 using namespace glutils;
+using namespace std;
 
 namespace trimesh
 {
@@ -795,90 +796,118 @@ namespace trimesh
     return si;
   }
 
-  bool disc_rendata_t::update(octtree_piece_rendata *drd)
+  template<eGradientDirection dir>
+  inline int get_edge_pts(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc);
+
+  template<>
+  inline int get_edge_pts<GRADDIR_DESCENDING>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
+  {
+    return tcc.get_cell_points(e,pts);
+  }
+
+  template<>
+  inline int get_edge_pts<GRADDIR_ASCENDING>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
+  {
+    int ncf = tcc.get_cell_co_facets(e,pts);
+    pts[2] = pts[1]; pts[1] = e;
+    return ncf+1;
+  }
+
+  template<eGradientDirection dir>
+  void update_saddle_mfold(disc_rendata_t *drd,octtree_piece_rendata *dp)
+  {
+    set<cellid_t> cset;
+
+    map<cellid_t,int> pt_idx;
+
+    get_disc_cells(dp->m_msgraph,dp->m_msgraph->m_id_cp_map[drd->cellid],dir,cset);
+
+    glutils::line_idx_list_t e_idxs;
+
+    for(set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
+    {
+      cellid_t pt[20];
+
+      dp->tri_cc_geom->get_cell_points(*it,pt);
+
+      int npts = get_edge_pts<dir>(*it,pt,*dp->tri_cc_geom);
+
+      if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
+      if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
+      e_idxs.push_back(glutils::line_idx_t(pt_idx[pt[0]],pt_idx[pt[1]]));
+
+      if(dir == GRADDIR_DESCENDING) continue;
+
+      if(npts < 3) continue;
+
+      if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
+      e_idxs.push_back(glutils::line_idx_t(pt_idx[pt[1]],pt_idx[pt[2]]));
+    }
+
+    glutils::vertex_list_t pts(pt_idx.size());
+
+    for(map<cellid_t,int>::iterator it = pt_idx.begin(); it!= pt_idx.end();++it)
+      pts[it->second] = dp->tri_cc_geom->get_cell_position(it->first);
+
+    glutils::smooth_lines(pts,e_idxs,4);
+
+    drd->ren[dir] = glutils::create_buffered_lines_ren
+                    (glutils::make_buf_obj(pts),glutils::make_buf_obj(e_idxs));
+  }
+
+  bool disc_rendata_t::update(octtree_piece_rendata *dp)
   {
     using namespace boost::lambda;
 
     for(uint dir = 0 ; dir<2;++dir)
     {
-      if(show[dir] && this->ren[dir] == NULL && drd->m_msgraph)
+      if(show[dir] && this->ren[dir] == NULL && dp->m_msgraph)
       {
-        ensure_cellid_critical(drd->m_msgraph.get(),cellid);
+        ensure_cellid_critical(dp->m_msgraph.get(),cellid);
 
-        std::set<cellid_t> cset;
-
-        get_disc_cells(drd->m_msgraph,drd->m_msgraph->m_id_cp_map[cellid],dir,cset);
-
-        if(index == 1 && dir == 0)
+        if(index == 1)
         {
-          glutils::line_idx_list_t e_idxs;
-
-          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
-          {
-            cellid_t pt[20];
-
-            drd->tri_cc_geom->get_cell_points(*it,pt);
-
-            e_idxs.push_back(glutils::line_idx_t(pt[0],pt[1]));
-
-          }
-
-          ren[dir] = glutils::create_buffered_lines_ren
-                     (drd->cell_pos_bo,
-                      glutils::make_buf_obj(e_idxs));
-
-        }
-
-        if(index == 1 && dir == 1)
-        {
-          glutils::line_idx_list_t e_idxs;
-
-          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
-          {
-            cellid_t cf[20];
-
-            uint cf_ct = drd->tri_cc_geom->get_cell_co_facets(*it,cf);
-
-            e_idxs.push_back(glutils::line_idx_t(*it,cf[0]));
-
-            if(cf_ct == 2)
-              e_idxs.push_back(glutils::line_idx_t(*it,cf[1]));
-
-          }
-
-          ren[dir] = glutils::create_buffered_lines_ren
-                     (drd->cell_pos_bo,
-                      glutils::make_buf_obj(e_idxs));
-
+          if(dir == 0)
+            update_saddle_mfold<GRADDIR_DESCENDING>(this,dp);
+          else
+            update_saddle_mfold<GRADDIR_ASCENDING>(this,dp);
         }
 
         if(index == 2 && dir == 0)
         {
+          std::set<cellid_t> cset;
+
+          get_disc_cells(dp->m_msgraph,dp->m_msgraph->m_id_cp_map[cellid],dir,cset);
+
           glutils::tri_idx_list_t t_idxs;
 
           for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
           {
             cellid_t pt[20];
 
-            drd->tri_cc_geom->get_cell_points(*it,pt);
+            dp->tri_cc_geom->get_cell_points(*it,pt);
 
             t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[1],pt[2]));
 
           }
 
           ren[dir] = glutils::create_buffered_triangles_ren
-                     (drd->cell_pos_bo,glutils::make_buf_obj(t_idxs),drd->cell_nrm_bo);
+                     (dp->cell_pos_bo,glutils::make_buf_obj(t_idxs),dp->cell_nrm_bo);
         }
 
         if(index == 0 && dir == 1)
         {
+          std::set<cellid_t> cset;
+
+          get_disc_cells(dp->m_msgraph,dp->m_msgraph->m_id_cp_map[cellid],dir,cset);
+
           glutils::tri_idx_list_t t_idxs;
 
           for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
           {
             cellid_t st[40];
 
-            uint st_ct = drd->tri_cc_geom->get_vert_star(*it,st);
+            uint st_ct = dp->tri_cc_geom->get_vert_star(*it,st);
 
             for(uint i = 1; i < st_ct; i++)
             {
@@ -890,9 +919,9 @@ namespace trimesh
           }
 
           ren[dir] = glutils::create_buffered_triangles_ren
-                     (drd->cell_pos_bo,
+                     (dp->cell_pos_bo,
                       glutils::make_buf_obj(t_idxs),
-                      drd->cell_nrm_bo);
+                      dp->cell_nrm_bo);
 
         }
 

@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-find_package(Boost COMPONENTS program_options thread serialization regex REQUIRED)
+find_package(Boost COMPONENTS program_options thread REQUIRED)
 
 set(QT_MIN_VERSION "4.5.0")
 set(QT_USE_QTGUI TRUE)
@@ -18,11 +18,6 @@ find_package(Qt4 REQUIRED)
 include(${QT_USE_FILE})
 
 find_package(QGLViewer REQUIRED)
-
-SET(QXT_USE_QXTCORE TRUE)
-SET(QXT_USE_QXTGUI TRUE)
-
-find_package(Qxt REQUIRED)
 
 find_package(PythonInterp REQUIRED)
 

@@ -142,81 +142,6 @@ namespace trimesh
         (glviewer->m_ren->m_piece_rens[m_active_otp_idx]);
   }
 
-  inline double get_nrm_value(double d_val,double d_min,double d_max)
-  {
-    return (d_val - d_min)/(d_max - d_min);
-  }
-
-  void viewer_mainwindow::update_roi_box(double l,double u,uint dim)
-  {
-    glviewer->m_ren->set_roi_dim_range_nrm(l,u,dim);
-
-    if (m_clear_roi_aabb_timer->isActive() ||
-        glviewer->m_ren->m_bShowRoiBB == false)
-    {
-      glviewer->m_ren->m_bShowRoiBB = true;
-
-      m_clear_roi_aabb_timer->start();
-    }
-
-    glviewer->updateGL();
-  }
-
-  void viewer_mainwindow::on_xroi_spanslider_spanChanged(int l , int u )
-  {
-    BOOST_AUTO(sldr,xroi_spanslider);
-
-    update_roi_box(get_nrm_value(l,sldr->minimum(),sldr->maximum()),
-                   get_nrm_value(u,sldr->minimum(),sldr->maximum()),0);
-
-  }
-
-  void viewer_mainwindow::on_yroi_spanslider_spanChanged(int l , int u )
-  {
-    BOOST_AUTO(sldr,yroi_spanslider);
-
-    update_roi_box(get_nrm_value(l,sldr->minimum(),sldr->maximum()),
-                   get_nrm_value(u,sldr->minimum(),sldr->maximum()),1);
-
-  }
-
-  void viewer_mainwindow::on_zroi_spanslider_spanChanged(int l , int u )
-  {
-    BOOST_AUTO(sldr,zroi_spanslider);
-
-    update_roi_box(get_nrm_value(l,sldr->minimum(),sldr->maximum()),
-                   get_nrm_value(u,sldr->minimum(),sldr->maximum()),2);
-
-  }
-
-  void viewer_mainwindow::on_update_roi_pushButton_clicked(bool)
-  {
-    glviewer->m_ren->m_bRebuildRens = true;
-
-    glviewer->updateGL();
-  }
-
-  void viewer_mainwindow::on_center_to_roi_checkBox_clicked(bool state)
-  {
-    glviewer->m_ren->m_bCenterToRoi = state;
-
-    glviewer->updateGL();
-  }
-
-  void viewer_mainwindow::on_show_surface_checkBox_clicked(bool state)
-  {
-    glviewer->m_ren->m_bShowSurface = state;
-
-    glviewer->updateGL();
-  }
-
-  void viewer_mainwindow::clear_roi_aabb()
-  {
-    glviewer->m_ren->m_bShowRoiBB = false;
-
-    glviewer->updateGL();
-  }
-
   viewer_mainwindow::viewer_mainwindow
       (data_manager_t * gdm):
       m_active_otp_idx(0)
@@ -245,14 +170,6 @@ namespace trimesh
 
     connect(critpt_filter_edit,SIGNAL(textChanged(QString)),
             m_cp_model_proxy,SLOT(setFilterFixedString(QString)));
-
-    m_clear_roi_aabb_timer = new QTimer(this);
-
-    m_clear_roi_aabb_timer->setSingleShot(true);
-
-    m_clear_roi_aabb_timer->setInterval(g_roi_show_aabb_time_msec);
-
-    connect(m_clear_roi_aabb_timer,SIGNAL(timeout()),this,SLOT(clear_roi_aabb()));
   }
 
   void viewer_mainwindow::showEvent ( QShowEvent * )

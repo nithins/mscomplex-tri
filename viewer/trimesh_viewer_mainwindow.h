@@ -75,7 +75,6 @@ namespace trimesh
     QSortFilterProxyModel   *m_cp_model_proxy;
     configurable_item_model *m_cp_model;
     configurable_item_model *m_otp_model;
-    QTimer                  *m_clear_roi_aabb_timer;
 
   public:
 
@@ -96,21 +95,6 @@ namespace trimesh
     void on_critpt_view_customContextMenuRequested ( const QPoint &p );
 
     void on_datapiece_view_activated ( const QModelIndex & index  );
-
-    void on_xroi_spanslider_spanChanged(int l , int u );
-
-    void on_yroi_spanslider_spanChanged(int l , int u );
-
-    void on_zroi_spanslider_spanChanged(int l , int u );
-
-    void on_update_roi_pushButton_clicked(bool);
-
-    void on_center_to_roi_checkBox_clicked(bool);
-
-    void on_show_surface_checkBox_clicked(bool);
-
-  private slots:
-    void clear_roi_aabb();
   };
 
   void configurable_ctx_menu
