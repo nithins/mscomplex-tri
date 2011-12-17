@@ -24,96 +24,155 @@
 #include <set>
 #include <map>
 
+#include <iostream>
+#include <fstream>
+
+#include <boost/noncopyable.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/function.hpp>
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/iterator/filter_iterator.hpp>
+#include <boost/iterator/counting_iterator.hpp>
+#include <boost/iterator/transform_iterator.hpp>
+#include <boost/functional.hpp>
+
 #include <trimesh.h>
+
 
 namespace trimesh
 {
+  typedef std::vector<cell_fn_t>     cp_fn_list_t;
+  typedef n_vector_t<int,2>          int_pair_t;
+  typedef std::vector<int_pair_t>    int_pair_list_t;
 
-  typedef std::vector<uint>         critpt_idx_list_t;
-  typedef std::vector<cell_fn_t>    cp_fn_list_t;
-  typedef n_vector_t<uint,2>        uint_pair_t;
-  typedef std::vector<uint_pair_t>  uint_pair_list_t;
+  typedef std::multiset<uint>                 conn_t;
+  typedef std::multiset<uint>::iterator       conn_iter_t;
+  typedef std::multiset<uint>::const_iterator const_conn_iter_t;
+  typedef std::vector<conn_t>                 conn_list_t;
 
-  struct critpt_t
-  {
-    typedef std::multiset<uint>     conn_set_t;
-    typedef std::vector<cellid_t>   disc_t;
-    typedef std::vector<uint>       disc_contrib_t;
-
-    cellid_t     cellid;
-    uint         pair_idx;
-    uint         vert_idx;
-    cell_fn_t    fn;
-    uchar        index;
-
-    bool isCancelled;
-    bool is_paired;
-    bool is_boundry;
-
-    critpt_t()
-    {
-      isCancelled           = false;
-      is_paired             = false;
-      pair_idx              = -1;
-      vert_idx              = -1;
-    }
-
-    // list of idx's of cancelled cps that contribute their disc to this cp
-
-    disc_contrib_t contrib[GRADDIR_COUNT];
-    disc_t         disc[GRADDIR_COUNT] ;
-    conn_set_t     conn[GRADDIR_COUNT];
-  };
-
-
-  class mscomplex_t
+  class mscomplex_t:public boost::enable_shared_from_this<mscomplex_t>
   {
   public:
 
-    typedef std::map<cellid_t,uint>  id_cp_map_t;
-    typedef std::vector<critpt_t *>  critpt_list_t;
+    cellid_list_t   m_cp_cellid;
+    cellid_list_t   m_cp_vertid;
+    int_list_t      m_cp_pair_idx;
+    char_list_t     m_cp_index;
+    bool_list_t     m_cp_is_cancelled;
+    bool_list_t     m_cp_is_boundry;
+    cell_fn_list_t  m_cp_fn;
 
-    critpt_list_t m_cps;
-    id_cp_map_t   m_id_cp_map;
+    int_pair_list_t m_canc_list;
 
-    void connect_cps(cellid_t c1,cellid_t c2);
+    conn_list_t   m_conn[GDIR_CT];
+    conn_list_t  &m_des_conn;
+    conn_list_t  &m_asc_conn;
 
-    void connect_cps(uint_pair_t p);
+    mscomplex_t();
+    ~mscomplex_t();
 
-    void add_critpt(cellid_t c,uchar i,cell_fn_t f,bool bflg,uint vert_idx);
+    inline int  get_num_critpts() const;
 
-    void simplify(uint_pair_list_t &,double simplification_treshold);
+    void resize(int i);
+    void set_critpt(int i,cellid_t c,char idx,cell_fn_t f,cellid_t vert_cell,bool is_bndry);
 
-    void un_simplify(const uint_pair_list_t &);
+    void connect_cps(int p, int q);
+    void dir_connect_cps(int p , int q);
+    void pair_cps(int p , int q);
 
-    void simplify_un_simplify(double simplification_treshold );
+    inline char& index(int i);
+    inline const char& index(int i) const;
 
-    void add_disc_tracking_seed_cps();
+    inline int& pair_idx(int i);
+    inline const int& pair_idx(int i) const;
+    inline bool is_paired(int i) const;
+
+    inline char&       is_canceled(int i);
+    inline const char& is_canceled(int i) const;
+
+    inline char&       is_boundry(int i);
+    inline const char& is_boundry(int i) const;
+
+    inline cellid_t& cellid(int i);
+    inline const cellid_t& cellid(int i) const;
+
+    inline cellid_t& vertid(int i);
+    inline const cellid_t& vertid(int i) const;
+
+    inline cell_fn_t& fn(int i);
+    inline const cell_fn_t& fn(int i) const;
+
+    inline bool is_extrema(int i) const;
+    inline bool is_saddle(int i) const;
+
+  public:
+
+    void simplify(double simplification_treshold);
+    void un_simplify();
+
+    void invert_for_collection();
+
+    void cancel_pair(int p, int q);
+    void uncancel_pair( int p, int q);
 
     void clear();
 
-    mscomplex_t(){}
+    void write_graph(std::ostream & os) const;
+    void write_graph(const std::string & fn) const;
 
-    ~mscomplex_t();
+    void stow(std::ostream &os,bool purge_data=true);
+    void load(std::istream &is);
 
-    void write_discs(const std::string &fn_prefix);
+    inline void stow(const std::string &f,bool purge_data=true)
+    {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);stow(fs,purge_data);}
+    void load(const std::string &f)
+    {std::fstream fs(f.c_str(),std::ios::in|std::ios::binary);load(fs);}
 
-    void save(std::ostream & os);
+    inline std::string cp_info (int cp_no) const;
+    inline std::string cp_conn (int cp_no) const;
 
-    void save_manifolds(std::ostream & os,const tri_cc_geom_t &geom);
+    typedef boost::counting_iterator<int> iterator_t;
+    typedef boost::function<bool (int)>   filter_t;
+    typedef bool (mscomplex_t::*memb_filter_t)(int) const;
+    typedef boost::filter_iterator<filter_t,iterator_t> fiterator_t;
+    template <typename it_t>            class cp_id_iterator;
+    typedef cp_id_iterator<fiterator_t> cp_id_fiterator;
+
+    inline iterator_t begin() const;
+    inline iterator_t end() const;
+
+    inline fiterator_t fbegin(filter_t f) const;
+    inline fiterator_t fend(filter_t f) const;
+
+    inline fiterator_t fbegin(memb_filter_t f) const;
+    inline fiterator_t fend(memb_filter_t f) const;
+
+    inline cp_id_fiterator cp_id_fbegin(filter_t f) const;
+    inline cp_id_fiterator cp_id_fend(filter_t f) const;
   };
 
-  typedef mscomplex_t::critpt_list_t           critpt_list_t;
-  typedef critpt_t::conn_set_t                 conn_set_t;
-  typedef critpt_t::disc_t                     critpt_disc_t;
-  typedef critpt_t::conn_set_t::iterator       conn_iter_t;
-  typedef critpt_t::conn_set_t::const_iterator const_conn_iter_t;
-  typedef critpt_t::disc_contrib_t             disc_contrib_t;
-
-  inline void order_pr_by_cp_index(mscomplex_t *msc,uint_pair_t &e)
+  template <typename it_t>
+  class mscomplex_t::cp_id_iterator:public std::iterator
+      <std::bidirectional_iterator_tag,cellid_t,int,cellid_t,cellid_t>
   {
-    if(msc->m_cps[e[0]]->index < msc->m_cps[e[1]]->index)
-      std::swap(e[0],e[1]);
-  }
+  public:
+    cp_id_iterator(){}
+
+    cp_id_iterator(mscomplex_const_ptr_t msc,it_t i):m_msc(msc),m_i(i){};
+    mscomplex_const_ptr_t m_msc;
+    it_t m_i;
+
+    inline cp_id_iterator& operator++(){++m_i; return *this;}
+    inline cp_id_iterator& operator--(){--m_i; return *this;}
+    inline reference operator*() const {return m_msc->cellid(*m_i);}
+
+    inline bool operator== (const cp_id_iterator &rhs) const
+    {return (m_i == rhs.m_i);}
+
+    inline bool operator!= (const cp_id_iterator &rhs) const
+    {return !(*this == rhs);}
+  };
 }
+
+#include <trimesh_mscomplex_ensure.h>
 #endif

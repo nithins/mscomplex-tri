@@ -27,9 +27,9 @@ namespace trimesh
     uint                   index;
     cellid_t               vert_no;
 
-    glutils::renderable_t *ren[GRADDIR_COUNT];
-    bool                   show[GRADDIR_COUNT];
-    glutils::color_t       color[GRADDIR_COUNT];
+    glutils::renderable_t *ren[GDIR_CT];
+    bool                   show[GDIR_CT];
+    glutils::color_t       color[GDIR_CT];
 
     disc_rendata_t(cellid_t c,uint i,cellid_t vno);
     ~disc_rendata_t();

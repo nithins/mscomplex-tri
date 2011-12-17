@@ -9,8 +9,6 @@
 #include <QFile>
 #include <logutil.h>
 
-#include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
 #include <boost/typeof/typeof.hpp>
 
 #include <trimesh_mscomplex.h>
@@ -48,7 +46,7 @@ namespace trimesh
 
   cellid_t get_cp_cellid(mscomplex_t *msgraph,uint idx)
   {
-    return msgraph->m_cps[idx]->cellid;
+    return msgraph->cellid(idx);
   }
 
   static uint ( dataset_t::*getcets[2] ) ( cellid_t,cellid_t * ) const =
@@ -57,82 +55,74 @@ namespace trimesh
     &dataset_t::getCellCofacets
   };
 
-  void compute_disc_bfs
-      (dataset_t *dataset,
-       critpt_disc_t *disc,
-       cellid_t start_cellId,
-       eGradientDirection gradient_dir
-       )
-  {
-    typedef cellid_t id_type;
+//  void compute_disc_bfs
+//      (dataset_t *dataset,
+//       critpt_disc_t *disc,
+//       cellid_t start_cellId,
+//       eGradientDirection gradient_dir
+//       )
+//  {
+//    typedef cellid_t id_type;
 
-    std::queue<id_type> cell_queue;
+//    std::queue<id_type> cell_queue;
 
-    cell_queue.push ( start_cellId );
+//    cell_queue.push ( start_cellId );
 
-    while ( !cell_queue.empty() )
-    {
-      id_type top_cell = cell_queue.front();
+//    while ( !cell_queue.empty() )
+//    {
+//      id_type top_cell = cell_queue.front();
 
-      cell_queue.pop();
+//      cell_queue.pop();
 
-      disc->push_back(top_cell);
+//      disc->push_back(top_cell);
 
-      id_type cets[20];
+//      id_type cets[20];
 
-      uint cet_ct = ( dataset->*getcets[gradient_dir] ) ( top_cell,cets );
+//      uint cet_ct = ( dataset->*getcets[gradient_dir] ) ( top_cell,cets );
 
-      for ( uint i = 0 ; i < cet_ct ; i++ )
-      {
-        if ( !dataset->isCellCritical ( cets[i] ) )
-        {
-//          if ( !dataset->isCellExterior ( cets[i] ) )
-          {
-            id_type next_cell = dataset->getCellPairId ( cets[i] );
+//      for ( uint i = 0 ; i < cet_ct ; i++ )
+//      {
+//        if ( !dataset->isCellCritical ( cets[i] ) )
+//        {
+////          if ( !dataset->isCellExterior ( cets[i] ) )
+//          {
+//            id_type next_cell = dataset->getCellPairId ( cets[i] );
 
-            if ( dataset->getCellDim ( top_cell ) ==
-                 dataset->getCellDim ( next_cell ) &&
-                 next_cell != top_cell )
-            {
-              cell_queue.push ( next_cell );
-            }
-          }
-        }
-      }
-    }
-  }
+//            if ( dataset->getCellDim ( top_cell ) ==
+//                 dataset->getCellDim ( next_cell ) &&
+//                 next_cell != top_cell )
+//            {
+//              cell_queue.push ( next_cell );
+//            }
+//          }
+//        }
+//      }
+//    }
+//  }
 
-  int dataset_t::postMergeFillDiscs(mscomplex_t *msgraph)
-  {
-    msgraph->add_disc_tracking_seed_cps();
+//  int dataset_t::postMergeFillDiscs(mscomplex_t *msgraph)
+//  {
+//    for(uint i = 0 ; i < msgraph->m_cps.size() ; ++i)
+//    {
+//      critpt_t * cp = msgraph->m_cps[i];
 
-    for(uint i = 0 ; i < msgraph->m_cps.size() ; ++i)
-    {
-      critpt_t * cp = msgraph->m_cps[i];
+////      if(cp->index != 1) continue;
 
-//      if(cp->index != 1) continue;
+//      for(uint dir = 0 ; dir < GDIR_CT;++dir)
+//      {
+//        if(cp->disc[dir].size() == 1)
+//        {
+//          cp->disc[dir].clear();
+//          compute_disc_bfs(this,&cp->disc[dir],cp->cellid,(eGradientDirection)dir);
+//        }
+//      }
+//    }
 
-      for(uint dir = 0 ; dir < GRADDIR_COUNT;++dir)
-      {
-        if(cp->disc[dir].size() == 1)
-        {
-          cp->disc[dir].clear();
-          compute_disc_bfs(this,&cp->disc[dir],cp->cellid,(eGradientDirection)dir);
-        }
-      }
-    }
-
-    return 0;
-  }
-
-  void connectCps (mscomplex_t *msgraph,cellid_t c1,cellid_t c2)
-  {
-    msgraph->connect_cps(c1,c2);
-  }
-
+//    return 0;
+//  }
 
   void track_gradient_tree_bfs
-      (dataset_t *dataset,cellid_t start_cellId,eGradientDirection gradient_dir)
+      (dataset_t *dataset,cellid_t start_cellId,eGDIR dir)
   {
     std::queue<cellid_t> cell_queue;
 
@@ -150,7 +140,7 @@ namespace trimesh
 
       cellid_t      cets[20];
 
-      uint cet_ct = ( dataset->*getcets[gradient_dir] ) ( top_cell,cets );
+      uint cet_ct = ( dataset->*getcets[dir] ) ( top_cell,cets );
 
       for ( uint i = 0 ; i < cet_ct ; i++ )
       {
@@ -373,8 +363,6 @@ namespace trimesh
 
   void  dataset_t::assignGradients()
   {
-    using namespace boost::lambda;
-
     typedef std::list<cellid_t> cellid_llist_t;
 
     int num_verts = m_tri_cc->get_num_cells_dim(0);
@@ -459,10 +447,10 @@ namespace trimesh
       switch (getCellDim (*it))
       {
       case 0:
-        track_gradient_tree_bfs(this,*it,GRADDIR_ASCENDING);
+        track_gradient_tree_bfs(this,*it,GDIR_ASC);
         break;
       case 2:
-        track_gradient_tree_bfs(this,*it,GRADDIR_DESCENDING);
+        track_gradient_tree_bfs(this,*it,GDIR_DES);
         break;
       default:
         break;
@@ -473,6 +461,9 @@ namespace trimesh
 
   void  dataset_t::writeout_connectivity(mscomplex_t *msgraph)
   {
+    msgraph->resize(m_critical_cells.size());
+
+    map<cellid_t,int> id_cp_map;
 
     for (uint i = 0 ; i <m_critical_cells.size(); ++i)
     {
@@ -480,27 +471,17 @@ namespace trimesh
 
       uint     vi = m_critical_cells_vert[i];
 
-      msgraph->add_critpt(c,getCellDim(c),m_vert_fns[vi],isBoundryCell(c),vi);
+      msgraph->set_critpt(i,c,getCellDim(c),m_vert_fns[vi],vi,isBoundryCell(c));
+
+      id_cp_map[c] = i;
     }
-
-//    for (uint i = 0 ; i <m_critical_cells.size(); ++i)
-//    {
-//      cellid_t &c = m_critical_cells[i];
-
-//      if(!isCellPaired(c))  continue;
-
-//      uint cp_idx = i;
-
-//      msgraph->m_cps[cp_idx]->is_paired = true;
-
-//      msgraph->m_cps[cp_idx]->pair_idx =
-//          msgraph->m_id_cp_map[getCellPairId(c)];
-//    }
 
     for (cellid_list_t::iterator it = m_critical_cells.begin() ;
     it != m_critical_cells.end();++it)
     {
       cellid_t c = *it;
+
+      ASSERT(id_cp_map.count(c) == 1);
 
       if(getCellDim(c) == 1)
       {
@@ -509,20 +490,20 @@ namespace trimesh
         uint f_ct = getCellFacets(c,f);
         uint cf_ct = getCellCofacets(c,cf);
 
-        for(uint i = 0 ; i < f_ct;++i)
+        for(int i = 0 ; i < f_ct;++i)
         {
-          cellid_t f_own_cp = m_cell_own[f[i]];
-
-          if(f_own_cp != invalid_cellid)
-            connectCps(msgraph,c,f_own_cp);
+          cellid_t own = m_cell_own[f[i]];
+          ASSERT(own != invalid_cellid);
+          ASSERT(id_cp_map.count(own) == 1);
+          msgraph->connect_cps(id_cp_map[c],id_cp_map[own]);
         }
 
-        for(uint i = 0 ; i < cf_ct;++i)
+        for(int i = 0 ; i < cf_ct;++i)
         {
-          cellid_t cf_own_cp = m_cell_own[cf[i]];
-
-          if(cf_own_cp != invalid_cellid)
-            connectCps(msgraph,c,cf_own_cp);
+          cellid_t own = m_cell_own[cf[i]];
+          ASSERT(own != invalid_cellid);
+          ASSERT(id_cp_map.count(own) == 1);
+          msgraph->connect_cps(id_cp_map[c],id_cp_map[own]);
         }
       }
     }

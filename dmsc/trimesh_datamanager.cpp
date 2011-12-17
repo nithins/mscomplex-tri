@@ -131,35 +131,17 @@ namespace trimesh
     m_dataset->writeout_connectivity(m_msgraph.get());
     cout<<"msgraph done ------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    {
-      std::fstream f((m_tri_filename+".full.graph.txt").c_str(),fstream::out);
-      m_msgraph->save(f);
-      f.close();
-    }
+    m_msgraph->stow(m_tri_filename+".full.graph.bin",false);
     cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    m_msgraph->simplify_un_simplify(m_simp_tresh);
+    m_msgraph->simplify(m_simp_tresh);
+    m_msgraph->un_simplify();
     cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    {
-      std::fstream f((m_tri_filename+".graph.txt").c_str(),fstream::out);
-      m_msgraph->save(f);
-      f.close();
-    }
+    m_msgraph->stow(m_tri_filename+".graph.bin",false);
     cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    m_dataset->postMergeFillDiscs(m_msgraph.get());
-    {
-      vertex_list_t  vlist;
-      tri_cc_geom_t  geom;
-
-      glutils::read_tri_file(m_tri_filename.c_str(),vlist);
-      geom.init(m_dataset->m_tri_cc,vlist);
-
-      std::fstream f((m_tri_filename+".mfold.txt").c_str(),fstream::out);
-      m_msgraph->save_manifolds(f,geom);
-      f.close();
-    }
+    m_msgraph->invert_for_collection();
     cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     cout<<"------------------------------------"<<endl;
