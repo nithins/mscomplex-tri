@@ -48,8 +48,9 @@ namespace trimesh
     void  clear();
 
   public:
-    void  work(mscomplex_ptr_t msc);
-    void  save_manifolds(std::string fn,mscomplex_ptr_t msc);
+    void  work(mscomplex_ptr_t);
+    void  save_manifolds(std::ostream &,mscomplex_ptr_t);
+    inline void  save_manifolds(std::string &,mscomplex_ptr_t);
 
   public:
     inline int cell_dim(cellid_t) const;

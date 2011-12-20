@@ -215,4 +215,92 @@ namespace trimesh
     make_connections(*msc,ccells,*this);
   }
 
+  template <eGDIR dir>
+  inline void bfs_collect(dataset_t &ds,mscomplex_t &msc,int i,cellid_list_t &mfold)
+  {
+    std::stack<cellid_t> stk;
+
+    int dim = msc.index(i);
+
+    stk.push(msc.cellid(i));
+
+    for(conn_iter_t b=msc.m_conn[dir][i].begin(),e=msc.m_conn[dir][i].end();b!=e;++b)
+      stk.push(msc.cellid(msc.pair_idx(*b)));
+
+    cellid_t f[20],*fe,*fb;
+
+    while(!stk.empty())
+    {
+      cellid_t c = stk.top(); stk.pop();
+
+      ASSERT(ds.cell_dim(c) == dim);
+
+      mfold.push_back(c);
+
+      fb = f; fe = f + ds.get_cets<dir>(c,f);
+
+      for (; fb != fe; ++fb )
+        if( ds.is_paired(*fb))
+        {
+          cellid_t p = ds.pair(*fb);
+          if(p != c && ds.cell_dim(p) == dim)
+            stk.push(p);
+        }
+    }
+  }
+
+  template<typename T>
+  inline void bin_write_vec(std::ostream &os, std::vector<T> &v)
+  {os.write((const char*)(const void*)v.data(),v.size()*sizeof(T));}
+
+  template<typename T>
+  inline void bin_write(std::ostream &os, const T &v)
+  {os.write((const char*)(const void*)&v,sizeof(T));}
+
+  int get_header_size(int num_cps)
+  {
+    return sizeof(int)              + // num_cps
+           sizeof(cellid_t)*num_cps + // cellids
+           sizeof(int)*(2*num_cps+1); // offsets
+  }
+
+  void write_header(std::ostream & os,int_list_t & offsets,cellid_list_t &cps,ios::off_type hoff= 0)
+  {
+    os.seekp(hoff,ios::beg);
+
+    bin_write(os,(int)cps.size());
+    bin_write_vec(os,cps);
+    bin_write_vec(os,offsets);
+  }
+
+  void  dataset_t::save_manifolds(std::ostream &os,mscomplex_ptr_t msc)
+  {
+    mscomplex_t::fiterator b = msc->fbegin(&mscomplex_t::is_not_paired);
+    mscomplex_t::fiterator e = msc->fend(&mscomplex_t::is_not_paired);
+
+    int num_cps = utls::count(b,e);
+    int hoff    = os.tellp();
+
+    os.seekp(get_header_size(num_cps),ios::cur);
+
+    int_list_t off((2*num_cps+1)); *off.begin()=0;
+    cellid_list_t cps; transform(b,e,back_inserter(cps),bind(&mscomplex_t::_rv_cellid,msc,_1));
+
+    for(;b!=e;++b)
+    {
+      cellid_list_t des,asc;
+
+      if(msc->index(*b) != 0) bfs_collect<GDIR_DES>(*this,*msc,*b,des);
+      if(msc->index(*b) != 2) bfs_collect<GDIR_ASC>(*this,*msc,*b,asc);
+
+      off.push_back(*off.rbegin()+des.size());
+      off.push_back(*off.rbegin()+asc.size());
+
+      bin_write_vec(os,des);
+      bin_write_vec(os,asc);
+    }
+
+    write_header(os,off,cps,hoff);
+  }
+
 }

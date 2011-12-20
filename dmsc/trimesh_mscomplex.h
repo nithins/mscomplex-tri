@@ -86,6 +86,7 @@ namespace trimesh
     inline int& pair_idx(int i);
     inline const int& pair_idx(int i) const;
     inline bool is_paired(int i) const;
+    inline bool is_not_paired(int i) const;
 
     inline char&       is_canceled(int i);
     inline const char& is_canceled(int i) const;
@@ -93,8 +94,11 @@ namespace trimesh
     inline char&       is_boundry(int i);
     inline const char& is_boundry(int i) const;
 
-    inline cellid_t& cellid(int i);
+    inline cellid_t&       _lv_cellid(int i);
+    inline const cellid_t& _rv_cellid(int i) const;
+    inline cellid_t&       cellid(int i);
     inline const cellid_t& cellid(int i) const;
+
 
     inline cellid_t& vertid(int i);
     inline const cellid_t& vertid(int i) const;
@@ -131,24 +135,28 @@ namespace trimesh
     inline std::string cp_info (int cp_no) const;
     inline std::string cp_conn (int cp_no) const;
 
-    typedef boost::counting_iterator<int> iterator_t;
+    typedef boost::counting_iterator<int> iterator;
     typedef boost::function<bool (int)>   filter_t;
     typedef bool (mscomplex_t::*memb_filter_t)(int) const;
-    typedef boost::filter_iterator<filter_t,iterator_t> fiterator_t;
+    typedef boost::filter_iterator<filter_t,iterator> fiterator;
     template <typename it_t>            class cp_id_iterator;
-    typedef cp_id_iterator<fiterator_t> cp_id_fiterator;
+    typedef cp_id_iterator<fiterator> id_fiterator;
+    typedef cp_id_iterator<iterator>  id_iterator;
 
-    inline iterator_t begin() const;
-    inline iterator_t end() const;
+    inline iterator begin() const;
+    inline iterator end() const;
 
-    inline fiterator_t fbegin(filter_t f) const;
-    inline fiterator_t fend(filter_t f) const;
+    inline id_iterator id_begin() const;
+    inline id_iterator id_end() const;
 
-    inline fiterator_t fbegin(memb_filter_t f) const;
-    inline fiterator_t fend(memb_filter_t f) const;
+    inline fiterator fbegin(filter_t f) const;
+    inline fiterator fend(filter_t f) const;
 
-    inline cp_id_fiterator cp_id_fbegin(filter_t f) const;
-    inline cp_id_fiterator cp_id_fend(filter_t f) const;
+    inline fiterator fbegin(memb_filter_t f) const;
+    inline fiterator fend(memb_filter_t f) const;
+
+    inline id_fiterator id_fbegin(filter_t f) const;
+    inline id_fiterator id_fend(filter_t f) const;
   };
 
   template <typename it_t>

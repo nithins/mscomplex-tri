@@ -10,29 +10,35 @@ namespace trimesh
 inline void order_pr_by_cp_index(const mscomplex_t &msc,int &p,int &q)
 {if(msc.index(p) < msc.index(q))std::swap(p,q);}
 
-inline mscomplex_t::iterator_t mscomplex_t::begin() const
-{return iterator_t(0);}
+inline mscomplex_t::iterator mscomplex_t::begin() const
+{return iterator(0);}
 
-inline mscomplex_t::iterator_t mscomplex_t::end() const
-{return iterator_t(get_num_critpts());}
+inline mscomplex_t::iterator mscomplex_t::end() const
+{return iterator(get_num_critpts());}
 
-inline mscomplex_t::fiterator_t mscomplex_t::fbegin(mscomplex_t::filter_t f) const
+inline mscomplex_t::id_iterator mscomplex_t::id_begin() const
+{return id_iterator(shared_from_this(),begin());}
+
+inline mscomplex_t::id_iterator mscomplex_t::id_end() const
+{return id_iterator(shared_from_this(),end());}
+
+inline mscomplex_t::fiterator mscomplex_t::fbegin(mscomplex_t::filter_t f) const
 {return boost::make_filter_iterator(f,begin(),end());}
 
-inline mscomplex_t::fiterator_t mscomplex_t::fend(mscomplex_t::filter_t f) const
+inline mscomplex_t::fiterator mscomplex_t::fend(mscomplex_t::filter_t f) const
 {return boost::make_filter_iterator(f,end(),end());}
 
-inline mscomplex_t::fiterator_t mscomplex_t::fbegin(mscomplex_t::memb_filter_t f) const
+inline mscomplex_t::fiterator mscomplex_t::fbegin(mscomplex_t::memb_filter_t f) const
 {return fbegin(boost::bind(f,this,_1));}
 
-inline mscomplex_t::fiterator_t mscomplex_t::fend(mscomplex_t::memb_filter_t f) const
+inline mscomplex_t::fiterator mscomplex_t::fend(mscomplex_t::memb_filter_t f) const
 {return fend(boost::bind(f,this,_1));}
 
-inline mscomplex_t::cp_id_fiterator mscomplex_t::cp_id_fbegin(mscomplex_t::filter_t f) const
-{return cp_id_fiterator(shared_from_this(),fbegin(f));}
+inline mscomplex_t::id_fiterator mscomplex_t::id_fbegin(mscomplex_t::filter_t f) const
+{return id_fiterator(shared_from_this(),fbegin(f));}
 
-inline mscomplex_t::cp_id_fiterator mscomplex_t::cp_id_fend(mscomplex_t::filter_t f) const
-{return cp_id_fiterator(shared_from_this(),fend(f));}
+inline mscomplex_t::id_fiterator mscomplex_t::id_fend(mscomplex_t::filter_t f) const
+{return id_fiterator(shared_from_this(),fend(f));}
 
 inline int  mscomplex_t::get_num_critpts() const
 {return m_cp_cellid.size();}
@@ -81,6 +87,14 @@ inline bool mscomplex_t::is_paired(int i) const
   return (m_cp_pair_idx[i] != -1);
 }
 
+inline bool mscomplex_t::is_not_paired(int i) const
+{
+  try{ASSERT(is_in_range(i,0,(int)m_cp_pair_idx.size()));}
+  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+
+  return (m_cp_pair_idx[i] == -1);
+}
+
 inline char& mscomplex_t::is_canceled(int i)
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_is_cancelled.size()));}
@@ -113,7 +127,7 @@ inline const char& mscomplex_t::is_boundry(int i) const
   return m_cp_is_boundry[i];
 }
 
-inline cellid_t& mscomplex_t::cellid(int i)
+inline cellid_t& mscomplex_t::_lv_cellid(int i)
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_cellid.size()));}
   catch(assertion_error e)
@@ -122,13 +136,16 @@ inline cellid_t& mscomplex_t::cellid(int i)
   return m_cp_cellid[i];
 }
 
-inline const cellid_t& mscomplex_t::cellid(int i) const
+inline const cellid_t& mscomplex_t::_rv_cellid(int i) const
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_cellid.size()));}
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return m_cp_cellid[i];
 }
+
+inline const cellid_t& mscomplex_t::cellid(int i) const{return _rv_cellid(i);}
+inline cellid_t& mscomplex_t::cellid(int i) {return _lv_cellid(i);}
 
 inline cellid_t& mscomplex_t::vertid(int i)
 {

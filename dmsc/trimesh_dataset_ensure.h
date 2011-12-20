@@ -1,6 +1,7 @@
 #ifndef TRIMESH_DATASET_ENSURE_H_INCLUDED
 #define TRIMESH_DATASET_ENSURE_H_INCLUDED
 
+#include <fstream>
 #include <trimesh_dataset.h>
 
 namespace trimesh
@@ -111,5 +112,13 @@ namespace trimesh
 
   inline cellid_t& dataset_t::owner(cellid_t c)
   {ASSERT(m_cell_own[c] == invalid_cellid);return m_cell_own[c];}
+
+
+  inline void  dataset_t::save_manifolds(std::string &s,mscomplex_ptr_t msc)
+  {
+    std::fstream fs(s.c_str(),std::ios::in|std::ios::binary);
+    ensure(fs.is_open(),"Unable to open file ");
+    save_manifolds(fs,msc);
+  }
 }
 #endif
