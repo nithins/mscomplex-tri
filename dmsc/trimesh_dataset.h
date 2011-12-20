@@ -25,113 +25,52 @@
 #include <vector>
 #include <trimesh.h>
 
+#include <boost/iterator/counting_iterator.hpp>
+
 namespace trimesh
 {
-
-  class mscomplex_t;
-
-  class pt_comp_t;
-
   class dataset_t
   {
-
   public:
-
-    enum eCellFlags
-    {
-      CELLFLAG_UNKNOWN = 0,
-      CELLFLAG_PAIRED  = 1,
-      CELLFLAG_CRITCAL = 2,
-    };
-
-  public:
-
     cell_fn_list_t      m_vert_fns;
     cellid_list_t       m_cell_own;
     cellid_list_t       m_cell_pairs;
-    cellid_list_t       m_critical_cells;
-    cellid_list_t       m_critical_cells_vert;
-    std::vector<uchar>  m_cell_flags;
+    cellid_list_t       m_cell_mxfct;
 
-    pt_comp_t*          m_ptcomp;
-    tri_cc_ptr_t        m_tri_cc;
+    tri_cc_t            m_tcc;
 
   public:
 
-    // initialization of the dataset
-
     dataset_t ();
-
     ~dataset_t ();
 
     void  init(const cell_fn_list_t &vert_fns,const tri_idx_list_t & trilist);
-
     void  clear();
 
-
-    // actual algorithm work
   public:
+    void  work(mscomplex_ptr_t msc);
+    void  save_manifolds(std::string fn,mscomplex_ptr_t msc);
 
-    void  work();
-
-    void  writeout_connectivity(mscomplex_t *msgraph);
-
-    void  assignGradients();
-
-    void  collateCriticalPoints();
-
-    void  assignCellOwnerExtrema();
-
-    int   postMergeFillDiscs(mscomplex_t *msgraph);
-
-    // dataset interface
   public:
+    inline int cell_dim(cellid_t) const;
+    inline bool is_boundry(cellid_t) const;
+    template<eGDIR dir> inline uint get_cets(cellid_t c,cellid_t *cets) const;
+    template<eGDIR dir> inline uint get_co_cets(cellid_t c,cellid_t *cets) const;
 
-    cellid_t   getCellPairId ( cellid_t ) const;
+    inline const cellid_t& max_fct(cellid_t ) const;
+    inline cellid_t& max_fct(cellid_t );
+    template <int dim> inline cellid_t max_vert(cellid_t c) const;
+    inline cell_fn_t cell_fn(cellid_t c) const;
 
-    inline bool ptLt ( cellid_t c1,cellid_t c2) const;
+    template <int dim> inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;
 
-    bool   compareCells( cellid_t ,cellid_t ) const;
+    inline const cellid_t& pair(cellid_t ) const;
+    inline void pair(cellid_t,cellid_t );
+    inline bool is_paired(cellid_t) const;
+    inline bool is_critical(cellid_t) const;
 
-    uint   getCellPoints ( cellid_t ,cellid_t  * ) const;
-
-    uint   getCellFacets ( cellid_t ,cellid_t * ) const;
-
-    uint   getCellCofacets ( cellid_t ,cellid_t * ) const;
-
-    uint   getCellEst( cellid_t ,cellid_t * ) const;
-
-    bool   isPairOrientationCorrect ( cellid_t c, cellid_t p ) const;
-
-    bool   isCellMarked ( cellid_t c ) const;
-
-    bool   isCellCritical ( cellid_t c ) const;
-
-    bool   isCellPaired ( cellid_t c ) const;
-
-    void   pairCells ( cellid_t c,cellid_t p );
-
-    void   markCellCritical ( cellid_t c );
-
-    uint   getCellDim ( cellid_t c ) const;
-
-    bool   isBoundryCell ( cellid_t c ) const;
-
-    std::string  getCellFunctionDescription ( cellid_t pt ) const;
-
-    std::string getCellDescription ( cellid_t cellid ) const;
-
-    // misc functions
-  public:
-
-    void log_flags();
-
-    void log_pairs();
-
-    std::string to_string(cellid_t c) const;
-
-    // return fn at point .. averge of points for higher dims
-    cell_fn_t get_cell_fn ( cellid_t c ) const;
+    inline const cellid_t& owner(cellid_t ) const;
+    inline cellid_t& owner(cellid_t );
 
   };
 }

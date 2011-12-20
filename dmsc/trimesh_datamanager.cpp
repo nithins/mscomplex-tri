@@ -125,11 +125,8 @@ namespace trimesh
     init();
     cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    m_dataset->work();
+    m_dataset->work(m_msgraph);
     cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
-
-    m_dataset->writeout_connectivity(m_msgraph.get());
-    cout<<"msgraph done ------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     m_msgraph->stow(m_tri_filename+".full.graph.bin",false);
     cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
@@ -141,7 +138,7 @@ namespace trimesh
     m_msgraph->stow(m_tri_filename+".graph.bin",false);
     cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-    m_msgraph->invert_for_collection();
+//    m_msgraph->invert_for_collection();
     cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     cout<<"------------------------------------"<<endl;

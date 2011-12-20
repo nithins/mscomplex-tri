@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <queue>
+#include <stack>
 
 #include <timer.h>
 
@@ -19,533 +20,199 @@ using namespace std;
 
 namespace trimesh
 {
+  dataset_t::dataset_t (){}
 
-  class pt_comp_t
-  {
-    dataset_t *pOwn;
-  public:
-    pt_comp_t(dataset_t *o):pOwn(o){}
-
-    bool operator()(cellid_t c1,cellid_t c2)
-    {
-      return pOwn->ptLt(c1,c2);
-    }
-  };
-
-  inline bool dataset_t::ptLt(cellid_t c1, cellid_t c2) const
-  {
-    cell_fn_t f1 = m_vert_fns[c1];
-    cell_fn_t f2 = m_vert_fns[c2];
-
-    if (f1 != f2)
-      return f1 < f2;
-
-    return c1<c2;
-  }
-
-
-  cellid_t get_cp_cellid(mscomplex_t *msgraph,uint idx)
-  {
-    return msgraph->cellid(idx);
-  }
-
-  static uint ( dataset_t::*getcets[2] ) ( cellid_t,cellid_t * ) const =
-  {
-    &dataset_t::getCellFacets,
-    &dataset_t::getCellCofacets
-  };
-
-//  void compute_disc_bfs
-//      (dataset_t *dataset,
-//       critpt_disc_t *disc,
-//       cellid_t start_cellId,
-//       eGradientDirection gradient_dir
-//       )
-//  {
-//    typedef cellid_t id_type;
-
-//    std::queue<id_type> cell_queue;
-
-//    cell_queue.push ( start_cellId );
-
-//    while ( !cell_queue.empty() )
-//    {
-//      id_type top_cell = cell_queue.front();
-
-//      cell_queue.pop();
-
-//      disc->push_back(top_cell);
-
-//      id_type cets[20];
-
-//      uint cet_ct = ( dataset->*getcets[gradient_dir] ) ( top_cell,cets );
-
-//      for ( uint i = 0 ; i < cet_ct ; i++ )
-//      {
-//        if ( !dataset->isCellCritical ( cets[i] ) )
-//        {
-////          if ( !dataset->isCellExterior ( cets[i] ) )
-//          {
-//            id_type next_cell = dataset->getCellPairId ( cets[i] );
-
-//            if ( dataset->getCellDim ( top_cell ) ==
-//                 dataset->getCellDim ( next_cell ) &&
-//                 next_cell != top_cell )
-//            {
-//              cell_queue.push ( next_cell );
-//            }
-//          }
-//        }
-//      }
-//    }
-//  }
-
-//  int dataset_t::postMergeFillDiscs(mscomplex_t *msgraph)
-//  {
-//    for(uint i = 0 ; i < msgraph->m_cps.size() ; ++i)
-//    {
-//      critpt_t * cp = msgraph->m_cps[i];
-
-////      if(cp->index != 1) continue;
-
-//      for(uint dir = 0 ; dir < GDIR_CT;++dir)
-//      {
-//        if(cp->disc[dir].size() == 1)
-//        {
-//          cp->disc[dir].clear();
-//          compute_disc_bfs(this,&cp->disc[dir],cp->cellid,(eGradientDirection)dir);
-//        }
-//      }
-//    }
-
-//    return 0;
-//  }
-
-  void track_gradient_tree_bfs
-      (dataset_t *dataset,cellid_t start_cellId,eGDIR dir)
-  {
-    std::queue<cellid_t> cell_queue;
-
-    // mark here that that cellid has no parent.
-
-    cell_queue.push ( start_cellId );
-
-    while ( !cell_queue.empty() )
-    {
-      cellid_t top_cell = cell_queue.front();
-
-      cell_queue.pop();
-
-      dataset->m_cell_own[top_cell] = start_cellId;
-
-      cellid_t      cets[20];
-
-      uint cet_ct = ( dataset->*getcets[dir] ) ( top_cell,cets );
-
-      for ( uint i = 0 ; i < cet_ct ; i++ )
-      {
-        if ( dataset->isCellCritical ( cets[i] ) )
-        {
-          //        connectCps(msgraph,start_cellId,cets[i]);
-        }
-        else
-        {
-//          if ( !dataset->isCellExterior ( cets[i] ) )
-          {
-            cellid_t next_cell = dataset->getCellPairId ( cets[i] );
-
-            if ( dataset->getCellDim ( top_cell ) ==
-                 dataset->getCellDim ( next_cell ) &&
-                 next_cell != top_cell )
-            {
-              dataset->m_cell_own[cets[i]] = start_cellId;
-
-              // mark here that the parent of next cell is top_cell
-              cell_queue.push ( next_cell );
-            }
-          }
-        }
-      }
-    }
-  }
-
-
-  dataset_t::dataset_t () :
-      m_ptcomp(new pt_comp_t(this)),
-      m_tri_cc(new tri_cc_t)
-  {
-  }
-
-  dataset_t::~dataset_t ()
-  {
-    delete m_ptcomp;
-
-    clear();
-  }
+  dataset_t::~dataset_t (){clear();}
 
   void dataset_t::init(const cell_fn_list_t &vert_fns,const tri_idx_list_t & trilist)
   {
-    ensure_valid_trilist_indexes(trilist,vert_fns.size());
-
     m_vert_fns.resize(vert_fns.size());
 
     std::copy(vert_fns.begin(),vert_fns.end(),m_vert_fns.begin());
 
-    m_tri_cc->init(trilist,vert_fns.size());
+    m_tcc.init(trilist,vert_fns.size());
 
-    m_cell_flags.resize(m_tri_cc->get_num_cells(),0);
+    int N = m_tcc.get_num_cells();
 
-    m_cell_pairs.resize(m_tri_cc->get_num_cells(),-1);
-
-    m_cell_own.resize(m_tri_cc->get_num_cells(),-1);
+    m_cell_own.resize(N,invalid_cellid);
+    m_cell_mxfct.resize(N,invalid_cellid);
+    m_cell_pairs.resize(N,invalid_cellid);
   }
 
   void  dataset_t::clear()
   {
     m_vert_fns.clear();
-
-    m_cell_flags.clear();
-
     m_cell_own.clear();
-
+    m_cell_mxfct.clear();
     m_cell_pairs.clear();
-
-    m_tri_cc->clear();
-
-    m_critical_cells.clear();
-
-    m_critical_cells_vert.clear();
+    m_tcc.clear();
   }
 
-  cellid_t   dataset_t::getCellPairId (cellid_t c) const
+  template <int dim,typename Titer>
+  inline void assign_max_facets(dataset_t &ds,Titer b,Titer e)
   {
-    ensure_cell_paired(this,c);
+    cellid_t f[10];
 
-    return m_cell_pairs[c];
+    BOOST_AUTO(cmp,bind(&dataset_t::compare_cells<dim-1>,&ds,_1,_2));
+
+    for(;b!=e;++b)
+      ds.max_fct(*b) = *max_element(f,f+ds.get_cets<GDIR_DES>(*b,f),cmp);
   }
 
-  bool dataset_t::compareCells( cellid_t c1,cellid_t  c2 ) const
+  inline cellid_t * filter_elst(cellid_t *b,cellid_t *e, cellid_t *r, cellid_t c,const dataset_t &ds)
+  {for(;b!=e; ++b) if( ds.max_fct(*b) == c) *r++ = *b; return r;}
+
+  template <int dim,typename Titer>
+  inline void assign_pairs(dataset_t &ds,Titer b,Titer e)
   {
-    bool is_c1_bndry = isBoundryCell(c1);
-    bool is_c2_bndry = isBoundryCell(c2);
+    cellid_t cf[10],*cfe;
 
-    if(is_c1_bndry != is_c2_bndry)
-      return is_c1_bndry;
+    BOOST_AUTO(cmp,bind(&dataset_t::compare_cells<dim+1>,&ds,_1,_2));
 
-    cellid_t pts1[20];
-    cellid_t pts2[20];
-
-    uint pts1_ct = getCellPoints ( c1,pts1);
-    uint pts2_ct = getCellPoints ( c2,pts2);
-
-    std::sort ( pts1,pts1+pts1_ct,*m_ptcomp );
-    std::sort ( pts2,pts2+pts2_ct,*m_ptcomp);
-
-    std::reverse(pts1,pts1+pts1_ct);
-    std::reverse(pts2,pts2+pts2_ct);
-
-    return std::lexicographical_compare
-        ( pts1,pts1+pts1_ct,pts2,pts2+pts2_ct,*m_ptcomp );
-  }
-
-  cell_fn_t dataset_t::get_cell_fn (cellid_t c) const
-  {
-
-    cell_fn_t  fn = 0.0;
-
-    cellid_t pts[20];
-
-    uint pts_ct = getCellPoints (c,pts);
-
-    for (int j = 0 ; j <pts_ct ;++j)
-      fn += m_vert_fns[pts[j]];
-
-    fn /= pts_ct;
-
-    return fn;
-  }
-
-  uint dataset_t::getCellPoints (cellid_t c,cellid_t  *p) const
-  {
-    return m_tri_cc->get_cell_points(c,p);
-  }
-
-  uint dataset_t::getCellFacets (cellid_t c,cellid_t *f) const
-  {
-    return m_tri_cc->get_cell_facets(c,f);
-  }
-
-  uint dataset_t::getCellCofacets (cellid_t c,cellid_t *cf) const
-  {
-    return m_tri_cc->get_cell_co_facets(c,cf);
-  }
-
-  bool dataset_t::isPairOrientationCorrect (cellid_t c, cellid_t p) const
-  {
-    return (getCellDim (c) <getCellDim (p));
-  }
-
-  bool dataset_t::isCellMarked (cellid_t c) const
-  {
-    return ! (m_cell_flags[c] == CELLFLAG_UNKNOWN);
-  }
-
-  bool dataset_t::isCellCritical (cellid_t c) const
-  {
-    return (m_cell_flags[c]& CELLFLAG_CRITCAL);
-  }
-
-  bool dataset_t::isCellPaired (cellid_t c) const
-  {
-    return (m_cell_flags[c] & CELLFLAG_PAIRED);
-  }
-
-  void dataset_t::pairCells (cellid_t c,cellid_t p)
-  {
-    m_cell_pairs[c] = p;
-    m_cell_pairs[p] = c;
-
-    m_cell_flags[c] = m_cell_flags[c] |CELLFLAG_PAIRED;
-    m_cell_flags[p] = m_cell_flags[p] |CELLFLAG_PAIRED;
-  }
-
-  uint dataset_t::getCellDim ( cellid_t c ) const
-  {
-    return m_tri_cc->get_cell_dim(c);
-  }
-
-  void dataset_t::markCellCritical (cellid_t c)
-  {
-    m_cell_flags[c] = m_cell_flags[c] |CELLFLAG_CRITCAL;
-  }
-
-  bool dataset_t::isBoundryCell (cellid_t c) const
-  {
-    return m_tri_cc->is_cell_boundry(c);
-  }
-
-  std::string dataset_t::getCellFunctionDescription (cellid_t c) const
-  {
-    std::stringstream ss;
-
-    ( (std::ostream &) ss) <<c;
-
-    return ss.str();
-
-  }
-
-  std::string dataset_t::getCellDescription (cellid_t c) const
-  {
-
-    std::stringstream ss;
-
-    ( (std::ostream &) ss) <<c;
-
-    return ss.str();
-
-  }
-
-  void dataset_t::work()
-  {
-    assignGradients();
-
-    assignCellOwnerExtrema();
-  }
-
-  template<typename est_it_t>
-  void log_est(dataset_t *ds,est_it_t begin, est_it_t end)
-  {
-    for(; begin != end;begin++)
-      cout<<ds->to_string(*begin);
-
-    cout<<endl;
-  }
-
-  void  dataset_t::assignGradients()
-  {
-    typedef std::list<cellid_t> cellid_llist_t;
-
-    int num_verts = m_tri_cc->get_num_cells_dim(0);
-
-    BOOST_AUTO(cmp,bind(&dataset_t::compareCells,this,_1,_2));
-
-    // assuming max degree is 20 adjust if necessary.
-
-    uint est[40];
-
-    for(int i = 0 ; i < num_verts; ++i)
+    for(;b!=e;++b)
     {
-      int star_ct = m_tri_cc->get_vert_star(i,est+1);
+      cfe = cf + ds.get_cets<GDIR_ASC>(*b,cf);
+      cfe = filter_elst(cf,cfe,cf,*b,ds);
 
-      int est_ct = 0;
+      cellid_t *mcf = min_element(cf,cfe,cmp);
 
-      est[0] = i; est_ct++;
+      if( mcf != cfe && ds.is_boundry(*mcf) == ds.is_boundry(*b))
+        ds.pair(*b,*mcf);
+    }
+  }
 
-      for(int j = 1 ; j < star_ct+1; ++j )
+  inline cellid_t * filter_elst2(cellid_t *b,cellid_t *e, cellid_t *r, cellid_t c,const dataset_t &ds)
+  {
+    for(;b!=e; ++b)
+      if( !ds.is_paired(*b) && ds.max_fct(*b) != c && ds.max_fct(ds.max_fct(*b)) == ds.max_fct(c))
+        *r++ = *b;
+
+    return r;
+  }
+
+  template <int dim,typename Titer>
+  inline void assign_pairs2(dataset_t &ds,Titer b,Titer e)
+  {
+    cellid_t cf[10],*cfe;
+
+    BOOST_AUTO(cmp,bind(&dataset_t::compare_cells<dim+1>,&ds,_1,_2));
+
+    int np = 0;
+
+    for(;b!=e;++b)
+      if(!ds.is_paired(*b))
       {
-        cellid_t vert[4];
+        cfe = cf + ds.get_cets<GDIR_ASC>(*b,cf);
+        cfe = filter_elst2(cf,cfe,cf,*b,ds);
 
-        int vert_ct = getCellPoints(est[j],vert);
+        cellid_t *mcf = min_element(cf,cfe,cmp);
 
-        std::sort(vert,vert+vert_ct,*m_ptcomp);
-
-        std::reverse(vert,vert+vert_ct);
-
-        if(vert[0] == i)
-          est[est_ct++] = est[j];
-      }
-
-      std::sort(est,est+est_ct,cmp);
-
-      cellid_llist_t est_list(est,est+est_ct);
-
-      for(cellid_llist_t::iterator j = est_list.begin(); j != est_list.end();)
-      {
-        cellid_llist_t::iterator c_it = j,p_it = j;
-
-        ++j;
-
-        while( p_it != est_list.begin())
+        if( mcf != cfe && ds.is_boundry(*mcf) == ds.is_boundry(*b))
         {
-          p_it--;
-
-          bool is_adj        = m_tri_cc->is_adjacent(*c_it,*p_it);
-          bool is_same_bndry = (isBoundryCell(*c_it) == isBoundryCell(*p_it));
-
-          if(is_adj && is_same_bndry)
-          {
-            pairCells(*c_it,*p_it);
-            est_list.erase(c_it);
-            est_list.erase(p_it);
-            break;
-          }
+          ds.pair(*b,*mcf); np++;
         }
-
       }
-
-
-      for(cellid_llist_t::iterator j = est_list.begin() ; j != est_list.end() ; ++j)
-      {
-        markCellCritical(*j);
-
-        m_critical_cells.push_back(*j);
-
-        m_critical_cells_vert.push_back(i);
-      }
-    }
   }
 
-
-  void  dataset_t::assignCellOwnerExtrema()
+  template<typename Toi,typename Tii>
+  inline Toi collect_cps(const dataset_t &ds,Tii b,Tii e,Toi r)
   {
-    for (cellid_list_t::iterator it = m_critical_cells.begin() ;
-    it != m_critical_cells.end();++it)
+    for(; b!=e; ++b)
+      if(!ds.is_paired(*b))
+        *r++ = *b;
+
+    return r;
+  }
+
+  template <eGDIR dir>
+  inline void bfs_owner_extrema(dataset_t &ds,cellid_t s)
+  {
+    const int dim = (dir == GDIR_DES)?(gc_max_cell_dim):(0);
+
+    std::stack<cellid_t> stk;
+    stk.push(s);
+    cellid_t f[20],*fe,*fb;
+
+    ASSERT(ds.cell_dim(s) == dim);
+
+    while(!stk.empty())
     {
+      cellid_t c = stk.top(); stk.pop();
 
-      m_cell_own[*it] = *it;
+      ds.owner(c) = s;
 
-      switch (getCellDim (*it))
-      {
-      case 0:
-        track_gradient_tree_bfs(this,*it,GDIR_ASC);
-        break;
-      case 2:
-        track_gradient_tree_bfs(this,*it,GDIR_DES);
-        break;
-      default:
-        break;
-      }
+      fb = f; fe = f + ds.get_cets<dir>(c,f);
+
+      for (; fb != fe; ++fb )
+        if( ds.is_paired(*fb))
+        {
+          cellid_t p = ds.pair(*fb);
+          if(p != c && ds.cell_dim(p) == dim)
+            stk.push(p);
+        }
     }
-
   }
 
-  void  dataset_t::writeout_connectivity(mscomplex_t *msgraph)
+  inline void make_connections(mscomplex_t &msc,const cellid_list_t &ccells,const dataset_t &ds)
   {
-    msgraph->resize(m_critical_cells.size());
+    msc.resize(ccells.size());
 
     map<cellid_t,int> id_cp_map;
 
-    for (uint i = 0 ; i <m_critical_cells.size(); ++i)
+    for( int i = 0 ; i < ccells.size() ; ++i)
     {
-      cellid_t c  = m_critical_cells[i];
-
-      uint     vi = m_critical_cells_vert[i];
-
-      msgraph->set_critpt(i,c,getCellDim(c),m_vert_fns[vi],vi,isBoundryCell(c));
-
+      cellid_t c = ccells[i];
+      msc.set_critpt(i,c,ds.cell_dim(c),ds.cell_fn(c),ds.max_vert<-1>(c),ds.is_boundry(c));
       id_cp_map[c] = i;
     }
 
-    for (cellid_list_t::iterator it = m_critical_cells.begin() ;
-    it != m_critical_cells.end();++it)
-    {
-      cellid_t c = *it;
+    cellid_t f[20]; int f_ct;
 
-      ASSERT(id_cp_map.count(c) == 1);
-
-      if(getCellDim(c) == 1)
+    for(cellid_list_t::const_iterator b = ccells.begin(),e =ccells.end();b!=e; ++b)
+      if(ds.cell_dim(*b) == 1)
       {
-        cellid_t f[4],cf[4];
+        ASSERT(id_cp_map.count(*b) ==1);
+        ds.get_cets<GDIR_DES>(*b,f);
 
-        uint f_ct = getCellFacets(c,f);
-        uint cf_ct = getCellCofacets(c,cf);
+        ASSERT(id_cp_map.count(ds.owner(f[0])) == 1);
+        msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[0])]);
 
-        for(int i = 0 ; i < f_ct;++i)
-        {
-          cellid_t own = m_cell_own[f[i]];
-          ASSERT(own != invalid_cellid);
-          ASSERT(id_cp_map.count(own) == 1);
-          msgraph->connect_cps(id_cp_map[c],id_cp_map[own]);
-        }
+        ASSERT(id_cp_map.count(ds.owner(f[1])) == 1);
+        msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[1])]);
 
-        for(int i = 0 ; i < cf_ct;++i)
-        {
-          cellid_t own = m_cell_own[cf[i]];
-          ASSERT(own != invalid_cellid);
-          ASSERT(id_cp_map.count(own) == 1);
-          msgraph->connect_cps(id_cp_map[c],id_cp_map[own]);
-        }
+        f_ct = ds.get_cets<GDIR_ASC>(*b,f);
+
+        ASSERT(id_cp_map.count(ds.owner(f[0])) == 1);
+        msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[0])]);
+
+        if(f_ct == 1) continue;
+
+        ASSERT(id_cp_map.count(ds.owner(f[1])) == 1);
+        msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[1])]);
       }
+  }
+
+  void dataset_t::work(mscomplex_ptr_t msc)
+  {
+    assign_max_facets<1>(*this,m_tcc.begin(1),m_tcc.end(1));
+    assign_max_facets<2>(*this,m_tcc.begin(2),m_tcc.end(2));
+
+    assign_pairs<0>(*this,m_tcc.begin(0),m_tcc.end(0));
+    assign_pairs<1>(*this,m_tcc.begin(1),m_tcc.end(1));
+
+    assign_pairs2<1>(*this,m_tcc.begin(1),m_tcc.end(1));
+
+    cellid_list_t ccells;
+
+    collect_cps(*this,m_tcc.begin(),m_tcc.end(),back_inserter(ccells));
+
+    for(cellid_list_t::iterator b = ccells.begin(),e =ccells.end();b!=e; ++b)
+    {
+      if(cell_dim(*b) == 2) bfs_owner_extrema<GDIR_DES>(*this,*b);
+      if(cell_dim(*b) == 0) bfs_owner_extrema<GDIR_ASC>(*this,*b);
     }
+
+    make_connections(*msc,ccells,*this);
   }
 
-  std::string dataset_t::to_string(cellid_t c) const
-  {
-    std::stringstream ss;
-
-    cellid_t vert[4];
-
-    uint vert_ct = getCellPoints(c,vert);
-
-    std::sort(vert,vert+vert_ct,*m_ptcomp);
-
-    std::reverse(vert,vert+vert_ct);
-
-    ss<<"(";
-
-    for(uint i = 0 ; i < vert_ct;++i)
-      ss<<vert[i]<<",";
-
-    ss<<")";
-
-    return ss.str();
-  }
-
-  void dataset_t::log_flags()
-  {
-    for(uint i = 0 ; i < m_cell_flags.size(); ++i)
-      std::cout<<(int)m_cell_flags[i]<<" ";
-
-    std::cout<<std::endl;
-
-  }
-
-  void dataset_t::log_pairs()
-  {
-    for(uint i = 0 ; i < m_cell_flags.size(); ++i)
-      std::cout<<m_cell_pairs[i]<<" ";
-
-    std::cout<<std::endl;
-
-  }
 }
