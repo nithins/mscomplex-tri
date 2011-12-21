@@ -39,7 +39,7 @@ namespace trimesh
 
     glviewer_t(QWidget *par);
 
-    void setup(data_manager_t *dm);
+    void setup(std::string tf,std::string gf,std::string mf);
 
     ~glviewer_t();
 
@@ -78,7 +78,7 @@ namespace trimesh
 
   public:
 
-    viewer_mainwindow(data_manager_t *gdm);
+    viewer_mainwindow(std::string tf,std::string gf,std::string mf);
 
     ~viewer_mainwindow();
 

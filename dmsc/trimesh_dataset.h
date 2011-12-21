@@ -22,7 +22,6 @@
 #ifndef TRIMESH_DATASET_H_INCLUDED
 #define TRIMESH_DATASET_H_INCLUDED
 
-#include <vector>
 #include <trimesh.h>
 
 #include <boost/iterator/counting_iterator.hpp>
@@ -50,7 +49,7 @@ namespace trimesh
   public:
     void  work(mscomplex_ptr_t);
     void  save_manifolds(std::ostream &,mscomplex_ptr_t);
-    inline void  save_manifolds(std::string &,mscomplex_ptr_t);
+    inline void  save_manifolds(const std::string &,mscomplex_ptr_t);
 
   public:
     inline int cell_dim(cellid_t) const;
@@ -75,4 +74,6 @@ namespace trimesh
 
   };
 }
+
+#include <trimesh_dataset_ensure.h>
 #endif

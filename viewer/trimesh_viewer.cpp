@@ -9,13 +9,9 @@
 
 #include <glutils.h>
 #include <GLSLProgram.h>
-#include <logutil.h>
 
 #include <trimesh_viewer.h>
-#include <trimesh_datamanager.h>
 #include <trimesh_mscomplex.h>
-#include <trimesh_mscomplex_ensure.h>
-#include <trimesh_dataset.h>
 
 #include <config.h>
 
@@ -78,14 +74,15 @@ namespace trimesh
   glutils::color_t g_normals_color = glutils::color_t(0.85,0.75,0.65);
 
   viewer_t::viewer_t
-      (data_manager_t * gdm):
+      (std::string tf,std::string gf,std::string mf):
       m_data_dia(0),
       m_bRebuildRens(true),m_bShowRoiBB(false),m_bCenterToRoi(false),
-      m_bShowSurface(false),
-      m_gdm(gdm)
+      m_bShowSurface(false),m_graph_file(gf),m_tri_file(tf),m_mfold_file(mf)
+
   {
-    //for(uint i = 0 ;i < m_gdm->m_pieces.size();++i)
-    m_piece_rens.push_back(new octtree_piece_rendata(m_gdm->m_dataset,m_gdm->m_msgraph,this));
+    mscomplex_ptr_t msc(new mscomplex_t);
+
+    m_piece_rens.push_back(new octtree_piece_rendata(msc,this));
   }
 
   viewer_t::~viewer_t()
@@ -94,8 +91,6 @@ namespace trimesh
       delete m_piece_rens[i];
 
     m_piece_rens.clear();
-
-    delete m_gdm;
   }
 
   void viewer_t::set_roi_dim_range_nrm(double l,double u,int dim)
@@ -184,8 +179,9 @@ namespace trimesh
 
     glutils::vertex_list_t  vlist;
 
-    glutils::read_tri_file(m_gdm->m_tri_filename.c_str(),vlist,tlist);
+    glutils::read_tri_file(m_tri_file.c_str(),vlist,tlist);
 
+    m_piece_rens[0]->m_msgraph->load(m_graph_file);
     m_piece_rens[0]->init(tlist,vlist);
 
     m_extent = m_piece_rens[0]->m_extent;
@@ -246,7 +242,7 @@ namespace trimesh
 
 
   octtree_piece_rendata::octtree_piece_rendata
-      (dataset_ptr_t d,mscomplex_ptr_t m,viewer_t *v):
+      (mscomplex_ptr_t m,viewer_t *v):
       m_bShowAllCps(false),
       m_bShowCpLabels ( false ),
       m_bShowMsGraph ( false ),
@@ -255,7 +251,6 @@ namespace trimesh
       m_bShowCancMsGraph(false),
       m_bNeedUpdateDiscRens(false),
       m_bShowCellNormals(false),
-      m_dataset(d),
       m_msgraph(m),
       m_viewer(v)
   {

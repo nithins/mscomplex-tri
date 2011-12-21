@@ -46,9 +46,9 @@ namespace trimesh
     setParent(par);
   }
 
-  void glviewer_t::setup(data_manager_t *dm)
+  void glviewer_t::setup(std::string tf,std::string gf,std::string mf)
   {
-    m_ren = new viewer_t(dm);
+    m_ren = new viewer_t(tf,gf,mf);
   }
 
   glviewer_t::~glviewer_t()
@@ -143,12 +143,12 @@ namespace trimesh
   }
 
   viewer_mainwindow::viewer_mainwindow
-      (data_manager_t * gdm):
+      (std::string tf,std::string gf,std::string mf):
       m_active_otp_idx(0)
   {
     setupUi (this);
 
-    glviewer->setup(gdm);
+    glviewer->setup(tf,gf,mf);
 
     m_otp_model = new configurable_item_model
                   (glviewer->m_ren,this);

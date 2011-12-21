@@ -1,13 +1,13 @@
 #ifndef TRIMESH_H_INCLUDED
 #define TRIMESH_H_INCLUDED
 
-#include <vector>
-#include <cpputils.h>
-#include <glutils.h>
 #include <tri_edge.h>
 
 namespace trimesh
 {
+  typedef tri_cc_t::tri_idx_t      tri_idx_t;
+  typedef tri_cc_t::tri_idx_list_t tri_idx_list_t;
+
   const uint gc_max_cell_dim =    tri_cc_t::cc_dim;
   typedef tri_cc_t::cellid_t      cellid_t;
   typedef double                  cell_fn_t;
@@ -18,10 +18,7 @@ namespace trimesh
   typedef std::vector<cell_fn_t>  cell_fn_list_t;
   typedef std::vector<char>       bool_list_t;
 
-  typedef glutils::tri_idx_list_t tri_idx_list_t;
-  typedef glutils::vertex_list_t  vertex_list_t;
-
-  const cellid_t invalid_cellid = -1;
+  const cellid_t invalid_cellid = tri_cc_t::INVALID_VALUE;
 
   enum eGDIR  {GDIR_DES,GDIR_ASC,GDIR_CT};
 

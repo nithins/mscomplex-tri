@@ -1,20 +1,11 @@
-#include <trimesh_dataset.h>
-#include <trimesh_dataset_ensure.h>
-
-#include <vector>
-#include <queue>
 #include <stack>
-
-#include <timer.h>
-
-#include <QFile>
-#include <logutil.h>
 
 #include <boost/typeof/typeof.hpp>
 
-#include <trimesh_mscomplex.h>
+#include <timer.h>
 
-#include <list>
+#include <trimesh_dataset.h>
+#include <trimesh_mscomplex.h>
 
 using namespace std;
 

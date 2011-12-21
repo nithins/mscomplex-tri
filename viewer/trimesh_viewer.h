@@ -46,13 +46,13 @@ namespace trimesh
   typedef boost::shared_ptr<glutils::renderable_t> renderable_sp_t;
   typedef boost::shared_ptr<disc_rendata_t>        disc_rendata_sp_t;
   typedef std::set<disc_rendata_sp_t>              disc_rendata_sp_set_t;
+  typedef glutils::vertex_list_t                   vertex_list_t;
 
   class octtree_piece_rendata:public configurable_t
   {
   public:
 
     viewer_t      * m_viewer;
-    dataset_ptr_t   m_dataset;
     mscomplex_ptr_t m_msgraph;
 
     // set externally to control what is rendered
@@ -102,7 +102,7 @@ namespace trimesh
     void render_msgraph_data() ;
     void render_dataset_data() ;
 
-    octtree_piece_rendata(dataset_ptr_t, mscomplex_ptr_t,viewer_t *);
+    octtree_piece_rendata(mscomplex_ptr_t,viewer_t *);
     void init(const tri_idx_list_t &,const vertex_list_t &);
 
     // configurable_t interface
@@ -128,18 +128,20 @@ namespace trimesh
     point_t                                m_roi_base_pt;
     renderable_sp_t                        m_surf_ren;
 
+    std::string  m_graph_file;
+    std::string  m_mfold_file;
+    std::string  m_tri_file;
+
   public:
     bool m_bShowRoiBB;
     bool m_bRebuildRens;
     bool m_bCenterToRoi;
     bool m_bShowSurface;
 
-    data_manager_t *                       m_gdm;
-
     spin::spin_image_ptr_t                 m_spin_image;
   public:
 
-    viewer_t(data_manager_t * );
+    viewer_t(std::string tf,std::string gf,std::string mf);
 
     ~viewer_t();
 

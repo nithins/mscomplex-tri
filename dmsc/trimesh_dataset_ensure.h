@@ -114,9 +114,9 @@ namespace trimesh
   {ASSERT(m_cell_own[c] == invalid_cellid);return m_cell_own[c];}
 
 
-  inline void  dataset_t::save_manifolds(std::string &s,mscomplex_ptr_t msc)
+  inline void  dataset_t::save_manifolds(const std::string &s,mscomplex_ptr_t msc)
   {
-    std::fstream fs(s.c_str(),std::ios::in|std::ios::binary);
+    std::fstream fs(s.c_str(),std::ios::out|std::ios::binary);
     ensure(fs.is_open(),"Unable to open file ");
     save_manifolds(fs,msc);
   }

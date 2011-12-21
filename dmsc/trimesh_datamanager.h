@@ -22,7 +22,6 @@
 #define TRIMESH_DATAMANAGER_H_INCLUDED
 
 #include <fstream>
-#include <vector>
 
 #include <trimesh.h>
 

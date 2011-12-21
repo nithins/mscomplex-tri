@@ -28,7 +28,6 @@
 #include <boost/archive/binary_oarchive.hpp>
 
 #include <timer.h>
-#include <logutil.h>
 
 #include <trimesh_datamanager.h>
 
@@ -95,13 +94,45 @@ namespace trimesh
     cout<<"------------------------------------"<<endl;
   }
 
+  void read_tri_file( const char *filename,tri_idx_list_t &tlist)
+  {
+    uint num_v,num_t;
+
+    std::fstream tri_file ( filename, std::fstream::in );
+
+    if(tri_file.is_open() == false)
+      throw std::runtime_error("unable to open tri file");
+
+    tri_file >> num_v >> num_t;
+
+    tlist.resize(num_t);
+
+    double vx,vy,vz;
+
+    for ( uint i = 0; i < num_v; ++i )
+      tri_file>>vx>>vy>>vz;
+
+    for ( uint i = 0; i < num_t; i++ )
+      for ( uint j = 0; j < 3; ++j )
+      {
+        tri_file >> tlist[i][j];
+
+        if(tlist[i][j] >= num_v||tlist[i][j] < 0)
+        {
+          throw std::runtime_error("invalid index");
+        }
+      }
+
+    tri_file.close();
+  }
+
+
   void data_manager_t::init()
   {
     tri_idx_list_t tlist;
-    vertex_list_t  vlist;
     cell_fn_list_t cell_fns;
 
-    glutils::read_tri_file(m_tri_filename.c_str(),vlist,tlist);
+    read_tri_file(m_tri_filename.c_str(),tlist);
 
     print_bin_info(m_bin_filename);
 
@@ -138,7 +169,8 @@ namespace trimesh
     m_msgraph->stow(m_tri_filename+".graph.bin",false);
     cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-//    m_msgraph->invert_for_collection();
+    m_msgraph->invert_for_collection();
+    m_dataset->save_manifolds(m_tri_filename+".mfold.bin",m_msgraph);
     cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
     cout<<"------------------------------------"<<endl;
