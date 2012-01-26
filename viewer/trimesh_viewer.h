@@ -12,48 +12,55 @@
 
 namespace trimesh
 {
-  typedef aabb::aabb_t<double,3>          rect_t;
-  typedef aabb::aabb_t<double,3>::point_t point_t;
+  typedef glutils::renderable_ptr_t  renderable_ptr_t;
+  typedef glutils::vertex_list_t     vertex_list_t;
 
-  class octtree_piece_rendata;
-
-  class viewer_t;
-
-  class disc_rendata_t
+  class mfold_data_t:public configurable_t
   {
   public:
+    std::string              m_mfold_file;
+    cellid_list_t            m_cellids;
+    int_list_t               m_offsets;
 
-    cellid_t               cellid;
-    uint                   index;
-    cellid_t               vert_no;
+    mscomplex_ptr_t          m_msc;
+    int_list_t               m_scpno_cpno_map;
 
-    glutils::renderable_t *ren[GDIR_CT];
-    bool                   show[GDIR_CT];
-    glutils::color_t       color[GDIR_CT];
+    std::string              m_tri_file;
+    tri_cc_geom_ptr_t        m_tcc;
+    glutils::bufobj_ptr_t    m_cell_pos_bo;
+    glutils::bufobj_ptr_t    m_cell_nrm_bo;
+    double                   m_extent[6];
 
-    disc_rendata_t(cellid_t c,uint i,cellid_t vno);
-    ~disc_rendata_t();
+    bool                          m_bNeedUpdate;
+    std::vector<renderable_ptr_t> m_ren[GDIR_CT];
+    bool_list_t                   m_ren_show[GDIR_CT];
+    glutils::color_list_t         m_ren_color[GDIR_CT];
 
-    void render(double data_dia);
-    bool update(octtree_piece_rendata *);
+    mfold_data_t(std::string mf,std::string tf,mscomplex_ptr_t msc);
 
-    spin::spin_image_ptr_t compute_spin_image(octtree_piece_rendata *,uint dir);
+    template<eGDIR dir> inline void read_mfold(int i,cellid_list_t &mfold);
+    void __read_mfold(int i,cellid_list_t &mfold);
 
-    static void init();
-    static void cleanup();
+    void init();
+    void render();
+    bool update();
+
+    // configurable_t interface
+  public:
+    virtual data_index_t  dim();
+    virtual bool exchange_field(const data_index_t &,boost::any &);
+    virtual eFieldType exchange_header(const int &,boost::any &);
   };
 
-  typedef boost::shared_ptr<glutils::renderable_t> renderable_sp_t;
-  typedef boost::shared_ptr<disc_rendata_t>        disc_rendata_sp_t;
-  typedef std::set<disc_rendata_sp_t>              disc_rendata_sp_set_t;
-  typedef glutils::vertex_list_t                   vertex_list_t;
+  template<> inline void mfold_data_t::read_mfold<GDIR_DES>(int i,cellid_list_t &mfold)
+  {__read_mfold(2*i,mfold);}
+  template<> inline void mfold_data_t::read_mfold<GDIR_ASC>(int i,cellid_list_t &mfold)
+  {__read_mfold(2*i+1,mfold);}
 
-  class octtree_piece_rendata:public configurable_t
+  class graph_data_t
   {
   public:
-
-    viewer_t      * m_viewer;
-    mscomplex_ptr_t m_msgraph;
+    mscomplex_ptr_t m_msc;
 
     // set externally to control what is rendered
     bool m_bShowCps[gc_max_cell_dim+1];
@@ -65,93 +72,45 @@ namespace trimesh
     bool m_bShowCancMsGraph;
     bool m_bShowCellNormals;
 
-    // set externally .. cleared by render
-    bool m_bNeedUpdateDiscRens;
+    renderable_ptr_t ren_grad[gc_max_cell_dim];
+    renderable_ptr_t ren_cp_labels[gc_max_cell_dim+1];
+    renderable_ptr_t ren_cp[gc_max_cell_dim+1];
+    renderable_ptr_t ren_cp_conns[gc_max_cell_dim];
+    renderable_ptr_t ren_canc_cp_labels[gc_max_cell_dim+1];
+    renderable_ptr_t ren_canc_cp[gc_max_cell_dim+1];
+    renderable_ptr_t ren_canc_cp_conns[gc_max_cell_dim];
+    renderable_ptr_t ren_cell_normals;
 
-    renderable_sp_t ren_grad[gc_max_cell_dim];
-    renderable_sp_t ren_cp_labels[gc_max_cell_dim+1];
-    renderable_sp_t ren_cp[gc_max_cell_dim+1];
-    renderable_sp_t ren_cp_conns[gc_max_cell_dim];
-    renderable_sp_t ren_canc_cp_labels[gc_max_cell_dim+1];
-    renderable_sp_t ren_canc_cp[gc_max_cell_dim+1];
-    renderable_sp_t ren_canc_cp_conns[gc_max_cell_dim];
-    renderable_sp_t ren_cell_normals;
+    mfold_data_t m_mfold_data;
 
-    // the triangulation
+    graph_data_t(std::string tf,std::string gf,std::string mf);
 
-    tri_cc_geom_ptr_t        tri_cc_geom;
+    void init();
+    void render();
 
-    glutils::bufobj_ptr_t    cell_pos_bo;
-
-    glutils::bufobj_ptr_t    cell_nrm_bo;
-
-    std::vector<disc_rendata_sp_t> disc_rds;
-
-    disc_rendata_sp_set_t    active_disc_rens[gc_max_cell_dim + 1];
-
-    rect_t                              m_extent;
-
-    void create_disc_rds();
-    void update_active_disc_rens();
-
-    void create_cell_pos_nrm_bo();
-    void create_cp_rens(const rect_t &roi);
-    void create_canc_cp_rens(const rect_t &roi);
-    void create_grad_rens(const rect_t &roi);
-
-    void render_msgraph_data() ;
-    void render_dataset_data() ;
-
-    octtree_piece_rendata(mscomplex_ptr_t,viewer_t *);
-    void init(const tri_idx_list_t &,const vertex_list_t &);
-
-    // configurable_t interface
-  public:
-    virtual data_index_t  dim();
-    virtual bool exchange_field(const data_index_t &,boost::any &);
-    virtual eFieldType exchange_header(const int &,boost::any &);
+    void init_cps();
+    void init_ccps();
   };
-
-  typedef octtree_piece_rendata * datapiece_rendata_ptr_t;
-
-  class data_manager_t;
 
   class viewer_t:
       public glutils::renderable_t,
       public configurable_t
   {
   public:
-    std::vector<octtree_piece_rendata * >  m_piece_rens;
-    rect_t                                 m_roi;
-    rect_t                                 m_extent;
-    double                                 m_data_dia;
-    point_t                                m_roi_base_pt;
-    renderable_sp_t                        m_surf_ren;
-
-    std::string  m_graph_file;
-    std::string  m_mfold_file;
-    std::string  m_tri_file;
+    std::vector<graph_data_t * >  m_graphs;
+    renderable_ptr_t              m_surf_ren;
 
   public:
-    bool m_bShowRoiBB;
-    bool m_bRebuildRens;
-    bool m_bCenterToRoi;
+    double m_data_dia;
     bool m_bShowSurface;
 
-    spin::spin_image_ptr_t                 m_spin_image;
   public:
 
     viewer_t(std::string tf,std::string gf,std::string mf);
 
     ~viewer_t();
 
-    // ensure normalization of l and u, l < u , dim in {0,1,2}
-    void set_roi_dim_range_nrm(double l,double u,int dim);
-
   private:
-
-    void build_rens();
-
     // renderable_t interface
   public:
 

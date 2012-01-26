@@ -27,11 +27,11 @@ mscomplex_t::~mscomplex_t(){clear();}
 
 void mscomplex_t::set_critpt(int i, cellid_t c, char idx, cell_fn_t f, cellid_t v, bool b)
 {
-  cellid(i)     = c;
-  vertid(i)     = v;
-  index(i)      = idx;
-  fn(i)         = f;
-  is_boundry(i) = b;
+  m_cp_cellid[i]     = c;
+  m_cp_vertid[i]     = v;
+  m_cp_index[i]      = idx;
+  m_cp_fn[i]         = f;
+  m_cp_is_boundry[i] = b;
 }
 
 void  mscomplex_t::resize(int i)
@@ -96,8 +96,8 @@ void mscomplex_t::dir_connect_cps(int p, int q)
 
 void mscomplex_t::pair_cps(int p, int q)
 {
-  pair_idx(p) = q;
-  pair_idx(q) = p;
+  m_cp_pair_idx[p] = q;
+  m_cp_pair_idx[q] = p;
 }
 
 void mscomplex_t::cancel_pair ( int p, int q)
@@ -139,8 +139,8 @@ void mscomplex_t::cancel_pair ( int p, int q)
   for(j = m_asc_conn[q].begin();j != m_asc_conn[q].end();++j)
     m_des_conn[*j].erase(q);
 
-  is_canceled(p) = true;
-  is_canceled(q) = true;
+  m_cp_is_cancelled[p] = true;
+  m_cp_is_cancelled[q] = true;
 
   m_asc_conn[p].clear();
   m_des_conn[q].clear();
@@ -154,8 +154,8 @@ void mscomplex_t::uncancel_pair(int p, int q)
   ASSERT(index(p) == index(q)+1);
   ASSERT(pair_idx(p) == q && pair_idx(q) == p);
 
-  is_canceled(p) = false;
-  is_canceled(q) = false;
+  m_cp_is_cancelled[p] = false;
+  m_cp_is_cancelled[q] = false;
 
   conn_iter_t i,j;
 

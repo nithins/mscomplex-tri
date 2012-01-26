@@ -1,6 +1,7 @@
 #include <stack>
 
 #include <boost/typeof/typeof.hpp>
+#include <boost/foreach.hpp>
 
 #include <timer.h>
 
@@ -252,17 +253,25 @@ namespace trimesh
   {
     return sizeof(int)              + // num_cps
            sizeof(cellid_t)*num_cps + // cellids
-           sizeof(int)*(2*num_cps+1); // offsets
+           sizeof(char)*num_cps     + // cell indices
+           sizeof(int)*(2*num_cps);   // numcells
   }
 
-  void write_header(std::ostream & os,int_list_t & offsets,cellid_list_t &cps,ios::off_type hoff= 0)
+  void write_header
+  (std::ostream & os,
+   int_list_t & nmcells,
+   cellid_list_t &cps,
+   char_list_t &cp_inds,
+   ios::off_type hoff= 0)
   {
     os.seekp(hoff,ios::beg);
 
     bin_write(os,(int)cps.size());
     bin_write_vec(os,cps);
-    bin_write_vec(os,offsets);
+    bin_write_vec(os,cp_inds);
+    bin_write_vec(os,nmcells);
   }
+
 
   void  dataset_t::save_manifolds(std::ostream &os,mscomplex_ptr_t msc)
   {
@@ -274,24 +283,36 @@ namespace trimesh
 
     os.seekp(get_header_size(num_cps),ios::cur);
 
-    int_list_t off((2*num_cps+1)); *off.begin()=0;
-    cellid_list_t cps; transform(b,e,back_inserter(cps),bind(&mscomplex_t::_rv_cellid,msc,_1));
+    int_list_t nmcells;
 
-    for(;b!=e;++b)
+    for(BOOST_AUTO(i,b);i!=e;++i)
     {
       cellid_list_t des,asc;
+      int_list_t    desop,ascop;
 
-      if(msc->index(*b) != 0) bfs_collect<GDIR_DES>(*this,*msc,*b,des);
-      if(msc->index(*b) != 2) bfs_collect<GDIR_ASC>(*this,*msc,*b,asc);
+      if(msc->index(*i) != 0) bfs_collect<GDIR_DES>(*this,*msc,*i,des);
+      if(msc->index(*i) != 2) bfs_collect<GDIR_ASC>(*this,*msc,*i,asc);
 
-      off.push_back(*off.rbegin()+des.size());
-      off.push_back(*off.rbegin()+asc.size());
+      BOOST_AUTO(desop_bi,back_inserter(desop));
+      BOOST_AUTO(ascop_bi,back_inserter(ascop));
 
-      bin_write_vec(os,des);
-      bin_write_vec(os,asc);
+      BOOST_FOREACH(cellid_t c,des) m_tcc.cellid_to_output(c,desop_bi);
+      BOOST_FOREACH(cellid_t c,asc) m_tcc.cellid_to_output(c,ascop_bi);
+
+      nmcells.push_back(desop.size());
+      nmcells.push_back(ascop.size());
+
+      bin_write_vec(os,desop);
+      bin_write_vec(os,ascop);
     }
 
-    write_header(os,off,cps,hoff);
+    cellid_list_t cps;
+    char_list_t   cp_idxs;
+
+    transform(b,e,back_inserter(cps),bind(&mscomplex_t::cellid,msc,_1));
+    transform(b,e,back_inserter(cp_idxs),bind(&mscomplex_t::index,msc,_1));
+
+    write_header(os,nmcells,cps,cp_idxs,hoff);
   }
 
 }

@@ -70,10 +70,6 @@ namespace trimesh
       else
         disconnect(this, SIGNAL(drawFinished(bool)),this, SLOT(saveSnapshot(bool)));
     }
-    else if ((e->key()==Qt::Key_R) && (modifiers==Qt::ControlModifier))
-    {
-      m_ren->m_bShowRoiBB = !m_ren->m_bShowRoiBB;
-    }
     else if ((e->key()==Qt::Key_B) && (modifiers==Qt::ControlModifier))
     {
       m_bf_cull = !m_bf_cull;
@@ -125,7 +121,7 @@ namespace trimesh
     QModelIndexList l = m_cp_model_proxy->mapSelectionToSource
                         (critpt_view->selectionModel()->selection()).indexes();
 
-    configurable_ctx_menu(glviewer->m_ren->m_piece_rens[m_active_otp_idx],
+    configurable_ctx_menu(&(glviewer->m_ren->m_graphs[m_active_otp_idx]->m_mfold_data),
                           l,critpt_view->mapToGlobal(p));
 
     glviewer->updateGL();
@@ -139,7 +135,7 @@ namespace trimesh
     m_active_otp_idx = index.row();
 
     m_cp_model->reset_configurable
-        (glviewer->m_ren->m_piece_rens[m_active_otp_idx]);
+        (&(glviewer->m_ren->m_graphs[m_active_otp_idx]->m_mfold_data));
   }
 
   viewer_mainwindow::viewer_mainwindow
@@ -160,7 +156,7 @@ namespace trimesh
     datapiece_view->setModel ( m_otp_model );
 
     m_cp_model = new configurable_item_model
-                 (glviewer->m_ren->m_piece_rens[m_active_otp_idx],this);
+                 (&(glviewer->m_ren->m_graphs[m_active_otp_idx]->m_mfold_data),this);
 
     m_cp_model_proxy = new QSortFilterProxyModel(this);
 
@@ -417,21 +413,21 @@ namespace spin
 
   void si_graphics_item_t::update_image()
   {
-    if(m_si == m_viewer->m_spin_image) return;
+//    if(m_si == m_viewer->m_spin_image) return;
 
-    m_si = m_viewer->m_spin_image;
+//    m_si = m_viewer->m_spin_image;
 
-    if(!m_si) return;
+//    if(!m_si) return;
 
-    si_point_t sz = m_si->m_iextent.span();
+//    si_point_t sz = m_si->m_iextent.span();
 
-    si_point_t lc = m_si->m_iextent.lower_corner();
+//    si_point_t lc = m_si->m_iextent.lower_corner();
 
-    m_image = new QImage(QSize(sz[0],sz[1]),QImage::Format_RGB888);
+//    m_image = new QImage(QSize(sz[0],sz[1]),QImage::Format_RGB888);
 
-    for(uint y = 0 ; y < sz[1]; ++y)
-      for(uint x = 0 ; x < sz[0]; ++x)
-        m_image->setPixel( x,y,to_qrgb((*m_si->m_image)(lc + si_ipoint_t(x,y))));
+//    for(uint y = 0 ; y < sz[1]; ++y)
+//      for(uint x = 0 ; x < sz[0]; ++x)
+//        m_image->setPixel( x,y,to_qrgb((*m_si->m_image)(lc + si_ipoint_t(x,y))));
 
   }
 

@@ -33,900 +33,643 @@ template<typename T> std::string to_string(const T & t)
 using namespace glutils;
 using namespace std;
 
+template <typename iter_t>
+inline void log_range ( iter_t begin,iter_t end,const char * title = NULL,bool with_ind = false )
+{
+
+  if ( title != NULL )
+  {
+    std::string title_str ( title );
+    std::string ln1_str ( title_str.size(),'=' );
+    std::string ln2_str ( title_str.size(),'-' );
+
+    std::cout<< ( ln1_str );
+    std::cout<< ( title_str );
+    std::cout<< ( ln2_str );
+  }
+
+  std::stringstream ss;
+
+  unsigned int i = 0;
+
+  for ( iter_t pos = begin;pos !=end; ++pos )
+  {
+    std::stringstream ss_temp;
+
+    if ( with_ind )
+    {
+      ss_temp<<i++<<":";
+    }
+
+    ss_temp << *pos<<" ";
+
+    ss<<ss_temp.str();
+  }
+  std::cout<< ( ss.str() );
+
+  if ( title != NULL )
+  {
+    std::string title_str ( title );
+    std::string ln1_str ( title_str.size(),'=' );
+    std::cout<< ( ln1_str );
+  }
+
+  std::cout<<std::endl;
+}
+
 namespace trimesh
 {
-  glutils::color_t g_cp_colors[gc_max_cell_dim+1] =
+glutils::color_t g_cp_colors[gc_max_cell_dim+1] =
+{
+  glutils::color_t(0.0,0.0,1.0),
+  glutils::color_t(0.0,1.0,0.0),
+  glutils::color_t(1.0,0.0,0.0),
+};
+
+glutils::color_t g_grad_colors[gc_max_cell_dim] =
+{
+  glutils::color_t(0.0,0.5,0.5 ),
+  glutils::color_t(0.5,0.0,0.5 ),
+};
+
+glutils::color_t g_disc_colors[GDIR_CT][gc_max_cell_dim+1] =
+{
   {
-    glutils::color_t(0.0,0.0,1.0),
-    glutils::color_t(0.0,1.0,0.0),
-    glutils::color_t(1.0,0.0,0.0),
-  };
+    glutils::color_t(0.15,0.45,0.35 ),
+    glutils::color_t(0.85,0.65,0.75 ),
+    glutils::color_t(0.0,0.0,0.0 ),
+  },
 
-  glutils::color_t g_grad_colors[gc_max_cell_dim] =
+{
+    glutils::color_t(0.0,0.0,0.0 ),
+    glutils::color_t(0.65,0.95,0.45 ),
+    glutils::color_t(0.15,0.25,0.75 ),
+  },
+};
+
+glutils::color_t g_cp_conn_colors[gc_max_cell_dim] =
+{
+  glutils::color_t(0.0,0.5,0.5 ),
+  glutils::color_t(0.5,0.0,0.5 ),
+};
+
+glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
+
+glutils::color_t g_normals_color = glutils::color_t(0.85,0.75,0.65);
+
+viewer_t::viewer_t
+    (std::string tf,std::string gf,std::string mf):
+    m_data_dia(0),
+    m_bShowSurface(false)
+
+{
+  m_graphs.push_back(new graph_data_t(tf,gf,mf));
+}
+
+viewer_t::~viewer_t()
+{
+  for ( uint i = 0 ; i < m_graphs.size();i++ )
+    delete m_graphs[i];
+
+  m_graphs.clear();
+}
+
+int viewer_t::render()
+{
+  glPushAttrib(GL_ENABLE_BIT);
+
+  glEnable(GL_RESCALE_NORMAL);
+
+  glScalef(1.0/m_data_dia,1.0/m_data_dia,1.0/m_data_dia);
+
+  for ( uint i = 0 ; i < m_graphs.size();i++ )
   {
-    glutils::color_t(0.0,0.5,0.5 ),
-    glutils::color_t(0.5,0.0,0.5 ),
-  };
-
-  glutils::color_t g_disc_colors[GDIR_CT][gc_max_cell_dim+1] =
-  {
-    {
-      glutils::color_t(0.15,0.45,0.35 ),
-      glutils::color_t(0.85,0.65,0.75 ),
-      glutils::color_t(0.0,0.0,0.0 ),
-    },
-
-  {
-      glutils::color_t(0.0,0.0,0.0 ),
-      glutils::color_t(0.65,0.95,0.45 ),
-      glutils::color_t(0.15,0.25,0.75 ),
-    },
-  };
-
-  glutils::color_t g_cp_conn_colors[gc_max_cell_dim] =
-  {
-    glutils::color_t(0.0,0.5,0.5 ),
-    glutils::color_t(0.5,0.0,0.5 ),
-  };
-
-  glutils::color_t g_roiaabb_color = glutils::color_t(0.85,0.75,0.65);
-
-  glutils::color_t g_normals_color = glutils::color_t(0.85,0.75,0.65);
-
-  viewer_t::viewer_t
-      (std::string tf,std::string gf,std::string mf):
-      m_data_dia(0),
-      m_bRebuildRens(true),m_bShowRoiBB(false),m_bCenterToRoi(false),
-      m_bShowSurface(false),m_graph_file(gf),m_tri_file(tf),m_mfold_file(mf)
-
-  {
-    mscomplex_ptr_t msc(new mscomplex_t);
-
-    m_piece_rens.push_back(new octtree_piece_rendata(msc,this));
+    m_graphs[i]->render();
   }
 
-  viewer_t::~viewer_t()
-  {
-    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
-      delete m_piece_rens[i];
+  if(m_bShowSurface)
+    m_surf_ren->render();
 
-    m_piece_rens.clear();
+  glPopAttrib();
+}
+
+void viewer_t::init()
+{
+  glutils::init();
+
+  graph_data_t *gd= m_graphs[0];
+
+  gd->init();
+
+  double *e = gd->m_mfold_data.m_extent;
+
+  vertex_t s(e[1]-e[0],e[3]-e[2],e[5]-e[4]);
+
+  m_data_dia = *std::max_element(s.begin(),s.end());
+}
+
+configurable_t::data_index_t viewer_t::dim()
+{
+  return data_index_t(11,m_graphs.size());
+}
+
+bool viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
+{
+  graph_data_t * gd = m_graphs[idx[1]];
+
+  switch(idx[0])
+  {
+  case 0: return s_exchange_data_ro(std::string("0"),v);
+  case 1: return s_exchange_data_rw(gd->m_bShowAllCps,v);
+  case 2: return s_exchange_data_rw(gd->m_bShowCps[0],v);
+  case 3: return s_exchange_data_rw(gd->m_bShowCps[1],v);
+  case 4: return s_exchange_data_rw(gd->m_bShowCps[2],v);
+  case 5: return s_exchange_data_rw(gd->m_bShowCpLabels,v);
+  case 6: return s_exchange_data_rw(gd->m_bShowMsGraph,v);
+  case 7: return s_exchange_data_rw(gd->m_bShowGrad,v);
+  case 8: return s_exchange_data_rw(gd->m_bShowCancCps,v);
+  case 9: return s_exchange_data_rw(gd->m_bShowCancMsGraph,v);
+  case 10: return s_exchange_data_rw(gd->m_bShowCellNormals,v);
   }
 
-  void viewer_t::set_roi_dim_range_nrm(double l,double u,int dim)
+  throw std::logic_error("unknown index");
+}
+configurable_t::eFieldType viewer_t::exchange_header(const int &i, boost::any &v)
+{
+  switch(i)
   {
-    if(!(l<=u && 0.0 <= l && u <=1.0 && 0<=dim && dim < 3))
-      return;
-
-    double span = m_extent[dim].span();
-
-    m_roi[dim][0]  = m_extent[dim][0] + (uint)(l*span);
-    m_roi[dim][1]  = m_extent[dim][0] + (uint)(u*span);
-
-    m_roi_base_pt  = ((m_roi.upper_corner() +  m_roi.lower_corner())/2);
+  case 0: v = std::string("oct tree piece"); return EFT_DATA_RO;
+  case 1: v = std::string("all cps"); return EFT_DATA_RW;
+  case 2: v = std::string("minima"); return EFT_DATA_RW;
+  case 3: v = std::string("1 saddle"); return EFT_DATA_RW;
+  case 4: v = std::string("maxima"); return EFT_DATA_RW;
+  case 5: v = std::string("cp labels"); return EFT_DATA_RW;
+  case 6: v = std::string("msgraph");return EFT_DATA_RW;
+  case 7: v = std::string("gradient");return EFT_DATA_RW;
+  case 8: v = std::string("cancelled cps");return EFT_DATA_RW;
+  case 9: v = std::string("cancelled cp msgraph");return EFT_DATA_RW;
+  case 10: v = std::string("cell normals");return EFT_DATA_RW;
   }
+  throw std::logic_error("unknown index");
+}
 
-  int viewer_t::render()
-  {
-    if(m_bRebuildRens)
+graph_data_t::graph_data_t(std::string tf, std::string gf, std::string mf):
+    m_bShowAllCps(false),
+    m_bShowCpLabels ( false ),
+    m_bShowMsGraph ( false ),
+    m_bShowGrad ( false ),
+    m_bShowCancCps(false),
+    m_bShowCancMsGraph(false),
+    m_bShowCellNormals(false),
+    m_msc(new mscomplex_t),
+    m_mfold_data(mf,tf,m_msc)
+{
+  m_msc->load(gf);
+
+  m_bShowCps[0] = false;
+  m_bShowCps[1] = false;
+  m_bShowCps[2] = false;
+}
+
+void graph_data_t::init()
+{
+  m_mfold_data.init();
+
+  init_cps();
+  init_ccps();
+}
+
+void graph_data_t::init_cps()
+{
+  using namespace glutils;
+
+  point_idx_list_t  vind[gc_max_cell_dim+1];
+  line_idx_list_t   eind[gc_max_cell_dim];
+
+  int N = m_msc->get_num_critpts();
+
+  for(uint i = 0; i < N; ++i)
+    if(!m_msc->is_paired(i))
+      vind[m_msc->index(i)].push_back(m_msc->cellid(i));
+
+  bufobj_ptr_t cbo = m_mfold_data.m_cell_pos_bo;
+
+  for(uint i = 0 ; i < N; ++i)
+  if(!m_msc->is_paired(i))
+    for(conn_iter_t b = m_msc->m_des_conn[i].begin(),e = m_msc->m_des_conn[i].end(); b != e; ++b)
+      eind[m_msc->index(i)-1].push_back(line_idx_t(m_msc->cellid(*b),m_msc->cellid(i)));
+
+  ren_cp[0].reset(create_buffered_points_ren(cbo,make_buf_obj(vind[0])));
+  ren_cp[1].reset(create_buffered_points_ren(cbo,make_buf_obj(vind[1])));
+  ren_cp[2].reset(create_buffered_points_ren(cbo,make_buf_obj(vind[2])));
+
+  ren_cp_conns[0].reset(create_buffered_lines_ren(cbo,make_buf_obj(eind[0])));
+  ren_cp_conns[1].reset(create_buffered_lines_ren(cbo,make_buf_obj(eind[1])));
+}
+
+void graph_data_t::init_ccps()
+{
+  using namespace glutils;
+
+  point_idx_list_t  vind[gc_max_cell_dim+1];
+  line_idx_list_t   eind[gc_max_cell_dim];
+
+  int N = m_msc->get_num_critpts();
+
+  for(uint i = 0; i < N; ++i)
+    if(m_msc->is_paired(i))
+        vind[m_msc->index(i)].push_back(m_msc->cellid(i));
+
+  for(uint i = 0 ; i < N; ++i)
+    if(m_msc->is_paired(i))
     {
-      build_rens();
+      int idx  = m_msc->index(i), pidx = m_msc->index(m_msc->pair_idx(i));
+      int eidx = min(idx,pidx);
+      eGDIR d  = (idx > pidx)?(GDIR_DES):(GDIR_ASC);
 
-      m_bRebuildRens = false;
+      for(conn_iter_t b = m_msc->m_conn[d][i].begin(),e = m_msc->m_conn[d][i].end();b!=e ;++b)
+        eind[eidx].push_back(line_idx_t(m_msc->cellid(*b),m_msc->cellid(i)));
     }
 
-    glPushAttrib(GL_ENABLE_BIT);
+  bufobj_ptr_t cbo = m_mfold_data.m_cell_pos_bo;
 
-    glEnable(GL_RESCALE_NORMAL);
+  ren_canc_cp[0].reset(create_buffered_points_ren(cbo,make_buf_obj(vind[0])));
+  ren_canc_cp[1].reset(create_buffered_points_ren(cbo,make_buf_obj(vind[1])));
+  ren_canc_cp[2].reset(create_buffered_points_ren(cbo,make_buf_obj(vind[2])));
 
-    glScalef(1.0/m_data_dia,1.0/m_data_dia,1.0/m_data_dia);
+  ren_canc_cp_conns[0].reset(create_buffered_lines_ren(cbo,make_buf_obj(eind[0])));
+  ren_canc_cp_conns[1].reset(create_buffered_lines_ren(cbo,make_buf_obj(eind[1])));
+}
 
-    point_t s = ((m_extent.upper_corner() +  m_extent.lower_corner())/2);
+void graph_data_t::render()
+{
+  glPushMatrix();
+  glPushAttrib ( GL_ENABLE_BIT );
 
-    if(m_bCenterToRoi)
-      glTranslatef(-m_roi_base_pt[0],-m_roi_base_pt[1],-m_roi_base_pt[2]);
-    else
-      glTranslated(-s[0],-s[1],-s[2]);
-
-    if(m_bShowRoiBB)
-    {
-      glPushAttrib(GL_ENABLE_BIT);
-
-      glDisable(GL_LIGHTING);
-
-      glColor3dv(g_roiaabb_color.data());
-
-      glutils::draw_aabb_line(m_roi.lower_corner(),m_roi.upper_corner());
-
-      glPopAttrib();
-    }
-
-    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
-    {
-      m_piece_rens[i]->render_msgraph_data();
-    }
-
-    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
-    {
-      m_piece_rens[i]->render_dataset_data();
-    }
-
-    if(m_bShowSurface)
-      m_surf_ren->render();
-
-    glPopAttrib();
-  }
-
-  void viewer_t::build_rens()
-  {
-    for ( uint i = 0 ; i < m_piece_rens.size();i++ )
-    {
-      m_piece_rens[i]->create_cp_rens(m_roi);
-      m_piece_rens[i]->create_canc_cp_rens(m_roi);
-      m_piece_rens[i]->create_grad_rens(m_roi);
-    }
-  }
-
-  void viewer_t::init()
-  {
-
-    glutils::init();
-
-//    if(m_extent.eff_dim() == 0)
-//      throw std::runtime_error("NULL extent for viewer");
-
-    glutils::tri_idx_list_t tlist;
-
-    glutils::vertex_list_t  vlist;
-
-    glutils::read_tri_file(m_tri_file.c_str(),vlist,tlist);
-
-    m_piece_rens[0]->m_msgraph->load(m_graph_file);
-    m_piece_rens[0]->init(tlist,vlist);
-
-    m_extent = m_piece_rens[0]->m_extent;
-
-    m_roi = m_extent;
-
-    point_t s = m_extent.span();
-
-    m_data_dia = *std::max_element(s.begin(),s.end());
-
-    m_surf_ren.reset(create_buffered_flat_triangles_ren(make_buf_obj(vlist),make_buf_obj(tlist)));
-  }
-
-  configurable_t::data_index_t viewer_t::dim()
-  {
-    return data_index_t(11,m_piece_rens.size());
-  }
-
-  bool viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
-  {
-    octtree_piece_rendata * otprd = m_piece_rens[idx[1]];
-
-    switch(idx[0])
-    {
-    case 0: return s_exchange_data_ro(std::string("0"),v);
-    case 1: return s_exchange_data_rw(otprd->m_bShowAllCps,v);
-    case 2: return s_exchange_data_rw(otprd->m_bShowCps[0],v);
-    case 3: return s_exchange_data_rw(otprd->m_bShowCps[1],v);
-    case 4: return s_exchange_data_rw(otprd->m_bShowCps[2],v);
-    case 5: return s_exchange_data_rw(otprd->m_bShowCpLabels,v);
-    case 6: return s_exchange_data_rw(otprd->m_bShowMsGraph,v);
-    case 7: return s_exchange_data_rw(otprd->m_bShowGrad,v);
-    case 8: return s_exchange_data_rw(otprd->m_bShowCancCps,v);
-    case 9: return s_exchange_data_rw(otprd->m_bShowCancMsGraph,v);
-    case 10: return s_exchange_data_rw(otprd->m_bShowCellNormals,v);
-    }
-
-    throw std::logic_error("unknown index");
-  }
-  configurable_t::eFieldType viewer_t::exchange_header(const int &i, boost::any &v)
-  {
-    switch(i)
-    {
-    case 0: v = std::string("oct tree piece"); return EFT_DATA_RO;
-    case 1: v = std::string("all cps"); return EFT_DATA_RW;
-    case 2: v = std::string("minima"); return EFT_DATA_RW;
-    case 3: v = std::string("1 saddle"); return EFT_DATA_RW;
-    case 4: v = std::string("maxima"); return EFT_DATA_RW;
-    case 5: v = std::string("cp labels"); return EFT_DATA_RW;
-    case 6: v = std::string("msgraph");return EFT_DATA_RW;
-    case 7: v = std::string("gradient");return EFT_DATA_RW;
-    case 8: v = std::string("cancelled cps");return EFT_DATA_RW;
-    case 9: v = std::string("cancelled cp msgraph");return EFT_DATA_RW;
-    case 10: v = std::string("cell normals");return EFT_DATA_RW;
-    }
-    throw std::logic_error("unknown index");
-  }
-
-
-  octtree_piece_rendata::octtree_piece_rendata
-      (mscomplex_ptr_t m,viewer_t *v):
-      m_bShowAllCps(false),
-      m_bShowCpLabels ( false ),
-      m_bShowMsGraph ( false ),
-      m_bShowGrad ( false ),
-      m_bShowCancCps(false),
-      m_bShowCancMsGraph(false),
-      m_bNeedUpdateDiscRens(false),
-      m_bShowCellNormals(false),
-      m_msgraph(m),
-      m_viewer(v)
-  {
-    m_bShowCps[0] = false;
-    m_bShowCps[1] = false;
-    m_bShowCps[2] = false;
-  }
-
-  void octtree_piece_rendata::init(const tri_idx_list_t &t,const vertex_list_t &v)
-  {
-    tri_cc_geom.reset(new tri_cc_geom_t);
-    tri_cc_geom->init(t,v);
-    create_cell_pos_nrm_bo();
-    create_disc_rds();
-
-    glutils::compute_extent(v,m_extent.data()->data());
-  }
-
-  void octtree_piece_rendata::create_cell_pos_nrm_bo()
-  {
-    cell_pos_bo = glutils::make_buf_obj(tri_cc_geom->get_cell_positions());
-
-    cell_nrm_bo = glutils::make_buf_obj(tri_cc_geom->get_cell_normals());
-
-    ren_cell_normals.reset(glutils::create_buffered_normals_ren
-                           (cell_pos_bo,
-                            glutils::bufobj_ptr_t(),
-                            glutils::bufobj_ptr_t(),
-                            cell_nrm_bo,
-                            tri_cc_geom->get_average_edge_length()/2));
-  }
-
-  void  octtree_piece_rendata::create_cp_rens(const rect_t & roi)
-  {
-    if(m_msgraph == NULL)
-      return;
-
-    std::vector<glutils::point_idx_t>   crit_pt_idxs[gc_max_cell_dim+1];
-    std::vector<glutils::line_idx_t>    crit_conn_idxs[gc_max_cell_dim];
-
-    int N = m_msgraph->get_num_critpts();
-
-    for(uint i = 0; i < N; ++i)
-    {
-      if(m_msgraph->is_paired(i))
-        continue;
-
-      cellid_t c = (m_msgraph->cellid(i));
-
-      uint index = m_msgraph->index(i);
-
-      crit_pt_idxs[index].push_back(c);
-    }
-
-    for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
-    {
-      ren_cp[i].reset(glutils::create_buffered_points_ren
-                      (cell_pos_bo,glutils::make_buf_obj(crit_pt_idxs[i])));
-    }
-
-    for(uint i = 0 ; i < N; ++i)
-    {
-      if(m_msgraph->is_paired(i))
-        continue;
-
-      cellid_t c = m_msgraph->cellid(i);
-      uint index = m_msgraph->index(i);
-
-      for(conn_iter_t it  = m_msgraph->m_des_conn[i].begin();
-      it != m_msgraph->m_des_conn[i].end(); ++it)
-      {
-        cellid_t p = m_msgraph->cellid(*it);
-
-        crit_conn_idxs[index-1].push_back(glutils::line_idx_t(c,p));
-      }
-    }
-
-    for(uint i = 0 ; i < gc_max_cell_dim; ++i)
-    {
-      ren_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                            (cell_pos_bo,glutils::make_buf_obj(crit_conn_idxs[i])));
-    }
-
-  }
-
-  void  octtree_piece_rendata::create_canc_cp_rens(const rect_t & roi)
-  {
-    if(m_msgraph == NULL)
-      return;
-
-    std::vector<glutils::point_idx_t>   canc_cp_idxs[gc_max_cell_dim+1];
-    std::vector<glutils::line_idx_t>    canc_cp_conn_idxs[gc_max_cell_dim];
-
-    int N = m_msgraph->get_num_critpts();
-
-    for(uint i = 0; i < N; ++i)
-    {
-      if(!m_msgraph->is_paired(i))
-        continue;
-
-      cellid_t c = (m_msgraph->cellid(i));
-
-      uint index = m_msgraph->index(i);
-
-      canc_cp_idxs[index].push_back(c);
-
-    }
-
-    for(uint i = 0 ; i < gc_max_cell_dim+1; ++i)
-    {
-      ren_canc_cp[i].reset(glutils::create_buffered_points_ren
-                           (cell_pos_bo,glutils::make_buf_obj(canc_cp_idxs[i])));
-    }
-
-    for(uint i = 0 ; i < N; ++i)
-    {
-      if(!m_msgraph->is_paired(i))
-        continue;
-
-      cellid_t c = m_msgraph->cellid(i);
-      int idx    = m_msgraph->index(i);
-      int pidx   = m_msgraph->index(m_msgraph->pair_idx(i));
-
-      eGDIR d = (idx > pidx)?(GDIR_DES):(GDIR_ASC);
-      int eidx   = min(idx,pidx);
-
-      for(conn_iter_t it  = m_msgraph->m_conn[d][i].begin();
-      it != m_msgraph->m_conn[d][i].end(); ++it)
-      {
-        cellid_t p = m_msgraph->cellid(*it);
-
-        canc_cp_conn_idxs[eidx].push_back(glutils::line_idx_t(c,p));
-      }
-
-    }
-
-    for(uint i = 0 ; i < gc_max_cell_dim; ++i)
-    {
-      ren_canc_cp_conns[i].reset(glutils::create_buffered_lines_ren
-                                 (cell_pos_bo,
-                                  glutils::make_buf_obj(canc_cp_conn_idxs[i])));
-    }
-
-  }
-
-  void octtree_piece_rendata::create_grad_rens(const rect_t & roi)
-  {
-#warning "create_grad_rens not implemented"
-  }
-
-  void octtree_piece_rendata::create_disc_rds()
-  {
-    if(m_msgraph == NULL)
-      return;
-
-    boost::shared_ptr<disc_rendata_t> sptr;
-
-    int N = m_msgraph->get_num_critpts();
-
-    for(uint i = 0 ; i < N;++i)
-    {
-      if(m_msgraph->is_paired(i)) continue;
-
-      sptr.reset(new disc_rendata_t(m_msgraph->cellid(i),
-                                    m_msgraph->index(i),
-                                    m_msgraph->vertid(i)));
-
-      disc_rds.push_back(sptr);
-    }
-  }
-
-  void octtree_piece_rendata::update_active_disc_rens()
-  {
-    if(m_msgraph == NULL)
-      return;
-
-    for(uint i = 0 ; i < disc_rds.size();++i)
-    {
-      if(disc_rds[i]->update(this))
-      {
-        active_disc_rens[disc_rds[i]->index].insert(disc_rds[i]);
-      }
-      else
-      {
-        active_disc_rens[disc_rds[i]->index].erase(disc_rds[i]);
-      }
-    }
-  }
-
-  void octtree_piece_rendata::render_msgraph_data()
-  {
-    glPushMatrix();
-    glPushAttrib ( GL_ENABLE_BIT );
-
-    glDisable ( GL_LIGHTING );
+  glDisable ( GL_LIGHTING );
 
 #ifndef VIEWER_RENDER_AWESOME
-    glPointSize ( g_max_cp_size );
+  glPointSize ( g_max_cp_size );
 
-    glEnable(GL_POINT_SMOOTH);
+  glEnable(GL_POINT_SMOOTH);
 #else
-    g_sphere_shader->use();
+  g_sphere_shader->use();
 
-    g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size*m_viewer->m_data_dia));
+  g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size*m_viewer->m_data_dia));
 #endif
 
+  for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
+  {
+    if(ren_cp[i]&& (m_bShowCps[i]||m_bShowAllCps))
+    {
+      glColor3dv(g_cp_colors[i].data());
+
+      ren_cp[i]->render();
+
+      if(ren_cp_labels[i] && m_bShowCpLabels)
+        ren_cp_labels[i]->render();
+    }
+  }
+
+#ifdef VIEWER_RENDER_AWESOME
+  g_sphere_shader->sendUniform("g_wc_radius",(float)g_max_cp_size*2/3);
+#endif
+
+  if ( m_bShowCancCps)
+  {
     for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
     {
-      if(ren_cp[i]&& (m_bShowCps[i]||m_bShowAllCps))
+      if(ren_canc_cp[i])
       {
         glColor3dv(g_cp_colors[i].data());
 
-        ren_cp[i]->render();
+        ren_canc_cp[i]->render();
 
-        if(ren_cp_labels[i] && m_bShowCpLabels)
-          ren_cp_labels[i]->render();
+        if(ren_canc_cp_labels[i] &&
+           m_bShowCpLabels)
+          ren_canc_cp_labels[i]->render();
       }
     }
+  }
 
 #ifdef VIEWER_RENDER_AWESOME
-    g_sphere_shader->sendUniform("g_wc_radius",(float)g_max_cp_size*2/3);
+  g_sphere_shader->disable();
 #endif
 
-    if ( m_bShowCancCps)
+  if (m_bShowMsGraph)
+  {
+    for(uint i = 0 ; i < gc_max_cell_dim;++i)
     {
-      for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
+      if(ren_cp_conns[i])
       {
-        if(ren_canc_cp[i])
-        {
-          glColor3dv(g_cp_colors[i].data());
+        glColor3dv(g_cp_conn_colors[i].data());
 
-          ren_canc_cp[i]->render();
-
-          if(ren_canc_cp_labels[i] &&
-             m_bShowCpLabels)
-            ren_canc_cp_labels[i]->render();
-        }
+        ren_cp_conns[i]->render();
       }
     }
-
-#ifdef VIEWER_RENDER_AWESOME
-    g_sphere_shader->disable();
-#endif
-
-    if (m_bShowMsGraph)
-    {
-      for(uint i = 0 ; i < gc_max_cell_dim;++i)
-      {
-        if(ren_cp_conns[i])
-        {
-          glColor3dv(g_cp_conn_colors[i].data());
-
-          ren_cp_conns[i]->render();
-        }
-      }
-    }
-
-    if (m_bShowCancMsGraph)
-    {
-      for(uint i = 0 ; i < gc_max_cell_dim;++i)
-      {
-        if(ren_canc_cp_conns[i])
-        {
-          glColor3dv(g_cp_conn_colors[i].data());
-
-          ren_canc_cp_conns[i]->render();
-        }
-      }
-    }
-
-    glPopAttrib();
-    glPopMatrix();
   }
 
-  void octtree_piece_rendata::render_dataset_data()
+  if (m_bShowCancMsGraph)
   {
-    if(m_bNeedUpdateDiscRens)
+    for(uint i = 0 ; i < gc_max_cell_dim;++i)
     {
-      update_active_disc_rens();
-      m_bNeedUpdateDiscRens = false;
-    }
-
-    glPushMatrix();
-    glPushAttrib ( GL_ENABLE_BIT );
-
-    glDisable ( GL_LIGHTING );
-
-    if(m_bShowGrad)
-    {
-      for(uint i = 0 ; i < gc_max_cell_dim; ++i)
+      if(ren_canc_cp_conns[i])
       {
-        if(ren_grad[i])
-        {
-          glColor3dv ( g_grad_colors[i].data() );
+        glColor3dv(g_cp_conn_colors[i].data());
 
-          ren_grad[i]->render();
-        }
+        ren_canc_cp_conns[i]->render();
       }
     }
-
-    for(disc_rendata_sp_set_t::iterator it = active_disc_rens[1].begin();
-        it != active_disc_rens[1].end() ; ++it)
-    {
-      (*it)->render(m_viewer->m_data_dia);
-    }
-
-    glEnable ( GL_LIGHTING );
-
-    for(disc_rendata_sp_set_t::iterator it = active_disc_rens[0].begin();
-        it != active_disc_rens[0].end() ; ++it)
-    {
-      (*it)->render(m_viewer->m_data_dia);
-    }
-
-    for(disc_rendata_sp_set_t::iterator it = active_disc_rens[2].begin();
-        it != active_disc_rens[2].end() ; ++it)
-    {
-      (*it)->render(m_viewer->m_data_dia);
-    }
-
-    glColor3dv(g_normals_color.data());
-
-    if(m_bShowCellNormals && ren_cell_normals)
-      ren_cell_normals->render();
-
-    glPopAttrib();
-    glPopMatrix();
-
   }
 
-  struct random_color_assigner
-  {
-    disc_rendata_sp_t m_drd;
+  glPopAttrib();
+  glPopMatrix();
 
-    int m_no;
+  m_mfold_data.render();
+}
 
-    static const uint MAX_RAND = 256;
+mfold_data_t::mfold_data_t(std::string mf, std::string tf, mscomplex_ptr_t msc)
+  :m_mfold_file(mf),m_msc(msc),m_tri_file(tf),m_tcc(new tri_cc_geom_t),m_bNeedUpdate(false)
+{}
 
-    random_color_assigner(disc_rendata_sp_t drd,int no):m_drd(drd),m_no(no){};
+template<typename T>
+inline void bin_read_vec(std::istream &is, std::vector<T> &v,int n)
+{v.resize(n);is.read((char*)(void*)v.data(),n*sizeof(T));}
 
-    void operator()()
+template<typename T>
+inline void bin_read(std::istream &is, const T &v)
+{is.read((char*)(void*)&v,sizeof(T));}
+
+int get_header_size(int num_cps)
+{
+  return sizeof(int)              + // num_cps
+         sizeof(cellid_t)*num_cps + // cellids
+         sizeof(int)*(2*num_cps+1); // offsets
+}
+
+void read_header(std::istream & is,int_list_t & offsets,cellid_list_t &cps,ios::off_type hoff= 0)
+{
+  is.seekg(hoff,ios::beg);
+
+  int N;
+
+  bin_read(is,N);
+  bin_read_vec(is,cps,N);
+  bin_read_vec(is,offsets,2*N+1);
+}
+
+void mfold_data_t::__read_mfold(int i,cellid_list_t &mfold)
+{
+  ASSERT(is_in_range(i,0,m_offsets.size()-1));
+
+  fstream fs(m_mfold_file.c_str(),ios::in|ios::binary);
+  ensure(fs.is_open(),"Cannot open file");
+
+  int N = m_offsets[i+1]  - m_offsets[i];
+
+  fs.seekg(get_header_size(m_cellids.size())+m_offsets[i]);
+  bin_read_vec(fs,mfold,N);
+}
+
+void mfold_data_t::init()
+{
+  fstream fs(m_mfold_file.c_str(),ios::in|ios::binary);
+  ensure(fs.is_open(),"Cannot open file");
+  read_header(fs,m_offsets,m_cellids);
+
+  m_scpno_cpno_map.resize(m_cellids.size());
+
+  for( int i = 0,j=0 ; i < m_msc->get_num_critpts(); ++i)
+    if(!m_msc->is_paired(i))
     {
-      for(uint c = 0 ; c < 3 ; ++c)
-        m_drd->color[m_no][c] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
-
+      ASSERT(m_cellids[j] == m_msc->cellid(i));
+      m_scpno_cpno_map[j++] = i;
     }
+
+
+  tri_idx_list_t tlist; vertex_list_t vlist;
+  read_tri_file(m_tri_file.c_str(),vlist,tlist);
+  m_tcc->init(tlist,vlist);
+  m_cell_pos_bo = make_buf_obj(m_tcc->get_cell_positions());
+  m_cell_nrm_bo = make_buf_obj(m_tcc->get_cell_normals());
+  compute_extent(vlist,m_extent);
+
+  m_ren[0].resize(m_cellids.size());
+  m_ren[1].resize(m_cellids.size());
+
+  m_ren_show[0].resize(m_cellids.size(),false);
+  m_ren_show[1].resize(m_cellids.size(),false);
+
+  m_ren_color[0].resize(m_cellids.size(),g_disc_colors[0][0]);
+  m_ren_color[1].resize(m_cellids.size(),g_disc_colors[1][1]);
+}
+
+void mfold_data_t::render()
+{
+  if(m_bNeedUpdate)
+  {
+    update();
+    m_bNeedUpdate = false;
+  }
+
+  glPushMatrix();
+  glPushAttrib ( GL_ENABLE_BIT );
+
+  for(int d = 0 ; d < 2; ++d)
+  for(int i = 0 ; i < m_cellids.size(); ++i)
+  if(m_ren_show[d][i] && m_ren[d][i])
+  {
+    glColor3dv(m_ren_color[d][i].data());
+    m_ren[d][i]->render();
+  }
+
+  glPopAttrib();
+  glPopMatrix();
+
+}
+
+void assign_random_color(glutils::color_t &col)
+{
+  const uint MAX_RAND = 256;
+
+  col[0] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+  col[1] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+  col[2] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+}
+
+configurable_t::data_index_t mfold_data_t::dim()
+{return data_index_t(9,m_cellids.size());}
+
+bool mfold_data_t::exchange_field
+    (const data_index_t &idx,boost::any &v)
+{
+  bool is_read     = v.empty();
+
+  int i = idx[0];
+
+  int scpno = idx[1];
+  int cpno = m_scpno_cpno_map[idx[1]];
+
+  switch(i)
+  {
+  case 0:
+    return s_exchange_data_ro((int)m_msc->cellid(cpno),v);
+  case 1:
+    return s_exchange_data_ro((int)m_msc->index(cpno),v);
+  case 2:
+  case 3:
+    {
+      bool show = m_ren_show[i%2][scpno];
+
+      bool need_update = s_exchange_data_rw(show,v);
+
+      m_ren_show[i%2][scpno] = show;
+
+      if(need_update && !is_read)
+        m_bNeedUpdate = true;
+
+      return need_update;
+    }
+  case 4:
+  case 5:
+    return s_exchange_data_rw(m_ren_color[i%2][scpno],v);
+  case 6:
+  case 7:
+    return s_exchange_action(bind(assign_random_color,boost::ref(m_ren_color[i%2][scpno])),v);
+  case 8:
+    return s_exchange_data_ro((int)m_msc->vertid(cpno),v);
   };
 
-  struct spin_image_creator
+   throw std::logic_error("octtree_piece_rendata::invalid index");
+}
+
+configurable_t::eFieldType mfold_data_t::exchange_header
+    (const int &i,boost::any &v)
+{
+  switch(i)
   {
-    disc_rendata_sp_t m_drd;
+  case 0: v = std::string("cellid"); return EFT_DATA_RO;
+  case 1: v = std::string("index"); return EFT_DATA_RO;
+  case 2: v = std::string("des mfold"); return EFT_DATA_RW;
+  case 3: v = std::string("asc mfold"); return EFT_DATA_RW;
+  case 4: v = std::string("des mfold color"); return EFT_DATA_RW;
+  case 5: v = std::string("asc mfold color"); return EFT_DATA_RW;
+  case 6: v = std::string("rand des mflod color"); return EFT_ACTION;
+  case 7: v = std::string("rand asc mflod color"); return EFT_ACTION;
+  case 8: v = std::string("vert no"); return EFT_DATA_RO;
 
-    datapiece_rendata_ptr_t m_dprd;
+  }
+  throw std::logic_error("octtree_piece_rendata::invalid index");
+}
 
-    int m_dir;
+template<eGDIR dir>
+inline int get_edge_pts(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc);
 
-    spin_image_creator(disc_rendata_sp_t drd,datapiece_rendata_ptr_t dprd,int dir)
-      :m_drd(drd),m_dprd(dprd),m_dir(dir){};
+template<>
+inline int get_edge_pts<GDIR_DES>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
+{return tcc.get_cell_points(e,pts);}
 
-    void operator()()
-    {
-      m_dprd->m_viewer->m_spin_image = m_drd->compute_spin_image(m_dprd,m_dir);
-    }
-  };
+template<>
+inline int get_edge_pts<GDIR_ASC>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
+{
+  int ncf = tcc.get_cell_co_facets(e,pts);
+  pts[2] = pts[1]; pts[1] = e;
+  return ncf+1;
+}
 
-  configurable_t::data_index_t octtree_piece_rendata::dim()
+template<eGDIR dir>
+void update_saddle_mfold(mfold_data_t &dp,int scpno)
+{
+  cellid_list_t mfold;
+
+  dp.read_mfold<dir>(scpno,mfold);
+
+  map<cellid_t,int> pt_idx;
+
+  line_idx_list_t e_idxs;
+
+  for(cellid_list_t::iterator it = mfold.begin(); it!= mfold.end(); ++it)
   {
-    return data_index_t(11,disc_rds.size());
+    cellid_t pt[20];
+
+    dp.m_tcc->get_cell_points(*it,pt);
+
+    int npts = get_edge_pts<dir>(*it,pt,*(dp.m_tcc));
+
+    if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
+    if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
+    e_idxs.push_back(glutils::line_idx_t(pt_idx[pt[0]],pt_idx[pt[1]]));
+
+    if(dir == GDIR_DES) continue;
+
+    if(npts < 3) continue;
+
+    if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
+    e_idxs.push_back(glutils::line_idx_t(pt_idx[pt[1]],pt_idx[pt[2]]));
   }
 
-  bool octtree_piece_rendata::exchange_field
-      (const data_index_t &idx,boost::any &v)
+  vertex_list_t pts(pt_idx.size());
+
+  for(map<cellid_t,int>::iterator it = pt_idx.begin(); it!= pt_idx.end();++it)
+    pts[it->second] = dp.m_tcc->get_cell_position(it->first);
+
+  smooth_lines(pts,e_idxs,4);
+
+  dp.m_ren[dir][scpno].reset(create_buffered_lines_ren(make_buf_obj(pts),make_buf_obj(e_idxs)));
+}
+
+template<eGDIR dir>
+void update_extrema_mfold(mfold_data_t &dp,int scpno)
+{
+  cellid_list_t mfold;
+
+  dp.read_mfold<dir>(scpno,mfold);
+
+  tri_idx_list_t t_idxs;
+
+  for(cellid_list_t::iterator it = mfold.begin(); it!= mfold.end(); ++it)
   {
-    bool is_read     = v.empty();
+    cellid_t st[40];
 
-    int i = idx[0];
+    if(dir == GDIR_DES)
+    {
+      dp.m_tcc->get_cell_points(*it,st);
+      t_idxs.push_back(tri_idx_t(st[0],st[1],st[2]));
+    }
+    else
+    {
+      uint st_ct = dp.m_tcc->get_vert_star(*it,st);
 
-    disc_rendata_sp_t drd = disc_rds[idx[1]];
+      for(uint i = 1; i < st_ct; i++)
+        t_idxs.push_back(glutils::tri_idx_t(st[i-1],*it,st[i]));
 
-    switch(i)
+      if(st_ct%2 == 0)
+        t_idxs.push_back(glutils::tri_idx_t(st[st_ct-1],*it,st[0]));
+    }
+  }
+
+  dp.m_ren[dir][scpno].reset
+      (create_buffered_triangles_ren(dp.m_cell_pos_bo,make_buf_obj(t_idxs),dp.m_cell_nrm_bo));
+}
+
+bool mfold_data_t::update()
+{
+  for( int i = 0 ; i < m_cellids.size(); ++i)
+  {
+    switch(m_msc->index(m_scpno_cpno_map[i]))
     {
     case 0:
-      return s_exchange_data_ro((int)drd->cellid,v);
+      if(m_ren_show[0][i] && !m_ren[0][i]) update_extrema_mfold<GDIR_ASC>(*this,i);break;
     case 1:
-      return s_exchange_data_ro((int)drd->index,v);
+      if(m_ren_show[0][i] && !m_ren[0][i]) update_saddle_mfold<GDIR_DES>(*this,i);
+      if(m_ren_show[1][i] && !m_ren[1][i]) update_saddle_mfold<GDIR_ASC>(*this,i);break;
     case 2:
-    case 3:
-      {
-        bool need_update =  s_exchange_data_rw(drd->show[i%2],v);
-
-        if(need_update && is_read == false )
-          m_bNeedUpdateDiscRens = true;
-
-        return need_update;
-      }
-    case 4:
-    case 5:
-      return s_exchange_data_rw(drd->color[i%2],v);
-    case 6:
-    case 7:
-      return s_exchange_action(random_color_assigner(drd,i%2),v);
-    case 8:
-    case 9:
-      return s_exchange_action(spin_image_creator(drd,this,i%2),v);
-    case 10:
-      return s_exchange_data_ro((int)drd->vert_no,v);
-    };
-
-     throw std::logic_error("octtree_piece_rendata::invalid index");
-  }
-
-  configurable_t::eFieldType octtree_piece_rendata::exchange_header
-      (const int &i,boost::any &v)
-  {
-    switch(i)
-    {
-    case 0: v = std::string("cellid"); return EFT_DATA_RO;
-    case 1: v = std::string("index"); return EFT_DATA_RO;
-    case 2: v = std::string("des mfold"); return EFT_DATA_RW;
-    case 3: v = std::string("asc mfold"); return EFT_DATA_RW;
-    case 4: v = std::string("des mfold color"); return EFT_DATA_RW;
-    case 5: v = std::string("asc mfold color"); return EFT_DATA_RW;
-    case 6: v = std::string("rand des mflod color"); return EFT_ACTION;
-    case 7: v = std::string("rand asc mflod color"); return EFT_ACTION;
-    case 8: v = std::string("create des spin img"); return EFT_ACTION;
-    case 9: v = std::string("create asc spin img"); return EFT_ACTION;
-    case 10: v = std::string("vert no"); return EFT_DATA_RO;
-
-    }
-    throw std::logic_error("octtree_piece_rendata::invalid index");
-  }
-
-  disc_rendata_t::disc_rendata_t(cellid_t c,uint i,cellid_t v_no):
-      cellid(c),index(i),vert_no(v_no)
-  {
-    color[0] = g_disc_colors[1][index];
-    color[1] = g_disc_colors[0][index];
-
-    show[0] =false; ren[0] =NULL;
-    show[1] =false; ren[1] =NULL;
-  }
-
-  disc_rendata_t::~disc_rendata_t()
-  {
-    show[0] =false;
-    show[1] =false;
-
-    update(NULL);
-
-  }
-
-  void disc_rendata_t::render(double data_dia)
-  {
-    for(uint dir = 0 ; dir<2;++dir)
-    {
-      if(show[dir] && ren[dir])
-      {
-#ifdef VIEWER_RENDER_AWESOME
-        if(index == 1)
-        {
-          g_cylinder_shader->use();
-
-          g_cylinder_shader->sendUniform("ug_cylinder_radius",float(g_max_cp_size*data_dia/3.0));
-        }
-#endif
-        glColor3dv(color[dir].data());
-        ren[dir]->render();
-
-#ifdef VIEWER_RENDER_AWESOME
-        if(index == 1)
-        {
-          g_cylinder_shader->disable();
-        }
-#endif
-
-      }
-    }
-  }
-
-  void get_disc_cells
-      (mscomplex_ptr_t msgraph,uint cidx,uint dir,std::set<cellid_t> & cset)
-  {
-
-//    critpt_t *cp = msgraph->m_cps[cidx];
-
-//    for(uint j = 0 ; j < cp->contrib[dir].size();++j)
-//    {
-//      critpt_t *cp_contrib = msgraph->m_cps[cp->contrib[dir][j]];
-
-//      if(cp_contrib->index != cp->index)
-//        throw std::logic_error("contrib and cp must have same idx");
-
-//      for(uint i = 0; i < cp_contrib->disc[dir].size(); ++i)
-//      {
-//        cellid_t c = cp_contrib->disc[dir][i];
-
-//        if(cset.count(c) == 0)
-//          cset.insert(c);
-//      }
-//    }
-  }
-
-  spin::spin_image_ptr_t disc_rendata_t::compute_spin_image
-      (octtree_piece_rendata *drd,uint dir)
-  {
-    using namespace spin;
-
-    spin_image_ptr_t si(new spin_image_t);
-
-    oriented_point_t si_bp(drd->tri_cc_geom->get_cell_position(cellid),
-                              drd->tri_cc_geom->get_cell_normal(cellid));
-
-
-    rect_t  extent = drd->m_extent;
-
-    si_scalar_t  max_pt_dist = euclid_distance(extent.lower_corner(),extent.upper_corner());
-
-    si_extent_t si_extent(si_extent_t::range_t(0,max_pt_dist),
-                          si_extent_t::range_t(-max_pt_dist,max_pt_dist));
-
-    si_point_t  si_res(drd->tri_cc_geom->get_average_edge_length()/2.0,
-                        drd->tri_cc_geom->get_average_edge_length()/2.0);
-
-    si->init(si_bp,si_extent,si_res,M_PI_2);
-
-    std::set<cellid_t> cset;
-
-    typedef typeof(cset) cset_t;
-
-    get_disc_cells(drd->m_msgraph,cellid,dir,cset);
-
-    for(cset_t::iterator it = cset.begin(); it!= cset.end(); ++it)
-    {
-      si->accumulate_point(drd->tri_cc_geom->get_cell_position(*it));
+      if(m_ren_show[1][i] && !m_ren[1][i]) update_extrema_mfold<GDIR_DES>(*this,i);break;
     }
 
-    return si;
+    if(!m_ren_show[0][i] && m_ren[0][i]) m_ren[0][i].reset();
+    if(!m_ren_show[1][i] && m_ren[1][i]) m_ren[1][i].reset();
   }
-
-  template<eGDIR dir>
-  inline int get_edge_pts(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc);
-
-  template<>
-  inline int get_edge_pts<GDIR_DES>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
-  {
-    return tcc.get_cell_points(e,pts);
-  }
-
-  template<>
-  inline int get_edge_pts<GDIR_ASC>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
-  {
-    int ncf = tcc.get_cell_co_facets(e,pts);
-    pts[2] = pts[1]; pts[1] = e;
-    return ncf+1;
-  }
-
-  template<eGDIR dir>
-  void update_saddle_mfold(disc_rendata_t *drd,octtree_piece_rendata *dp)
-  {
-    set<cellid_t> cset;
-
-    map<cellid_t,int> pt_idx;
-
-    get_disc_cells(dp->m_msgraph,drd->cellid,dir,cset);
-
-    glutils::line_idx_list_t e_idxs;
-
-    for(set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
-    {
-      cellid_t pt[20];
-
-      dp->tri_cc_geom->get_cell_points(*it,pt);
-
-      int npts = get_edge_pts<dir>(*it,pt,*dp->tri_cc_geom);
-
-      if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
-      if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
-      e_idxs.push_back(glutils::line_idx_t(pt_idx[pt[0]],pt_idx[pt[1]]));
-
-      if(dir == GDIR_DES) continue;
-
-      if(npts < 3) continue;
-
-      if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
-      e_idxs.push_back(glutils::line_idx_t(pt_idx[pt[1]],pt_idx[pt[2]]));
-    }
-
-    glutils::vertex_list_t pts(pt_idx.size());
-
-    for(map<cellid_t,int>::iterator it = pt_idx.begin(); it!= pt_idx.end();++it)
-      pts[it->second] = dp->tri_cc_geom->get_cell_position(it->first);
-
-    glutils::smooth_lines(pts,e_idxs,4);
-
-    drd->ren[dir] = glutils::create_buffered_lines_ren
-                    (glutils::make_buf_obj(pts),glutils::make_buf_obj(e_idxs));
-  }
-
-  bool disc_rendata_t::update(octtree_piece_rendata *dp)
-  {
-    for(uint dir = 0 ; dir<2;++dir)
-    {
-      if(show[dir] && this->ren[dir] == NULL && dp->m_msgraph)
-      {
-        if(index == 1)
-        {
-          if(dir == 0)
-            update_saddle_mfold<GDIR_DES>(this,dp);
-          else
-            update_saddle_mfold<GDIR_ASC>(this,dp);
-        }
-
-        if(index == 2 && dir == 0)
-        {
-          std::set<cellid_t> cset;
-
-          get_disc_cells(dp->m_msgraph,cellid,dir,cset);
-
-          glutils::tri_idx_list_t t_idxs;
-
-          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
-          {
-            cellid_t pt[20];
-
-            dp->tri_cc_geom->get_cell_points(*it,pt);
-
-            t_idxs.push_back(glutils::tri_idx_t(pt[0],pt[1],pt[2]));
-
-          }
-
-          ren[dir] = glutils::create_buffered_triangles_ren
-                     (dp->cell_pos_bo,glutils::make_buf_obj(t_idxs),dp->cell_nrm_bo);
-        }
-
-        if(index == 0 && dir == 1)
-        {
-          std::set<cellid_t> cset;
-
-          get_disc_cells(dp->m_msgraph,cellid,dir,cset);
-
-          glutils::tri_idx_list_t t_idxs;
-
-          for(std::set<cellid_t>::iterator it = cset.begin(); it!= cset.end(); ++it)
-          {
-            cellid_t st[40];
-
-            uint st_ct = dp->tri_cc_geom->get_vert_star(*it,st);
-
-            for(uint i = 1; i < st_ct; i++)
-            {
-              t_idxs.push_back(glutils::tri_idx_t(st[i-1],*it,st[i]));
-            }
-
-            if(st_ct%2 == 0)
-              t_idxs.push_back(glutils::tri_idx_t(st[st_ct-1],*it,st[0]));
-          }
-
-          ren[dir] = glutils::create_buffered_triangles_ren
-                     (dp->cell_pos_bo,
-                      glutils::make_buf_obj(t_idxs),
-                      dp->cell_nrm_bo);
-
-        }
-
-      }
-
-      if(!show[dir] && this->ren[dir] != NULL )
-      {
-        delete ren[dir];
-
-        ren[dir] = NULL;
-
-      }
-    }
-
-    return (show[0] || show[1]);
-  }
+}
 
 }

@@ -8,7 +8,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(cmake/dmsc.cmake)
 
-option(BUILD_VIEWER "build the mscomplex viewer" ON)
+option(BUILD_VIEWER "build the mscomplex viewer" OFF)
 
 if(BUILD_VIEWER)
 include(cmake/gui.cmake)

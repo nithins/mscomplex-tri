@@ -80,31 +80,16 @@ namespace trimesh
     void dir_connect_cps(int p , int q);
     void pair_cps(int p , int q);
 
-    inline char& index(int i);
     inline const char& index(int i) const;
-
-    inline int& pair_idx(int i);
     inline const int& pair_idx(int i) const;
+    inline const char& is_canceled(int i) const;
+    inline const char& is_boundry(int i) const;
+    inline const cellid_t& cellid(int i) const;
+    inline const cellid_t& vertid(int i) const;
+    inline const cell_fn_t& fn(int i) const;
+
     inline bool is_paired(int i) const;
     inline bool is_not_paired(int i) const;
-
-    inline char&       is_canceled(int i);
-    inline const char& is_canceled(int i) const;
-
-    inline char&       is_boundry(int i);
-    inline const char& is_boundry(int i) const;
-
-    inline cellid_t&       _lv_cellid(int i);
-    inline const cellid_t& _rv_cellid(int i) const;
-    inline cellid_t&       cellid(int i);
-    inline const cellid_t& cellid(int i) const;
-
-
-    inline cellid_t& vertid(int i);
-    inline const cellid_t& vertid(int i) const;
-
-    inline cell_fn_t& fn(int i);
-    inline const cell_fn_t& fn(int i) const;
 
     inline bool is_extrema(int i) const;
     inline bool is_saddle(int i) const;

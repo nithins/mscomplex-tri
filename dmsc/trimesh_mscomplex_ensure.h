@@ -43,30 +43,12 @@ inline mscomplex_t::id_fiterator mscomplex_t::id_fend(mscomplex_t::filter_t f) c
 inline int  mscomplex_t::get_num_critpts() const
 {return m_cp_cellid.size();}
 
-inline char& mscomplex_t::index(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_index.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_index[i];
-}
-
 inline const char& mscomplex_t::index(int i) const
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_index.size()));}
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return m_cp_index[i];
-}
-
-inline int& mscomplex_t::pair_idx(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_pair_idx.size()));
-  /*ASSERT(is_in_range(m_cp_pair_idx[i],0,(int)m_cp_pair_idx.size()));
-  ASSERT(i == m_cp_pair_idx[m_cp_pair_idx[i]]);*/}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_pair_idx[i];
 }
 
 inline const int& mscomplex_t::pair_idx(int i) const
@@ -95,28 +77,12 @@ inline bool mscomplex_t::is_not_paired(int i) const
   return (m_cp_pair_idx[i] == -1);
 }
 
-inline char& mscomplex_t::is_canceled(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_is_cancelled.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_is_cancelled[i];
-}
-
 inline const char& mscomplex_t::is_canceled(int i) const
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_is_cancelled.size()));}
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return m_cp_is_cancelled[i];
-}
-
-inline char& mscomplex_t::is_boundry(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_is_boundry.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_is_boundry[i];
 }
 
 inline const char& mscomplex_t::is_boundry(int i) const
@@ -127,32 +93,12 @@ inline const char& mscomplex_t::is_boundry(int i) const
   return m_cp_is_boundry[i];
 }
 
-inline cellid_t& mscomplex_t::_lv_cellid(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_cellid.size()));}
-  catch(assertion_error e)
-  {e.push(_FFL).push(SVAR(i)).push(SVAR(m_cp_cellid.size()));throw;}
-
-  return m_cp_cellid[i];
-}
-
-inline const cellid_t& mscomplex_t::_rv_cellid(int i) const
+inline const cellid_t& mscomplex_t::cellid(int i) const
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_cellid.size()));}
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return m_cp_cellid[i];
-}
-
-inline const cellid_t& mscomplex_t::cellid(int i) const{return _rv_cellid(i);}
-inline cellid_t& mscomplex_t::cellid(int i) {return _lv_cellid(i);}
-
-inline cellid_t& mscomplex_t::vertid(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_vertid.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_vertid[i];
 }
 
 inline const cellid_t& mscomplex_t::vertid(int i) const
@@ -161,14 +107,6 @@ inline const cellid_t& mscomplex_t::vertid(int i) const
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return m_cp_vertid[i];
-}
-
-inline cell_fn_t& mscomplex_t::fn(int i)
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_fn.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_fn[i];
 }
 
 inline const cell_fn_t& mscomplex_t::fn(int i) const
