@@ -10,36 +10,6 @@ namespace trimesh
 inline void order_pr_by_cp_index(const mscomplex_t &msc,int &p,int &q)
 {if(msc.index(p) < msc.index(q))std::swap(p,q);}
 
-inline mscomplex_t::iterator mscomplex_t::begin() const
-{return iterator(0);}
-
-inline mscomplex_t::iterator mscomplex_t::end() const
-{return iterator(get_num_critpts());}
-
-inline mscomplex_t::id_iterator mscomplex_t::id_begin() const
-{return id_iterator(shared_from_this(),begin());}
-
-inline mscomplex_t::id_iterator mscomplex_t::id_end() const
-{return id_iterator(shared_from_this(),end());}
-
-inline mscomplex_t::fiterator mscomplex_t::fbegin(mscomplex_t::filter_t f) const
-{return boost::make_filter_iterator(f,begin(),end());}
-
-inline mscomplex_t::fiterator mscomplex_t::fend(mscomplex_t::filter_t f) const
-{return boost::make_filter_iterator(f,end(),end());}
-
-inline mscomplex_t::fiterator mscomplex_t::fbegin(mscomplex_t::memb_filter_t f) const
-{return fbegin(boost::bind(f,this,_1));}
-
-inline mscomplex_t::fiterator mscomplex_t::fend(mscomplex_t::memb_filter_t f) const
-{return fend(boost::bind(f,this,_1));}
-
-inline mscomplex_t::id_fiterator mscomplex_t::id_fbegin(mscomplex_t::filter_t f) const
-{return id_fiterator(shared_from_this(),fbegin(f));}
-
-inline mscomplex_t::id_fiterator mscomplex_t::id_fend(mscomplex_t::filter_t f) const
-{return id_fiterator(shared_from_this(),fend(f));}
-
 inline int  mscomplex_t::get_num_critpts() const
 {return m_cp_cellid.size();}
 

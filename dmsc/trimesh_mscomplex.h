@@ -36,6 +36,8 @@
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost/functional.hpp>
 
+#include <boost/range/iterator_range.hpp>
+
 #include <trimesh.h>
 
 
@@ -120,50 +122,12 @@ namespace trimesh
     inline std::string cp_info (int cp_no) const;
     inline std::string cp_conn (int cp_no) const;
 
-    typedef boost::counting_iterator<int> iterator;
-    typedef boost::function<bool (int)>   filter_t;
-    typedef bool (mscomplex_t::*memb_filter_t)(int) const;
-    typedef boost::filter_iterator<filter_t,iterator> fiterator;
-    template <typename it_t>            class cp_id_iterator;
-    typedef cp_id_iterator<fiterator> id_fiterator;
-    typedef cp_id_iterator<iterator>  id_iterator;
+    typedef boost::counting_iterator<int> iterator_t;
+    typedef boost::iterator_range<iterator_t> range_t;
 
-    inline iterator begin() const;
-    inline iterator end() const;
-
-    inline id_iterator id_begin() const;
-    inline id_iterator id_end() const;
-
-    inline fiterator fbegin(filter_t f) const;
-    inline fiterator fend(filter_t f) const;
-
-    inline fiterator fbegin(memb_filter_t f) const;
-    inline fiterator fend(memb_filter_t f) const;
-
-    inline id_fiterator id_fbegin(filter_t f) const;
-    inline id_fiterator id_fend(filter_t f) const;
-  };
-
-  template <typename it_t>
-  class mscomplex_t::cp_id_iterator:public std::iterator
-      <std::bidirectional_iterator_tag,cellid_t,int,cellid_t,cellid_t>
-  {
-  public:
-    cp_id_iterator(){}
-
-    cp_id_iterator(mscomplex_const_ptr_t msc,it_t i):m_msc(msc),m_i(i){};
-    mscomplex_const_ptr_t m_msc;
-    it_t m_i;
-
-    inline cp_id_iterator& operator++(){++m_i; return *this;}
-    inline cp_id_iterator& operator--(){--m_i; return *this;}
-    inline reference operator*() const {return m_msc->cellid(*m_i);}
-
-    inline bool operator== (const cp_id_iterator &rhs) const
-    {return (m_i == rhs.m_i);}
-
-    inline bool operator!= (const cp_id_iterator &rhs) const
-    {return !(*this == rhs);}
+    inline range_t cp_range()
+    {return boost::make_iterator_range
+          (iterator_t(0),iterator_t(get_num_critpts()));}
   };
 }
 

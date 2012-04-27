@@ -318,7 +318,7 @@ void mscomplex_t::simplify(double f_tresh)
 {
   BOOST_AUTO(cmp,bind(persistence_lt,boost::cref(*this),_2,_1));
 
-  priority_queue<int_pair_t,int_pair_list_t,typeof(cmp)> pq(cmp);
+  priority_queue<int_pair_t,int_pair_list_t,decltype(cmp)> pq(cmp);
 
   double f_range = *max_element(m_cp_fn.begin(),m_cp_fn.end()) -
       *min_element(m_cp_fn.begin(),m_cp_fn.end());

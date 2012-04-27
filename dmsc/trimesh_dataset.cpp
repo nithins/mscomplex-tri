@@ -2,6 +2,8 @@
 
 #include <boost/typeof/typeof.hpp>
 #include <boost/foreach.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <timer.h>
 
@@ -9,6 +11,9 @@
 #include <trimesh_mscomplex.h>
 
 using namespace std;
+
+namespace br    = boost::range;
+namespace badpt = boost::adaptors;
 
 namespace trimesh
 {
@@ -275,17 +280,17 @@ namespace trimesh
 
   void  dataset_t::save_manifolds(std::ostream &os,mscomplex_ptr_t msc)
   {
-    mscomplex_t::fiterator b = msc->fbegin(&mscomplex_t::is_not_paired);
-    mscomplex_t::fiterator e = msc->fend(&mscomplex_t::is_not_paired);
+    auto rng = msc->cp_range()|badpt::filtered
+        (boost::bind(&mscomplex_t::is_not_paired,msc,_1));
 
-    int num_cps = utls::count(b,e);
+    int num_cps = utls::count(boost::begin(rng),boost::end(rng));
     int hoff    = os.tellp();
 
     os.seekp(get_header_size(num_cps),ios::cur);
 
     int_list_t nmcells;
 
-    for(BOOST_AUTO(i,b);i!=e;++i)
+    for(auto i = boost::begin(rng);i!=boost::end(rng);++i)
     {
       cellid_list_t des,asc;
       int_list_t    desop,ascop;
@@ -309,8 +314,8 @@ namespace trimesh
     cellid_list_t cps;
     char_list_t   cp_idxs;
 
-    transform(b,e,back_inserter(cps),bind(&mscomplex_t::cellid,msc,_1));
-    transform(b,e,back_inserter(cp_idxs),bind(&mscomplex_t::index,msc,_1));
+    br::copy(rng,back_inserter(cps));
+    br::transform(rng,back_inserter(cp_idxs),bind(&mscomplex_t::index,msc,_1));
 
     write_header(os,nmcells,cps,cp_idxs,hoff);
   }
