@@ -28,14 +28,8 @@
 #include <fstream>
 
 #include <boost/noncopyable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/function.hpp>
 #include <boost/enable_shared_from_this.hpp>
-#include <boost/iterator/filter_iterator.hpp>
 #include <boost/iterator/counting_iterator.hpp>
-#include <boost/iterator/transform_iterator.hpp>
-#include <boost/functional.hpp>
-
 #include <boost/range/iterator_range.hpp>
 
 #include <trimesh.h>

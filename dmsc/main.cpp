@@ -3,13 +3,101 @@
 #include <exception>
 #include <string>
 
-#include <trimesh_datamanager.h>
-
 #include <boost/program_options.hpp>
 
+#include <timer.h>
+
+#include <trimesh_dataset.h>
+#include <trimesh_mscomplex.h>
 
 using namespace std;
 namespace bpo = boost::program_options;
+
+typedef float bin_data_type_t;
+
+const   uint bin_fnname_max_size = 32;
+
+template <typename T>
+void read_bin_file(std::vector<T> &cell_fns, const string & fname,int compno)
+{
+  fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
+
+  int num_bin_values, num_bin_comps;
+
+  fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
+  fnfile.read ( reinterpret_cast<char *> ( &num_bin_comps ), sizeof ( int ) );
+
+  cell_fns.resize(num_bin_values,-1);
+
+  fnfile.seekg ( bin_fnname_max_size*num_bin_comps, ios::cur );
+  fnfile.seekg ( sizeof ( bin_data_type_t ) * compno, ios::cur );
+
+  for ( uint i = 0; i < ( uint ) num_bin_values; i++ )
+  {
+    bin_data_type_t data;
+
+    fnfile.read ( reinterpret_cast<char *> ( &data ),sizeof(bin_data_type_t));
+    fnfile.seekg ( sizeof ( bin_data_type_t)*( num_bin_comps-1), ios::cur );
+
+    cell_fns[i] = data;
+  }
+
+  fnfile.close();
+}
+
+void print_bin_info(const string & fname)
+{
+  fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
+
+  int num_bin_values, num_bin_comps;
+
+  fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
+  fnfile.read ( reinterpret_cast<char *> ( &num_bin_comps ), sizeof ( int ) );
+
+  char compname[bin_fnname_max_size];
+
+  cout<<"        component names             "<<endl;
+  cout<<"------------------------------------"<<endl;
+
+  for(uint i = 0 ; i < num_bin_comps;++i)
+  {
+    fnfile.read ( compname, bin_fnname_max_size );
+    cout<<i<<". "<<compname<<endl;
+  }
+  cout<<"------------------------------------"<<endl;
+}
+
+void read_tri_file( const char *filename,trimesh::tri_idx_list_t &tlist)
+{
+  uint num_v,num_t;
+
+  std::fstream tri_file ( filename, std::fstream::in );
+
+  if(tri_file.is_open() == false)
+    throw std::runtime_error("unable to open tri file");
+
+  tri_file >> num_v >> num_t;
+
+  tlist.resize(num_t);
+
+  double vx,vy,vz;
+
+  for ( uint i = 0; i < num_v; ++i )
+    tri_file>>vx>>vy>>vz;
+
+  for ( uint i = 0; i < num_t; i++ )
+    for ( uint j = 0; j < 3; ++j )
+    {
+      tri_file >> tlist[i][j];
+
+      if(tlist[i][j] >= num_v||tlist[i][j] < 0)
+      {
+        throw std::runtime_error("invalid index");
+      }
+    }
+
+  tri_file.close();
+}
 
 int main(int ac , char **av)
 {
@@ -47,7 +135,44 @@ int main(int ac , char **av)
     return 1;
   }
 
-  trimesh::data_manager_t gdm(tri_filename,bin_filename,bin_comp_no,simp_tresh);
+  Timer t;
+  t.start();
 
-  gdm.work();
+  cout<<"===================================="<<endl;
+  cout<<"         Starting Processing        "<<endl;
+  cout<<"------------------------------------"<<endl;
+
+  trimesh::tri_idx_list_t tlist;
+  trimesh::cell_fn_list_t cell_fns;
+  print_bin_info(bin_filename);
+  cout<<"selected comp = "<<bin_comp_no<<endl;
+  cout<<"------------------------------------"<<endl;
+
+  read_tri_file(tri_filename.c_str(),tlist);
+  read_bin_file(cell_fns,bin_filename,bin_comp_no);
+  cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  trimesh::dataset_ptr_t   ds(new trimesh::dataset_t);
+  trimesh::mscomplex_ptr_t msc(new trimesh::mscomplex_t);
+  ds->init(cell_fns,tlist);
+  ds->work(msc);
+  cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  msc->stow(tri_filename+".full.graph.bin",false);
+  cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  msc->simplify(simp_tresh);
+  msc->un_simplify();
+  cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  msc->stow(tri_filename+".graph.bin",false);
+  cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  msc->invert_for_collection();
+  ds->save_manifolds(tri_filename+".mfold.bin",msc);
+  cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  cout<<"------------------------------------"<<endl;
+  cout<<"        Finished Processing         "<<endl;
+  cout<<"===================================="<<endl;
 }

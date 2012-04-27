@@ -8,7 +8,6 @@
 
 #include <trimesh_viewer.h>
 #include <trimesh_viewer_mainwindow.h>
-#include <trimesh_datamanager.h>
 
 const int g_roi_show_aabb_time_msec = 5*1000;
 

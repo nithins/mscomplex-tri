@@ -11,9 +11,6 @@ set(SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex_ensure.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_datamanager.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_datamanager.cpp
-
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/include/cpputils.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/src/cpputils.cpp
 
