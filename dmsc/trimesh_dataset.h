@@ -31,7 +31,7 @@ namespace trimesh
   class dataset_t
   {
   public:
-    cell_fn_list_t      m_vert_fns;
+    const fn_list_t    &m_vert_fns;
     cellid_list_t       m_cell_own;
     cellid_list_t       m_cell_pairs;
     cellid_list_t       m_cell_mxfct;
@@ -40,29 +40,30 @@ namespace trimesh
 
   public:
 
-    dataset_t ();
+    dataset_t (const fn_list_t &vert_fns,const tri_idx_list_t & trilist);
     ~dataset_t ();
-
-    void  init(const cell_fn_list_t &vert_fns,const tri_idx_list_t & trilist);
-    void  clear();
 
   public:
     void  work(mscomplex_ptr_t);
-    void  save_manifolds(std::ostream &,mscomplex_ptr_t);
-    inline void  save_manifolds(const std::string &,mscomplex_ptr_t);
 
   public:
     inline int cell_dim(cellid_t) const;
     inline bool is_boundry(cellid_t) const;
-    template<eGDIR dir> inline uint get_cets(cellid_t c,cellid_t *cets) const;
-    template<eGDIR dir> inline uint get_co_cets(cellid_t c,cellid_t *cets) const;
+
+    template<eGDIR dir>
+    inline uint get_cets(cellid_t c,cellid_t *cets) const;
+
+    template<eGDIR dir>
+    inline uint get_co_cets(cellid_t c,cellid_t *cets) const;
+
 
     inline const cellid_t& max_fct(cellid_t ) const;
     inline cellid_t& max_fct(cellid_t );
     template <int dim> inline cellid_t max_vert(cellid_t c) const;
-    inline cell_fn_t cell_fn(cellid_t c) const;
+    inline fn_t fn(cellid_t c) const;
 
-    template <int dim> inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;
+    template <int dim>
+    inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;
 
     inline const cellid_t& pair(cellid_t ) const;
     inline void pair(cellid_t,cellid_t );
@@ -71,6 +72,10 @@ namespace trimesh
 
     inline const cellid_t& owner(cellid_t ) const;
     inline cellid_t& owner(cellid_t );
+
+    template <eGDIR dir,typename rng_t>
+    inline void get_mfold(mfold_t &,rng_t rng);
+
 
   };
 }

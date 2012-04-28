@@ -37,14 +37,18 @@
 
 namespace trimesh
 {
-  typedef std::vector<cell_fn_t>     cp_fn_list_t;
-  typedef n_vector_t<int,2>          int_pair_t;
+  typedef std::vector<fn_t>     cp_fn_list_t;
+  typedef boost::numeric::ublas::bounded_vector<int,2>  int_pair_t;
   typedef std::vector<int_pair_t>    int_pair_list_t;
 
   typedef std::multiset<uint>                 conn_t;
   typedef std::multiset<uint>::iterator       conn_iter_t;
   typedef std::multiset<uint>::const_iterator const_conn_iter_t;
   typedef std::vector<conn_t>                 conn_list_t;
+
+  typedef cellid_list_t            mfold_t;
+  typedef std::vector<mfold_t>     mfold_list_t;
+
 
   class mscomplex_t:public boost::enable_shared_from_this<mscomplex_t>
   {
@@ -56,7 +60,7 @@ namespace trimesh
     char_list_t     m_cp_index;
     bool_list_t     m_cp_is_cancelled;
     bool_list_t     m_cp_is_boundry;
-    cell_fn_list_t  m_cp_fn;
+    fn_list_t       m_cp_fn;
 
     int_pair_list_t m_canc_list;
 
@@ -64,13 +68,17 @@ namespace trimesh
     conn_list_t  &m_des_conn;
     conn_list_t  &m_asc_conn;
 
+    mfold_list_t  m_mfolds[GDIR_CT];
+    mfold_list_t &m_des_mfolds;
+    mfold_list_t &m_asc_mfolds;
+
     mscomplex_t();
     ~mscomplex_t();
 
     inline int  get_num_critpts() const;
 
     void resize(int i);
-    void set_critpt(int i,cellid_t c,char idx,cell_fn_t f,cellid_t vert_cell,bool is_bndry);
+    void set_critpt(int i,cellid_t c,char idx,fn_t f,cellid_t vert_cell,bool is_bndry);
 
     void connect_cps(int p, int q);
     void dir_connect_cps(int p , int q);
@@ -82,7 +90,7 @@ namespace trimesh
     inline const char& is_boundry(int i) const;
     inline const cellid_t& cellid(int i) const;
     inline const cellid_t& vertid(int i) const;
-    inline const cell_fn_t& fn(int i) const;
+    inline const fn_t& fn(int i) const;
 
     inline bool is_paired(int i) const;
     inline bool is_not_paired(int i) const;
@@ -90,12 +98,15 @@ namespace trimesh
     inline bool is_extrema(int i) const;
     inline bool is_saddle(int i) const;
 
+    template<eGDIR dir>
+    inline mfold_t& mfold(int i){return m_mfolds[dir][i];}
+
   public:
 
     void simplify(double simplification_treshold);
     void un_simplify();
 
-    void invert_for_collection();
+    void get_mfolds(dataset_ptr_t ds);
 
     void cancel_pair(int p, int q);
     void uncancel_pair( int p, int q);
@@ -123,6 +134,8 @@ namespace trimesh
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
   };
+
+  void simplify_hypervolume(mscomplex_ptr_t msc,dataset_ptr_t ds,double tresh);
 }
 
 #include <trimesh_mscomplex_ensure.h>

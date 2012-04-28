@@ -3,11 +3,14 @@
 #include <limits>
 
 #include <boost/typeof/typeof.hpp>
+#include <boost/range/adaptors.hpp>
 
 #include <trimesh_mscomplex.h>
+#include <trimesh_dataset.h>
 
 
 using namespace std;
+namespace badpt = boost::adaptors;
 
 namespace trimesh
 {
@@ -21,11 +24,12 @@ inline std::string edge_to_string(mscomplex_t *msc,int_pair_t e)
 }
 
 mscomplex_t::mscomplex_t()
-  :m_des_conn(m_conn[0]),m_asc_conn(m_conn[1]){}
+  :m_des_conn(m_conn[0]),m_asc_conn(m_conn[1]),
+    m_des_mfolds(m_mfolds[0]),m_asc_mfolds(m_mfolds[1]){}
 
 mscomplex_t::~mscomplex_t(){clear();}
 
-void mscomplex_t::set_critpt(int i, cellid_t c, char idx, cell_fn_t f, cellid_t v, bool b)
+void mscomplex_t::set_critpt(int i, cellid_t c, char idx, fn_t f, cellid_t v, bool b)
 {
   m_cp_cellid[i]     = c;
   m_cp_vertid[i]     = v;
@@ -45,6 +49,9 @@ void  mscomplex_t::resize(int i)
   m_cp_fn.resize(i);
   m_des_conn.resize(i);
   m_asc_conn.resize(i);
+
+  m_des_mfolds.resize(i);
+  m_asc_mfolds.resize(i);
 }
 
 void mscomplex_t::clear()
@@ -58,6 +65,8 @@ void mscomplex_t::clear()
   m_cp_fn.clear();
   m_des_conn.clear();
   m_asc_conn.clear();
+  m_des_mfolds.clear();
+  m_asc_mfolds.clear();
 }
 
 void mscomplex_t::connect_cps(int p, int q)
@@ -220,11 +229,11 @@ inline int get_num_new_edges(const mscomplex_t &msc, int_pair_t pr)
 {
   order_pr_by_cp_index(msc,pr[0],pr[1]);
 
-  int pd = msc.m_conn[GDIR_DES][pr[0]].size();
-  int pa = msc.m_conn[GDIR_ASC][pr[0]].size();
+  int pd = msc.m_conn[DES][pr[0]].size();
+  int pa = msc.m_conn[ASC][pr[0]].size();
 
-  int qd = msc.m_conn[GDIR_DES][pr[1]].size();
-  int qa = msc.m_conn[GDIR_ASC][pr[1]].size();
+  int qd = msc.m_conn[DES][pr[1]].size();
+  int qa = msc.m_conn[ASC][pr[1]].size();
 
   return (pd - 1)*(qa - 1) - (pd + qd + pa +qa -1);
 }
@@ -240,7 +249,7 @@ inline bool fast_persistence_lt(const mscomplex_t &msc, int_pair_t p0, int_pair_
   return (get_num_new_edges(msc,p0) < get_num_new_edges(msc,p1));
 }
 
-inline cell_fn_t get_persistence(const mscomplex_t & msc,int_pair_t e)
+inline fn_t get_persistence(const mscomplex_t & msc,int_pair_t e)
 {
   return std::abs(msc.fn(e[0]) - msc.fn(e[1]));
 }
@@ -253,8 +262,8 @@ inline bool persistence_lt(const mscomplex_t &msc, int_pair_t p0, int_pair_t p1)
   if( eps_p0 != eps_p1)
     return eps_p0;
 
-  cell_fn_t d0 = get_persistence(msc,p0);
-  cell_fn_t d1 = get_persistence(msc,p1);
+  fn_t d0 = get_persistence(msc,p0);
+  fn_t d1 = get_persistence(msc,p1);
 
   if(d0 != d1)
     return d0 < d1;
@@ -292,13 +301,13 @@ inline bool persistence_lt(const mscomplex_t &msc, int_pair_t p0, int_pair_t p1)
     }
   }
 
-  cell_fn_t f00 = msc.fn(p0[0]);
-  cell_fn_t f01 = msc.fn(p0[1]);
-  cell_fn_t f10 = msc.fn(p1[0]);
-  cell_fn_t f11 = msc.fn(p1[1]);
+  fn_t f00 = msc.fn(p0[0]);
+  fn_t f01 = msc.fn(p0[1]);
+  fn_t f10 = msc.fn(p1[0]);
+  fn_t f11 = msc.fn(p1[1]);
 
-  cell_fn_t d1 = std::abs(f01-f00);
-  cell_fn_t d2 = std::abs(f11-f10);
+  fn_t d1 = std::abs(f01-f00);
+  fn_t d2 = std::abs(f11-f10);
 
   if(d1 != d2)
     return d1 < d2;
@@ -309,7 +318,7 @@ inline bool persistence_lt(const mscomplex_t &msc, int_pair_t p0, int_pair_t p1)
   return c01 < c11;
 }
 
-inline bool is_within_treshold(const mscomplex_t & msc,int_pair_t e,cell_fn_t t)
+inline bool is_within_treshold(const mscomplex_t & msc,int_pair_t e,fn_t t)
 {
   return (is_epsilon_persistent(msc,e) || get_persistence(msc,e) < t);
 }
@@ -329,7 +338,10 @@ void mscomplex_t::simplify(double f_tresh)
   {
     for(conn_iter_t j = m_des_conn[i].begin();j != m_des_conn[i].end() ;++j)
     {
-      int_pair_t pr(i,*j);
+      int_pair_t pr;
+
+      pr[0] = i;
+      pr[1] = *j;
 
       if(is_valid_canc_edge(*this,pr) && is_within_treshold(*this,pr,f_tresh))
         pq.push(pr);
@@ -362,7 +374,9 @@ void mscomplex_t::simplify(double f_tresh)
     for(conn_iter_t i = m_des_conn[p].begin();i != m_des_conn[p].end();++i)
       for(conn_iter_t j = m_asc_conn[q].begin();j != m_asc_conn[q].end();++j)
       {
-        int_pair_t npr(*i,*j);
+        int_pair_t npr;
+        pr[0] = *i;
+        pr[1] = *j;
 
         if(is_valid_canc_edge(*this,npr) && is_within_treshold(*this,npr,f_tresh))
           pq.push(npr);
@@ -380,22 +394,21 @@ void mscomplex_t::un_simplify()
   m_canc_list.clear();
 }
 
-void mscomplex_t::invert_for_collection()
+void mscomplex_t::get_mfolds(dataset_ptr_t ds)
 {
-  for(int i = 0 ; i < get_num_critpts(); ++i)
-  {
-    if(is_paired(i)== true)
-      continue;
+  vector<cellid_list_t> contrib_cells[GDIR_CT];
 
-    m_des_conn[i].clear();
-    m_asc_conn[i].clear();
-    continue;
-  }
+  contrib_cells[0].resize(get_num_critpts());
+  contrib_cells[1].resize(get_num_critpts());
 
   for(int i = 0 ; i < get_num_critpts(); ++i)
   {
     if(is_paired(i) == false)
+    {
+      contrib_cells[DES][i].push_back(cellid(i));
+      contrib_cells[ASC][i].push_back(cellid(i));
       continue;
+    }
 
     ASSERT(is_paired(i) && is_paired(pair_idx(i))== true);
     ASSERT(abs(index(i)- index(pair_idx(i))) == 1);
@@ -406,11 +419,17 @@ void mscomplex_t::invert_for_collection()
     for(conn_iter_t j  = m_conn[dir][i].begin(); j != m_conn[dir][i].end(); ++j)
     {
       ASSERT(is_paired(*j) == false);
-
-      m_conn[dir^1][*j].insert(i);
+      contrib_cells[dir^1][*j].push_back(cellid(pair_idx(i)));
     }
+  }
 
-    m_conn[dir][i].clear();
+  auto rng = cp_range()|
+      badpt::filtered(bind(&mscomplex_t::is_not_paired,this,_1));
+
+  for(auto b = boost::begin(rng); b != boost::end(rng); ++b)
+  {
+    if(index(*b)!=0) ds->get_mfold<DES>(mfold<DES>(*b),contrib_cells[DES][*b]);
+    if(index(*b)!=2) ds->get_mfold<ASC>(mfold<ASC>(*b),contrib_cells[ASC][*b]);
   }
 }
 
@@ -528,7 +547,7 @@ void mscomplex_t::load(std::istream &is)
 //      os<<(bool)cp->is_paired<<" ";
 //      os<<(int)cp->pair_idx<<" ";
 //      os<<cp->vert_idx<<" ";
-//      os<<(cell_fn_t)cp->fn<<" ";
+//      os<<(fn_t)cp->fn<<" ";
 
 //      os<<std::endl;
 //    }
@@ -561,6 +580,14 @@ void mscomplex_t::load(std::istream &is)
 //      os<<std::endl;
 //    }
 //  }
+
+void mscomplex_t::simplify_hypervolume(dataset_ptr_t ds, double tresh)
+{
+
+
+
+
+}
 
 }
 

@@ -1,5 +1,3 @@
-#include <stack>
-
 #include <boost/typeof/typeof.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/adaptors.hpp>
@@ -17,16 +15,10 @@ namespace badpt = boost::adaptors;
 
 namespace trimesh
 {
-  dataset_t::dataset_t (){}
-
-  dataset_t::~dataset_t (){clear();}
-
-  void dataset_t::init(const cell_fn_list_t &vert_fns,const tri_idx_list_t & trilist)
+  dataset_t::dataset_t
+  (const fn_list_t &vert_fns, const tri_idx_list_t &trilist):
+    m_vert_fns(vert_fns)
   {
-    m_vert_fns.resize(vert_fns.size());
-
-    std::copy(vert_fns.begin(),vert_fns.end(),m_vert_fns.begin());
-
     m_tcc.init(trilist,vert_fns.size());
 
     int N = m_tcc.get_num_cells();
@@ -36,9 +28,8 @@ namespace trimesh
     m_cell_pairs.resize(N,invalid_cellid);
   }
 
-  void  dataset_t::clear()
+  dataset_t::~dataset_t ()
   {
-    m_vert_fns.clear();
     m_cell_own.clear();
     m_cell_mxfct.clear();
     m_cell_pairs.clear();
@@ -53,7 +44,7 @@ namespace trimesh
     BOOST_AUTO(cmp,bind(&dataset_t::compare_cells<dim-1>,&ds,_1,_2));
 
     for(;b!=e;++b)
-      ds.max_fct(*b) = *max_element(f,f+ds.get_cets<GDIR_DES>(*b,f),cmp);
+      ds.max_fct(*b) = *max_element(f,f+ds.get_cets<DES>(*b,f),cmp);
   }
 
   inline cellid_t * filter_elst(cellid_t *b,cellid_t *e, cellid_t *r, cellid_t c,const dataset_t &ds)
@@ -68,7 +59,7 @@ namespace trimesh
 
     for(;b!=e;++b)
     {
-      cfe = cf + ds.get_cets<GDIR_ASC>(*b,cf);
+      cfe = cf + ds.get_cets<ASC>(*b,cf);
       cfe = filter_elst(cf,cfe,cf,*b,ds);
 
       cellid_t *mcf = min_element(cf,cfe,cmp);
@@ -99,7 +90,7 @@ namespace trimesh
     for(;b!=e;++b)
       if(!ds.is_paired(*b))
       {
-        cfe = cf + ds.get_cets<GDIR_ASC>(*b,cf);
+        cfe = cf + ds.get_cets<ASC>(*b,cf);
         cfe = filter_elst2(cf,cfe,cf,*b,ds);
 
         cellid_t *mcf = min_element(cf,cfe,cmp);
@@ -124,7 +115,7 @@ namespace trimesh
   template <eGDIR dir>
   inline void bfs_owner_extrema(dataset_t &ds,cellid_t s)
   {
-    const int dim = (dir == GDIR_DES)?(gc_max_cell_dim):(0);
+    const int dim = (dir == DES)?(gc_max_cell_dim):(0);
 
     std::stack<cellid_t> stk;
     stk.push(s);
@@ -159,7 +150,7 @@ namespace trimesh
     for( int i = 0 ; i < ccells.size() ; ++i)
     {
       cellid_t c = ccells[i];
-      msc.set_critpt(i,c,ds.cell_dim(c),ds.cell_fn(c),ds.max_vert<-1>(c),ds.is_boundry(c));
+      msc.set_critpt(i,c,ds.cell_dim(c),ds.fn(c),ds.max_vert<-1>(c),ds.is_boundry(c));
       id_cp_map[c] = i;
     }
 
@@ -169,7 +160,7 @@ namespace trimesh
       if(ds.cell_dim(*b) == 1)
       {
         ASSERT(id_cp_map.count(*b) ==1);
-        ds.get_cets<GDIR_DES>(*b,f);
+        ds.get_cets<DES>(*b,f);
 
         ASSERT(id_cp_map.count(ds.owner(f[0])) == 1);
         msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[0])]);
@@ -177,7 +168,7 @@ namespace trimesh
         ASSERT(id_cp_map.count(ds.owner(f[1])) == 1);
         msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[1])]);
 
-        f_ct = ds.get_cets<GDIR_ASC>(*b,f);
+        f_ct = ds.get_cets<ASC>(*b,f);
 
         ASSERT(id_cp_map.count(ds.owner(f[0])) == 1);
         msc.connect_cps(id_cp_map[*b],id_cp_map[ds.owner(f[0])]);
@@ -205,119 +196,85 @@ namespace trimesh
 
     for(cellid_list_t::iterator b = ccells.begin(),e =ccells.end();b!=e; ++b)
     {
-      if(cell_dim(*b) == 2) bfs_owner_extrema<GDIR_DES>(*this,*b);
-      if(cell_dim(*b) == 0) bfs_owner_extrema<GDIR_ASC>(*this,*b);
+      if(cell_dim(*b) == 2) bfs_owner_extrema<DES>(*this,*b);
+      if(cell_dim(*b) == 0) bfs_owner_extrema<ASC>(*this,*b);
     }
 
     make_connections(*msc,ccells,*this);
   }
 
-  template <eGDIR dir>
-  inline void bfs_collect(dataset_t &ds,mscomplex_t &msc,int i,cellid_list_t &mfold)
-  {
-    std::stack<cellid_t> stk;
+//  template<typename T>
+//  inline void bin_write_vec(std::ostream &os, std::vector<T> &v)
+//  {os.write((const char*)(const void*)v.data(),v.size()*sizeof(T));}
 
-    int dim = msc.index(i);
+//  template<typename T>
+//  inline void bin_write(std::ostream &os, const T &v)
+//  {os.write((const char*)(const void*)&v,sizeof(T));}
 
-    stk.push(msc.cellid(i));
+//  int get_header_size(int num_cps)
+//  {
+//    return sizeof(int)              + // num_cps
+//           sizeof(cellid_t)*num_cps + // cellids
+//           sizeof(char)*num_cps     + // cell indices
+//           sizeof(int)*(2*num_cps);   // numcells
+//  }
 
-    for(conn_iter_t b=msc.m_conn[dir][i].begin(),e=msc.m_conn[dir][i].end();b!=e;++b)
-      stk.push(msc.cellid(msc.pair_idx(*b)));
+//  void write_header
+//  (std::ostream & os,
+//   int_list_t & nmcells,
+//   cellid_list_t &cps,
+//   char_list_t &cp_inds,
+//   ios::off_type hoff= 0)
+//  {
+//    os.seekp(hoff,ios::beg);
 
-    cellid_t f[20],*fe,*fb;
-
-    while(!stk.empty())
-    {
-      cellid_t c = stk.top(); stk.pop();
-
-      ASSERT(ds.cell_dim(c) == dim);
-
-      mfold.push_back(c);
-
-      fb = f; fe = f + ds.get_cets<dir>(c,f);
-
-      for (; fb != fe; ++fb )
-        if( ds.is_paired(*fb))
-        {
-          cellid_t p = ds.pair(*fb);
-          if(p != c && ds.cell_dim(p) == dim)
-            stk.push(p);
-        }
-    }
-  }
-
-  template<typename T>
-  inline void bin_write_vec(std::ostream &os, std::vector<T> &v)
-  {os.write((const char*)(const void*)v.data(),v.size()*sizeof(T));}
-
-  template<typename T>
-  inline void bin_write(std::ostream &os, const T &v)
-  {os.write((const char*)(const void*)&v,sizeof(T));}
-
-  int get_header_size(int num_cps)
-  {
-    return sizeof(int)              + // num_cps
-           sizeof(cellid_t)*num_cps + // cellids
-           sizeof(char)*num_cps     + // cell indices
-           sizeof(int)*(2*num_cps);   // numcells
-  }
-
-  void write_header
-  (std::ostream & os,
-   int_list_t & nmcells,
-   cellid_list_t &cps,
-   char_list_t &cp_inds,
-   ios::off_type hoff= 0)
-  {
-    os.seekp(hoff,ios::beg);
-
-    bin_write(os,(int)cps.size());
-    bin_write_vec(os,cps);
-    bin_write_vec(os,cp_inds);
-    bin_write_vec(os,nmcells);
-  }
+//    bin_write(os,(int)cps.size());
+//    bin_write_vec(os,cps);
+//    bin_write_vec(os,cp_inds);
+//    bin_write_vec(os,nmcells);
+//  }
 
 
-  void  dataset_t::save_manifolds(std::ostream &os,mscomplex_ptr_t msc)
-  {
-    auto rng = msc->cp_range()|badpt::filtered
-        (boost::bind(&mscomplex_t::is_not_paired,msc,_1));
+//  void  dataset_t::save_manifolds(std::ostream &os,mscomplex_ptr_t msc)
+//  {
+//    auto rng = msc->cp_range()|badpt::filtered
+//        (boost::bind(&mscomplex_t::is_not_paired,msc,_1));
 
-    int num_cps = utls::count(boost::begin(rng),boost::end(rng));
-    int hoff    = os.tellp();
+//    int num_cps = utls::count(boost::begin(rng),boost::end(rng));
+//    int hoff    = os.tellp();
 
-    os.seekp(get_header_size(num_cps),ios::cur);
+//    os.seekp(get_header_size(num_cps),ios::cur);
 
-    int_list_t nmcells;
+//    int_list_t nmcells;
 
-    for(auto i = boost::begin(rng);i!=boost::end(rng);++i)
-    {
-      cellid_list_t des,asc;
-      int_list_t    desop,ascop;
+//    for(auto i = boost::begin(rng);i!=boost::end(rng);++i)
+//    {
+//      cellid_list_t des,asc;
+//      int_list_t    desop,ascop;
 
-      if(msc->index(*i) != 0) bfs_collect<GDIR_DES>(*this,*msc,*i,des);
-      if(msc->index(*i) != 2) bfs_collect<GDIR_ASC>(*this,*msc,*i,asc);
+//      if(msc->index(*i) != 0) bfs_collect<DES>(*this,*msc,*i,des);
+//      if(msc->index(*i) != 2) bfs_collect<ASC>(*this,*msc,*i,asc);
 
-      BOOST_AUTO(desop_bi,back_inserter(desop));
-      BOOST_AUTO(ascop_bi,back_inserter(ascop));
+//      BOOST_AUTO(desop_bi,back_inserter(desop));
+//      BOOST_AUTO(ascop_bi,back_inserter(ascop));
 
-      BOOST_FOREACH(cellid_t c,des) m_tcc.cellid_to_output(c,desop_bi);
-      BOOST_FOREACH(cellid_t c,asc) m_tcc.cellid_to_output(c,ascop_bi);
+//      BOOST_FOREACH(cellid_t c,des) m_tcc.cellid_to_output(c,desop_bi);
+//      BOOST_FOREACH(cellid_t c,asc) m_tcc.cellid_to_output(c,ascop_bi);
 
-      nmcells.push_back(desop.size());
-      nmcells.push_back(ascop.size());
+//      nmcells.push_back(desop.size());
+//      nmcells.push_back(ascop.size());
 
-      bin_write_vec(os,desop);
-      bin_write_vec(os,ascop);
-    }
+//      bin_write_vec(os,desop);
+//      bin_write_vec(os,ascop);
+//    }
 
-    cellid_list_t cps;
-    char_list_t   cp_idxs;
+//    cellid_list_t cps;
+//    char_list_t   cp_idxs;
 
-    br::copy(rng,back_inserter(cps));
-    br::transform(rng,back_inserter(cp_idxs),bind(&mscomplex_t::index,msc,_1));
+//    br::copy(rng,back_inserter(cps));
+//    br::transform(rng,back_inserter(cp_idxs),bind(&mscomplex_t::index,msc,_1));
 
-    write_header(os,nmcells,cps,cp_idxs,hoff);
-  }
+//    write_header(os,nmcells,cps,cp_idxs,hoff);
+//  }
 
 }

@@ -2,6 +2,10 @@
 #define TRIMESH_DATASET_ENSURE_H_INCLUDED
 
 #include <fstream>
+#include <stack>
+
+#include <boost/range.hpp>
+
 #include <trimesh_dataset.h>
 
 namespace trimesh
@@ -13,16 +17,16 @@ namespace trimesh
   {return m_tcc.is_cell_boundry(c);}
 
   template<>
-  inline uint dataset_t::get_cets<GDIR_DES>(cellid_t c,cellid_t *cets) const
+  inline uint dataset_t::get_cets<DES>(cellid_t c,cellid_t *cets) const
   {return m_tcc.get_cell_facets(c,cets);}
 
   template<>
-  inline uint dataset_t::get_cets<GDIR_ASC>(cellid_t c,cellid_t *cets) const
+  inline uint dataset_t::get_cets<ASC>(cellid_t c,cellid_t *cets) const
   {return m_tcc.get_cell_co_facets(c,cets);}
 
   template<eGDIR dir>
   inline uint dataset_t::get_co_cets(cellid_t c,cellid_t *cets) const
-  {return get_cets<(dir == GDIR_DES)?(GDIR_ASC):(GDIR_DES)>(c,cets);}
+  {return get_cets<(dir == DES)?(ASC):(DES)>(c,cets);}
 
 
 
@@ -52,7 +56,7 @@ namespace trimesh
     return c;
   }
 
-  inline cell_fn_t dataset_t::cell_fn(cellid_t c) const
+  inline fn_t dataset_t::fn(cellid_t c) const
   {return m_vert_fns[max_vert<-1>(c)];}
 
 
@@ -84,15 +88,14 @@ namespace trimesh
     ASSERT(m_tcc.get_cell_dim(c1) == 0);
     ASSERT(m_tcc.get_cell_dim(c2) == 0);
 
-    cell_fn_t f1 = m_vert_fns[c1];
-    cell_fn_t f2 = m_vert_fns[c2];
+    fn_t f1 = m_vert_fns[c1];
+    fn_t f2 = m_vert_fns[c2];
 
     if (f1 != f2)
       return f1 < f2;
 
     return c1 < c2;
   }
-
 
   inline const cellid_t& dataset_t::pair(cellid_t c) const
   {ASSERT(m_cell_pairs[c] != invalid_cellid);return m_cell_pairs[c];}
@@ -113,12 +116,40 @@ namespace trimesh
   inline cellid_t& dataset_t::owner(cellid_t c)
   {ASSERT(m_cell_own[c] == invalid_cellid);return m_cell_own[c];}
 
-
-  inline void  dataset_t::save_manifolds(const std::string &s,mscomplex_ptr_t msc)
+  template <eGDIR dir,typename rng_t>
+  inline void dataset_t::get_mfold(mfold_t &mfold,rng_t rng)
   {
-    std::fstream fs(s.c_str(),std::ios::out|std::ios::binary);
-    ensure(fs.is_open(),"Unable to open file ");
-    save_manifolds(fs,msc);
+    std::stack<cellid_t> stk;
+
+    auto b = boost::begin(rng);
+    auto e = boost::end(rng);
+
+    int dim = cell_dim(*b);
+
+    while ( b!= e) stk.push(*b++);
+
+    cellid_t f[20],*fe,*fb;
+
+    while(!stk.empty())
+    {
+      cellid_t c = stk.top(); stk.pop();
+
+      ASSERT(cell_dim(c) == dim);
+
+      mfold.push_back(c);
+
+      fb = f; fe = f + get_cets<dir>(c,f);
+
+      for (; fb != fe; ++fb )
+        if( is_paired(*fb))
+        {
+          cellid_t p = pair(*fb);
+          if(p != c && cell_dim(p) == dim)
+            stk.push(p);
+        }
+    }
   }
+
+
 }
 #endif

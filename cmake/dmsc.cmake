@@ -14,9 +14,6 @@ set(SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/include/cpputils.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/src/cpputils.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/utls/include/n_vector.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/utls/src/n_vector.cpp
-
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/include/tri_edge.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/src/tri_edge.cpp
 

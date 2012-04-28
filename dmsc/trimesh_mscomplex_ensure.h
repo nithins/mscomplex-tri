@@ -79,7 +79,7 @@ inline const cellid_t& mscomplex_t::vertid(int i) const
   return m_cp_vertid[i];
 }
 
-inline const cell_fn_t& mscomplex_t::fn(int i) const
+inline const fn_t& mscomplex_t::fn(int i) const
 {
   try{ASSERT(is_in_range(i,0,(int)m_cp_fn.size()));}
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}

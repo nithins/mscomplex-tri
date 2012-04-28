@@ -18,7 +18,7 @@ typedef float bin_data_type_t;
 const   uint bin_fnname_max_size = 32;
 
 template <typename T>
-void read_bin_file(std::vector<T> &cell_fns, const string & fname,int compno)
+void read_bin_file(std::vector<T> &fns, const string & fname,int compno)
 {
   fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
 
@@ -27,7 +27,7 @@ void read_bin_file(std::vector<T> &cell_fns, const string & fname,int compno)
   fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
   fnfile.read ( reinterpret_cast<char *> ( &num_bin_comps ), sizeof ( int ) );
 
-  cell_fns.resize(num_bin_values,-1);
+  fns.resize(num_bin_values,-1);
 
   fnfile.seekg ( bin_fnname_max_size*num_bin_comps, ios::cur );
   fnfile.seekg ( sizeof ( bin_data_type_t ) * compno, ios::cur );
@@ -39,7 +39,7 @@ void read_bin_file(std::vector<T> &cell_fns, const string & fname,int compno)
     fnfile.read ( reinterpret_cast<char *> ( &data ),sizeof(bin_data_type_t));
     fnfile.seekg ( sizeof ( bin_data_type_t)*( num_bin_comps-1), ios::cur );
 
-    cell_fns[i] = data;
+    fns[i] = data;
   }
 
   fnfile.close();
@@ -143,18 +143,17 @@ int main(int ac , char **av)
   cout<<"------------------------------------"<<endl;
 
   trimesh::tri_idx_list_t tlist;
-  trimesh::cell_fn_list_t cell_fns;
+  trimesh::fn_list_t      fns;
   print_bin_info(bin_filename);
   cout<<"selected comp = "<<bin_comp_no<<endl;
   cout<<"------------------------------------"<<endl;
 
   read_tri_file(tri_filename.c_str(),tlist);
-  read_bin_file(cell_fns,bin_filename,bin_comp_no);
+  read_bin_file(fns,bin_filename,bin_comp_no);
   cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  trimesh::dataset_ptr_t   ds(new trimesh::dataset_t);
+  trimesh::dataset_ptr_t   ds(new trimesh::dataset_t(fns,tlist));
   trimesh::mscomplex_ptr_t msc(new trimesh::mscomplex_t);
-  ds->init(cell_fns,tlist);
   ds->work(msc);
   cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
@@ -168,9 +167,9 @@ int main(int ac , char **av)
   msc->stow(tri_filename+".graph.bin",false);
   cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  msc->invert_for_collection();
-  ds->save_manifolds(tri_filename+".mfold.bin",msc);
-  cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
+  msc->get_mfolds(ds);
+
+//  cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
   cout<<"------------------------------------"<<endl;
   cout<<"        Finished Processing         "<<endl;
