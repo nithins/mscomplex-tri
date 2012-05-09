@@ -2,14 +2,17 @@
 #include <queue>
 #include <limits>
 
+#include <boost/foreach.hpp>
+
+#include <boost/range/algorithm.hpp>
 #include <boost/typeof/typeof.hpp>
 #include <boost/range/adaptors.hpp>
 
 #include <trimesh_mscomplex.h>
 #include <trimesh_dataset.h>
 
-
 using namespace std;
+namespace br    = boost::range;
 namespace badpt = boost::adaptors;
 
 namespace trimesh
@@ -101,12 +104,6 @@ void mscomplex_t::dir_connect_cps(int p, int q)
 
   if(conn.count(q) == 0)
     conn.insert(q);
-}
-
-void mscomplex_t::pair_cps(int p, int q)
-{
-  m_cp_pair_idx[p] = q;
-  m_cp_pair_idx[q] = p;
 }
 
 void mscomplex_t::cancel_pair ( int p, int q)
@@ -375,8 +372,8 @@ void mscomplex_t::simplify(double f_tresh)
       for(conn_iter_t j = m_asc_conn[q].begin();j != m_asc_conn[q].end();++j)
       {
         int_pair_t npr;
-        pr[0] = *i;
-        pr[1] = *j;
+        npr[0] = *i;
+        npr[1] = *j;
 
         if(is_valid_canc_edge(*this,npr) && is_within_treshold(*this,npr,f_tresh))
           pq.push(npr);
@@ -581,9 +578,139 @@ void mscomplex_t::load(std::istream &is)
 //    }
 //  }
 
-void mscomplex_t::simplify_hypervolume(dataset_ptr_t ds, double tresh)
+}
+
+#include <tuple>
+
+namespace trimesh
 {
 
+typedef int_pair_t edge_t;
+
+template <typename T>
+inline edge_t mk_edge(const T & u,const T & v)
+{edge_t e; e[0] = u;e[1] = v; return e;}
+
+
+template <eGDIR dir>
+double get_hyp_volume(mscomplex_ptr_t msc,dataset_ptr_t ds,const int_pair_t &pr)
+{
+  const int EIDX = (dir == DES)? (0):(1);
+
+  mfold_t &mfold = msc->mfold<dir>(pr[EIDX]);
+
+  cellid_t p[40];
+
+  double sum = 0;
+
+  BOOST_FOREACH(cellid_t c,mfold)
+  {
+    cellid_t *pb = p,*pe = p+ds->get_points<dir>(c,p);
+
+    fn_t max_f = ds->fn(*pb);
+    fn_t min_f = ds->fn(*pb);
+
+    for (++pb ;pb != pe; ++pb)
+    {
+      max_f = max(max_f,ds->fn(*pb));
+      min_f = min(min_f,ds->fn(*pb));
+    }
+
+    sum += (max_f - min_f);
+  }
+
+  return sum;
+}
+
+struct hv_edge
+{
+  edge_t     edge;
+  double     hv_pers;
+
+  hv_edge(edge_t e,double p):edge(e),hv_pers(p){}
+
+  bool operator < (const hv_edge & hve) const
+  { return hve.hv_pers < hv_pers ;}
+};
+
+void mscomplex_t::simplify_hypervolume(dataset_ptr_t ds, double tresh)
+{
+  get_mfolds(ds);
+
+  priority_queue<hv_edge> pq;
+  vector<double>  extrema_pers(get_num_critpts());
+  double total_extrema_pers=0;
+
+  for( int i = 0 ; i < get_num_critpts(); ++i)
+  {
+    BOOST_FOREACH(int j,m_conn[0][i])
+    {
+      edge_t e = mk_edge(i,j);
+
+      double hv_pers = 0;
+      int ex_idx=-1;
+
+      if (index(i) == 2)
+      {
+        hv_pers = get_hyp_volume<DES>(shared_from_this(),ds,e);
+        ex_idx = i;
+      }
+      else
+      {
+        hv_pers = get_hyp_volume<ASC>(shared_from_this(),ds,e);
+        ex_idx = j;
+      }
+
+      pq.push(hv_edge(e,hv_pers));
+
+      extrema_pers[ex_idx] = hv_pers;
+
+      total_extrema_pers += hv_pers;
+    }
+  }
+
+  while (pq.size() != 0 )
+  {
+    hv_edge hve = pq.top(); pq.pop();
+
+    int ex = hve.edge[0],sd = hve.edge[1];
+    if(index(ex) == 1) swap(ex,sd);
+
+    if(is_valid_canc_edge(*this,hve.edge) == false)
+      continue;
+
+    if(hve.hv_pers != extrema_pers[ex])
+    {
+      pq.push(hv_edge(hve.edge,extrema_pers[ex]));
+      continue;
+    }
+
+    if(hve.hv_pers > total_extrema_pers*tresh)
+      break;
+
+    pair_cps(hve.edge);
+    cancel_pair(hve.edge[0],hve.edge[1]);
+    m_canc_list.push_back(hve.edge);
+
+
+    int surv_ex = *m_conn[((index(ex) == 2)?(ASC):(DES))][sd].begin();
+    extrema_pers[surv_ex] += extrema_pers[ex];
+    extrema_pers[ex]       = 0;
+
+    BOOST_FOREACH(int i,m_des_conn[hve.edge[0]])
+    {
+      BOOST_FOREACH(int j,m_asc_conn[hve.edge[1]])
+      {
+        edge_t e = mk_edge(i,j);
+
+        int e_ex = i,e_sd = j;
+        if(index(e_ex) == 1) swap(e_ex,e_sd);
+
+        if(is_valid_canc_edge(*this,e))
+          pq.push(hv_edge(e,extrema_pers[e_ex]));
+      }
+    }
+  }
 
 
 

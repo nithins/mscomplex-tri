@@ -93,6 +93,13 @@ inline bool mscomplex_t::is_extrema(int i) const
 inline bool mscomplex_t::is_saddle(int i) const
 {return (index(i) == 1);}
 
+inline void mscomplex_t::pair_cps(int p, int q)
+{m_cp_pair_idx[p] = q;m_cp_pair_idx[q] = p;}
+
+inline void mscomplex_t::pair_cps(const int_pair_t &e)
+{pair_cps(e[0],e[1]);}
+
+
 inline std::string mscomplex_t::cp_info (int cp_no) const
 {
   std::stringstream ss;

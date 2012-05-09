@@ -56,6 +56,9 @@ namespace trimesh
     template<eGDIR dir>
     inline uint get_co_cets(cellid_t c,cellid_t *cets) const;
 
+    template<eGDIR dir>
+    inline uint get_points(cellid_t c,cellid_t *pts) const;
+
 
     inline const cellid_t& max_fct(cellid_t ) const;
     inline cellid_t& max_fct(cellid_t );
@@ -64,6 +67,17 @@ namespace trimesh
 
     template <int dim>
     inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;
+
+    template <int di,int dj>
+    inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;
+
+    template <int dim>
+    inline bool compare_cells_pp(const cellid_t & c1, const cellid_t &c2) const;
+
+    template <int di,int dj>
+    inline bool compare_cells_pp(const cellid_t & c1, const cellid_t &c2) const;
+
+
 
     inline const cellid_t& pair(cellid_t ) const;
     inline void pair(cellid_t,cellid_t );

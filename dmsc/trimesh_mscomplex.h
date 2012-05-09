@@ -82,7 +82,9 @@ namespace trimesh
 
     void connect_cps(int p, int q);
     void dir_connect_cps(int p , int q);
-    void pair_cps(int p , int q);
+
+    inline void pair_cps(int p , int q);
+    inline void pair_cps(const int_pair_t &);
 
     inline const char& index(int i) const;
     inline const int& pair_idx(int i) const;
@@ -133,9 +135,10 @@ namespace trimesh
     inline range_t cp_range()
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
+
+    void simplify_hypervolume(dataset_ptr_t ds, double tresh);
   };
 
-  void simplify_hypervolume(mscomplex_ptr_t msc,dataset_ptr_t ds,double tresh);
 }
 
 #include <trimesh_mscomplex_ensure.h>

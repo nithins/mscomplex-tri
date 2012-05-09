@@ -28,7 +28,13 @@ namespace trimesh
   inline uint dataset_t::get_co_cets(cellid_t c,cellid_t *cets) const
   {return get_cets<(dir == DES)?(ASC):(DES)>(c,cets);}
 
+  template<>
+  inline uint dataset_t::get_points<DES>(cellid_t c,cellid_t *pts) const
+  {return m_tcc.get_cell_points(c,pts);}
 
+  template<>
+  inline uint dataset_t::get_points<ASC>(cellid_t c,cellid_t *tris) const
+  {return m_tcc.get_cell_tris(c,tris);}
 
 
 
@@ -58,8 +64,6 @@ namespace trimesh
 
   inline fn_t dataset_t::fn(cellid_t c) const
   {return m_vert_fns[max_vert<-1>(c)];}
-
-
 
   template <int dim>
   inline bool dataset_t::compare_cells(const cellid_t & c1, const cellid_t &c2) const
@@ -96,6 +100,51 @@ namespace trimesh
 
     return c1 < c2;
   }
+
+  template <int di,int dj>
+  inline bool dataset_t::compare_cells(const cellid_t & c1, const cellid_t &c2) const
+  {
+    if ( di < dj)
+      return ! compare_cells<dj,di>(c2,c1);
+
+    ASSERT(cell_dim(c1) == di && cell_dim(c2) == dj);
+
+    if( di == dj)
+      return compare_cells<di>(c1,c2);
+
+    return compare_cells<di-1,dj>(max_fct(c1),c2);
+  }
+
+
+  template <int dim>
+  inline bool dataset_t::compare_cells_pp(const cellid_t & c1, const cellid_t &c2) const
+  {
+    cellid_t oc1 = c1,oc2 = c2;
+
+    if(is_paired(c1) && cell_dim(pair(c1)) == dim+1)
+      oc1 = max_fct(pair(c1));
+
+    if(is_paired(c2) && cell_dim(pair(c2)) == dim+1)
+      oc2 = max_fct(pair(c2));
+
+    return compare_cells<dim>(oc1,oc2);
+  }
+
+  template <int di,int dj>
+  inline bool dataset_t::compare_cells_pp(const cellid_t & c1, const cellid_t &c2) const
+  {
+    cellid_t oc1 = c1,oc2 = c2;
+
+    if(is_paired(c1) && cell_dim(pair(c1)) == di+1)
+      oc1 = max_fct(pair(c1));
+
+    if(is_paired(c2) && cell_dim(pair(c2)) == dj+1)
+      oc2 = max_fct(pair(c2));
+
+    return compare_cells<di,dj>(oc1,oc2);
+  }
+
+
 
   inline const cellid_t& dataset_t::pair(cellid_t c) const
   {ASSERT(m_cell_pairs[c] != invalid_cellid);return m_cell_pairs[c];}

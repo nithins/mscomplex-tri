@@ -160,7 +160,8 @@ int main(int ac , char **av)
   msc->stow(tri_filename+".full.graph.bin",false);
   cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  msc->simplify(simp_tresh);
+  msc->simplify(0.0);
+  msc->simplify_hypervolume(ds,simp_tresh);
   msc->un_simplify();
   cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
