@@ -21,10 +21,10 @@ set(dmsc_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.cpp
 )
 
-set(spin_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
-)
+#set(spin_SRCS
+#  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.h
+#  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
+#)
 
 set(viewer_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.h

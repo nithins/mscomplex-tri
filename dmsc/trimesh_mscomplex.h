@@ -58,7 +58,6 @@ namespace trimesh
     cellid_list_t   m_cp_vertid;
     int_list_t      m_cp_pair_idx;
     char_list_t     m_cp_index;
-    bool_list_t     m_cp_is_cancelled;
     bool_list_t     m_cp_is_boundry;
     fn_list_t       m_cp_fn;
 
@@ -88,7 +87,6 @@ namespace trimesh
 
     inline const char& index(int i) const;
     inline const int& pair_idx(int i) const;
-    inline const char& is_canceled(int i) const;
     inline const char& is_boundry(int i) const;
     inline const cellid_t& cellid(int i) const;
     inline const cellid_t& vertid(int i) const;
@@ -109,6 +107,7 @@ namespace trimesh
     void un_simplify();
 
     void get_mfolds(dataset_ptr_t ds);
+    void clear_mfolds();
 
     void cancel_pair(int p, int q);
     void uncancel_pair( int p, int q);
@@ -118,11 +117,17 @@ namespace trimesh
     void write_graph(std::ostream & os) const;
     void write_graph(const std::string & fn) const;
 
-    void stow(std::ostream &os,bool purge_data=true);
+    void save(std::ostream &os);
     void load(std::istream &is);
 
-    inline void stow(const std::string &f,bool purge_data=true)
-    {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);stow(fs,purge_data);}
+    void save_ascii(const std::string &f);
+
+    void save_mfolds(std::ostream &os,dataset_ptr_t ds);
+    inline void save_mfolds(const std::string &f,dataset_ptr_t ds)
+    {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);save_mfolds(fs,ds);}
+
+    inline void save(const std::string &f)
+    {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);save(fs);}
     void load(const std::string &f)
     {std::fstream fs(f.c_str(),std::ios::in|std::ios::binary);load(fs);}
 

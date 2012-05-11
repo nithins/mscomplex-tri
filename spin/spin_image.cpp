@@ -39,8 +39,8 @@ namespace spin
     point_t &p  = get_point(m_base_pt);
     point_t &n  = get_normal(m_base_pt);
 
-    double rho  = euclid_norm(cross_product((x-p),n));
-    double   z  = dot_product(x-p,n);
+    double rho  = boost::numeric::ublas::norm_2(cross_product((x-p),n));
+    double   z  = boost::numeric::ublas::inner_prod(x-p,n);
 
     si_point_t  si_pt(rho,z);
 

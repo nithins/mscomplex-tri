@@ -15,7 +15,8 @@ inline int  mscomplex_t::get_num_critpts() const
 
 inline const char& mscomplex_t::index(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_index.size()));}
+  try{ASSERT(is_in_range(i,0,(int)m_cp_index.size()));
+  ASSERT(is_in_range(m_cp_index[i],0,3));}
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return m_cp_index[i];
@@ -45,14 +46,6 @@ inline bool mscomplex_t::is_not_paired(int i) const
   catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
 
   return (m_cp_pair_idx[i] == -1);
-}
-
-inline const char& mscomplex_t::is_canceled(int i) const
-{
-  try{ASSERT(is_in_range(i,0,(int)m_cp_is_cancelled.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
-  return m_cp_is_cancelled[i];
 }
 
 inline const char& mscomplex_t::is_boundry(int i) const

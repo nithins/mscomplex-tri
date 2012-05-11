@@ -157,20 +157,21 @@ int main(int ac , char **av)
   ds->work(msc);
   cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  msc->stow(tri_filename+".full.graph.bin",false);
-  cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
-
   msc->simplify(0.0);
-  msc->simplify_hypervolume(ds,simp_tresh);
+  msc->un_simplify();
+  msc->get_mfolds(ds);
+  msc->save(tri_filename+".mscomplex.full.bin");
+  cout<<"write unsimplified done -- "<<t.getElapsedTimeInMilliSec()<<endl;
+
+  msc->simplify(simp_tresh);
   msc->un_simplify();
   cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  msc->stow(tri_filename+".graph.bin",false);
-  cout<<"write graph done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
-
+  msc->clear_mfolds();
   msc->get_mfolds(ds);
-
-//  cout<<"write mfolds done --------- "<<t.getElapsedTimeInMilliSec()<<endl;
+  msc->save(tri_filename+".mscomplex.bin");
+  msc->save_ascii(tri_filename+".mscomplex.txt");
+  cout<<"write simplified done ---- "<<t.getElapsedTimeInMilliSec()<<endl;
 
   cout<<"------------------------------------"<<endl;
   cout<<"        Finished Processing         "<<endl;

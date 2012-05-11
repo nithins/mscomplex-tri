@@ -45,9 +45,9 @@ namespace trimesh
     setParent(par);
   }
 
-  void glviewer_t::setup(std::string tf,std::string gf,std::string mf)
+  void glviewer_t::setup(std::string tf,std::string mf)
   {
-    m_ren = new viewer_t(tf,gf,mf);
+    m_ren = new viewer_t(tf,mf);
   }
 
   glviewer_t::~glviewer_t()
@@ -120,7 +120,7 @@ namespace trimesh
     QModelIndexList l = m_cp_model_proxy->mapSelectionToSource
                         (critpt_view->selectionModel()->selection()).indexes();
 
-    configurable_ctx_menu(&(glviewer->m_ren->m_graphs[m_active_otp_idx]->m_mfold_data),
+    configurable_ctx_menu(&(glviewer->m_ren->m_msc_ren),
                           l,critpt_view->mapToGlobal(p));
 
     glviewer->updateGL();
@@ -133,29 +133,28 @@ namespace trimesh
 
     m_active_otp_idx = index.row();
 
-    m_cp_model->reset_configurable
-        (&(glviewer->m_ren->m_graphs[m_active_otp_idx]->m_mfold_data));
+    m_cp_model->reset_configurable(&(glviewer->m_ren->m_msc_ren));
   }
 
   viewer_mainwindow::viewer_mainwindow
-      (std::string tf,std::string gf,std::string mf):
+      (std::string tf,std::string mf):
       m_active_otp_idx(0)
   {
     setupUi (this);
 
-    glviewer->setup(tf,gf,mf);
+    glviewer->setup(tf,mf);
 
     m_otp_model = new configurable_item_model
                   (glviewer->m_ren,this);
 
     spinviewer->setScene(new QGraphicsScene(this));
 
-    spinviewer->scene()->addItem(new spin::si_graphics_item_t(glviewer->m_ren));
+//    spinviewer->scene()->addItem(new spin::si_graphics_item_t(glviewer->m_ren));
 
     datapiece_view->setModel ( m_otp_model );
 
     m_cp_model = new configurable_item_model
-                 (&(glviewer->m_ren->m_graphs[m_active_otp_idx]->m_mfold_data),this);
+                 (&(glviewer->m_ren->m_msc_ren),this);
 
     m_cp_model_proxy = new QSortFilterProxyModel(this);
 
@@ -361,7 +360,7 @@ namespace trimesh
       QColor qc = QColorDialog::getColor(ic);
 
       if(qc.isValid())
-        out_val = glutils::color_t(qc.redF(),qc.greenF(),qc.blueF());
+        out_val = glutils::mk_vertex(qc.redF(),qc.greenF(),qc.blueF());
     }
 
     if(m_vals[0].type() == typeid(configurable_t::action_callback_t))
@@ -385,62 +384,62 @@ namespace trimesh
 
 }
 
-namespace spin
-{
-  QRectF si_graphics_item_t::boundingRect() const
-  {
-    QRectF r;
+//namespace spin
+//{
+//  QRectF si_graphics_item_t::boundingRect() const
+//  {
+//    QRectF r;
 
-    if(!m_si) return r;
+//    if(!m_si) return r;
 
-    si_point_t si_lc = m_si->m_iextent.lower_corner();
-    si_point_t si_uc = m_si->m_iextent.upper_corner();
+//    si_point_t si_lc = m_si->m_iextent.lower_corner();
+//    si_point_t si_uc = m_si->m_iextent.upper_corner();
 
-    r.setBottomLeft(to_qpointf(si_lc));
-    r.setTopRight(to_qpointf(si_uc));
+//    r.setBottomLeft(to_qpointf(si_lc));
+//    r.setTopRight(to_qpointf(si_uc));
 
-    return r;
-  }
+//    return r;
+//  }
 
 
-  QRgb to_qrgb(si_scalar_t c)
-  {
-    c*= 20;
+//  QRgb to_qrgb(si_scalar_t c)
+//  {
+//    c*= 20;
 
-    return qRgb(c,c,c);
-  }
+//    return qRgb(c,c,c);
+//  }
 
-  void si_graphics_item_t::update_image()
-  {
-//    if(m_si == m_viewer->m_spin_image) return;
+//  void si_graphics_item_t::update_image()
+//  {
+////    if(m_si == m_viewer->m_spin_image) return;
 
-//    m_si = m_viewer->m_spin_image;
+////    m_si = m_viewer->m_spin_image;
+
+////    if(!m_si) return;
+
+////    si_point_t sz = m_si->m_iextent.span();
+
+////    si_point_t lc = m_si->m_iextent.lower_corner();
+
+////    m_image = new QImage(QSize(sz[0],sz[1]),QImage::Format_RGB888);
+
+////    for(uint y = 0 ; y < sz[1]; ++y)
+////      for(uint x = 0 ; x < sz[0]; ++x)
+////        m_image->setPixel( x,y,to_qrgb((*m_si->m_image)(lc + si_ipoint_t(x,y))));
+
+//  }
+
+//  void si_graphics_item_t::paint
+//      (QPainter *painter,
+//       const QStyleOptionGraphicsItem *option,
+//       QWidget *widget)
+//  {
+//    update_image();
 
 //    if(!m_si) return;
 
-//    si_point_t sz = m_si->m_iextent.span();
-
 //    si_point_t lc = m_si->m_iextent.lower_corner();
 
-//    m_image = new QImage(QSize(sz[0],sz[1]),QImage::Format_RGB888);
-
-//    for(uint y = 0 ; y < sz[1]; ++y)
-//      for(uint x = 0 ; x < sz[0]; ++x)
-//        m_image->setPixel( x,y,to_qrgb((*m_si->m_image)(lc + si_ipoint_t(x,y))));
-
-  }
-
-  void si_graphics_item_t::paint
-      (QPainter *painter,
-       const QStyleOptionGraphicsItem *option,
-       QWidget *widget)
-  {
-    update_image();
-
-    if(!m_si) return;
-
-    si_point_t lc = m_si->m_iextent.lower_corner();
-
-    painter->drawImage(QPoint(lc[0],lc[1]),*m_image);
-  }
-}
+//    painter->drawImage(QPoint(lc[0],lc[1]),*m_image);
+//  }
+//}

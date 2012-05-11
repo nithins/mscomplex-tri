@@ -13,16 +13,14 @@ namespace bpo = boost::program_options;
 
 int main(int ac , char **av)
 {
-  string tri_filename;
-  string graph_file;
-  string mfold_file;
+  string tri_file;
+  string mscomplex_file;
 
   bpo::options_description desc("Allowed options");
   desc.add_options()
       ("help,h", "produce help message")
-      ("tri-file,t",bpo::value(&tri_filename)->required(), "tri file name")
-      ("graph-bin-file,g",bpo::value(&graph_file)->required(), "ms graph file")
-      ("mfold-bin-file,m",bpo::value(&mfold_file)->required(), "ms mfold file")
+      ("tri-file,t",bpo::value(&tri_file)->required(), "tri file name")
+      ("msocomplex-bin-file,m",bpo::value(&mscomplex_file)->required(), "msocomplex file")
       ;
 
 
@@ -47,7 +45,7 @@ int main(int ac , char **av)
 
   QApplication application(ac,av);
 
-  trimesh::viewer_mainwindow gvmw(tri_filename,graph_file,mfold_file);
+  trimesh::viewer_mainwindow gvmw(tri_file,mscomplex_file);
 
   gvmw.setWindowTitle("ms complex vis");
 
