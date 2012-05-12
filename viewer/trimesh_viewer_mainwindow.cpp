@@ -3,10 +3,13 @@
 #include <QColorDialog>
 #include <QDebug>
 #include <QKeyEvent>
+#include <QFileDialog>
+#include <QDir>
 
 #include <boost/typeof/typeof.hpp>
 
 #include <trimesh_viewer.h>
+#include <trimesh_mscomplex.h>
 #include <trimesh_viewer_mainwindow.h>
 
 const int g_roi_show_aabb_time_msec = 5*1000;
@@ -134,6 +137,21 @@ namespace trimesh
     m_active_otp_idx = index.row();
 
     m_cp_model->reset_configurable(&(glviewer->m_ren->m_msc_ren));
+  }
+
+  void viewer_mainwindow::on_actionLoad_Canc_Tree_triggered(bool)
+  {
+    QString fname = QFileDialog::getOpenFileName
+        (this,tr("Select simplified ms complex to load canc tree from"),
+         QDir::currentPath(),"Mscomplex (*.bin)");
+
+    mscomplex_t msc;
+
+    msc.load(fname.toStdString());
+
+    glviewer->m_ren->m_msc_ren.build_canctree(msc.m_canc_list);
+
+    glviewer->m_ren->m_msc_ren.update_canctree_tresh(0.04);
   }
 
   viewer_mainwindow::viewer_mainwindow

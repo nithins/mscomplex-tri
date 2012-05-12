@@ -56,6 +56,26 @@ namespace trimesh
     void init();
     void render();
 
+
+
+    struct canc_tree_node_t
+    {
+      glutils::color_t   color;
+      fn_t               perst;
+      int                parent;
+
+      canc_tree_node_t():perst(-1),parent(-1){}
+    };
+
+    typedef std::vector<canc_tree_node_t> canc_tree_t;
+
+
+    canc_tree_t  m_canc_tree;
+
+
+    void build_canctree(const int_pair_list_t &);
+    void update_canctree_tresh(double tresh);
+
     void update_geom();
 
     // configurable_t interface

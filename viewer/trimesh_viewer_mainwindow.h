@@ -4,6 +4,7 @@
 #include <trimesh.h>
 
 #include <QDialog>
+#include <QMainWindow>
 #include <QAbstractItemModel>
 #include <QModelIndex>
 #include <QVariant>
@@ -62,7 +63,7 @@ namespace trimesh
 {
 
   class viewer_mainwindow:
-      public QDialog,
+      public QMainWindow,
       public Ui::viewer_mainwindow_Dialog
   {
 
@@ -95,6 +96,8 @@ namespace trimesh
     void on_critpt_view_customContextMenuRequested ( const QPoint &p );
 
     void on_datapiece_view_activated ( const QModelIndex & index  );
+
+    void on_actionLoad_Canc_Tree_triggered(bool);
   };
 
   void configurable_ctx_menu

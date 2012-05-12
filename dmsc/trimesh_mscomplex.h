@@ -37,10 +37,6 @@
 
 namespace trimesh
 {
-  typedef std::vector<fn_t>     cp_fn_list_t;
-  typedef boost::numeric::ublas::bounded_vector<int,2>  int_pair_t;
-  typedef std::vector<int_pair_t>    int_pair_list_t;
-
   typedef std::multiset<uint>                 conn_t;
   typedef std::multiset<uint>::iterator       conn_iter_t;
   typedef std::multiset<uint>::const_iterator const_conn_iter_t;

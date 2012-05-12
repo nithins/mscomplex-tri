@@ -86,6 +86,19 @@ glutils::color_t g_roiaabb_color = glutils::mk_vertex(0.85,0.75,0.65);
 
 glutils::color_t g_normals_color = glutils::mk_vertex(0.85,0.75,0.65);
 
+inline color_t get_random_color()
+{
+  color_t col;
+
+  const uint MAX_RAND = 256;
+
+  col[0] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+  col[1] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+  col[2] = ((double) (rand()%MAX_RAND))/((double)MAX_RAND);
+
+  return col;
+}
+
 viewer_t::viewer_t
     (std::string tf,std::string mf):
     m_data_dia(0),
@@ -182,7 +195,8 @@ mscomplex_ren_t::mscomplex_ren_t(std::string tf, std::string mf):
     m_bShowCancMsGraph(false),
     m_bShowCellNormals(false),
     m_msc(new mscomplex_t),
-    m_tcc(new tri_cc_geom_t)
+    m_tcc(new tri_cc_geom_t),
+    m_need_update_geom(false)
 
 {
   m_msc->load(mf);
@@ -246,6 +260,97 @@ void mscomplex_ren_t::init()
   m_surv_mfold_color[0].resize(m_surv_cps.size(),g_disc_colors[0][0]);
   m_surv_mfold_color[1].resize(m_surv_cps.size(),g_disc_colors[1][1]);
 
+}
+
+inline int get_root(int i,const mscomplex_ren_t::canc_tree_t &canc_tree)
+{
+  while(canc_tree[i].parent != -1)
+    i = canc_tree[i].parent;
+
+  return i;
+}
+
+inline int get_ancestor(int i,const mscomplex_ren_t::canc_tree_t &canc_tree,double tresh)
+{
+  while(canc_tree[i].parent != -1 && canc_tree[i].perst < tresh)
+    i = canc_tree[i].parent;
+
+  return i;
+}
+
+inline int get_other_ex(int_pair_t pr,mscomplex_ptr_t msc,const mscomplex_ren_t::canc_tree_t &canc_tree)
+{
+  if(!msc->is_extrema(pr[0])) swap(pr[0],pr[1]);
+
+  int dir = (msc->index(pr[0]) == 0)?(0):(1);
+
+  auto beg = msc->m_conn[dir][pr[1]].begin();
+  auto end = msc->m_conn[dir][pr[1]].end();
+
+  ASSERT(beg != end);
+
+  int ex1  = *beg++;
+  int ex2  = (beg == end)?(-1):(*beg++);
+
+  ASSERT(beg == end);
+  ASSERT(is_in_range(ex1,0,msc->get_num_critpts()));
+
+  int ex = get_root(ex1,canc_tree);
+
+  if(ex == pr[0])
+  {
+    ASSERT(is_in_range(ex2,0,msc->get_num_critpts()));
+    ex = get_root(ex2,canc_tree);
+  }
+
+  return ex;
+}
+
+void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list)
+{
+  m_canc_tree.resize(m_msc->get_num_critpts());
+
+  double fmax = *br::max_element(m_msc->m_cp_fn);
+  double fmin = *br::min_element(m_msc->m_cp_fn);
+
+  BOOST_FOREACH(int_pair_t pr,canc_list)
+  {
+    ASSERT(is_in_range(pr[0],0,m_msc->get_num_critpts()));
+    ASSERT(is_in_range(pr[1],0,m_msc->get_num_critpts()));
+
+    ASSERT(m_msc->index(pr[0]) + 1 == m_msc->index(pr[1]) ||
+           m_msc->index(pr[1]) + 1 == m_msc->index(pr[0]));
+
+    if(!m_msc->is_extrema(pr[0])) swap(pr[0],pr[1]);
+
+    ASSERT(m_msc->is_extrema(pr[0]) && m_msc->is_saddle(pr[1]));
+
+    m_canc_tree[pr[0]].perst  =
+        (abs(m_msc->fn(pr[0]) - m_msc->fn(pr[1])))/(fmax-fmin);
+
+    m_canc_tree[pr[0]].parent = get_other_ex(pr,m_msc,m_canc_tree);
+  }
+
+  for(int i = 0 ; i < m_msc->get_num_critpts(); ++i)
+  {
+    m_canc_tree[i].color = get_random_color();
+  }
+}
+
+void mscomplex_ren_t::update_canctree_tresh(double tresh)
+{
+  for( int i = 0; i < m_surv_cps.size(); ++i)
+  {
+    int j = m_surv_cps[i];
+
+    if(m_msc->is_saddle(j))
+      continue;
+
+    m_surv_mfold_color[0][i] = m_canc_tree[get_ancestor(j,m_canc_tree,tresh)].color;
+    m_surv_mfold_color[1][i] = m_canc_tree[get_ancestor(j,m_canc_tree,tresh)].color;
+  }
+
+  cout<<"here"<<endl;
 }
 
 void mscomplex_ren_t::render()
