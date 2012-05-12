@@ -98,6 +98,8 @@ namespace trimesh
     void on_datapiece_view_activated ( const QModelIndex & index  );
 
     void on_actionLoad_Canc_Tree_triggered(bool);
+
+    void on_canc_tree_slider_valueChanged ( int value );
   };
 
   void configurable_ctx_menu

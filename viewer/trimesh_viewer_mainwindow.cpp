@@ -151,7 +151,16 @@ namespace trimesh
 
     glviewer->m_ren->m_msc_ren.build_canctree(msc.m_canc_list);
 
-    glviewer->m_ren->m_msc_ren.update_canctree_tresh(0.04);
+    glviewer->m_ren->m_msc_ren.update_canctree_tresh(0.0);
+
+    glviewer->updateGL();
+  }
+
+  void viewer_mainwindow::on_canc_tree_slider_valueChanged ( int value )
+  {
+    glviewer->m_ren->m_msc_ren.update_canctree_tresh(double(value)/99.0);
+
+    glviewer->updateGL();
   }
 
   viewer_mainwindow::viewer_mainwindow

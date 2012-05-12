@@ -339,6 +339,9 @@ void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list)
 
 void mscomplex_ren_t::update_canctree_tresh(double tresh)
 {
+  if (m_canc_tree.size() == 0)
+    return;
+
   for( int i = 0; i < m_surv_cps.size(); ++i)
   {
     int j = m_surv_cps[i];
@@ -349,8 +352,6 @@ void mscomplex_ren_t::update_canctree_tresh(double tresh)
     m_surv_mfold_color[0][i] = m_canc_tree[get_ancestor(j,m_canc_tree,tresh)].color;
     m_surv_mfold_color[1][i] = m_canc_tree[get_ancestor(j,m_canc_tree,tresh)].color;
   }
-
-  cout<<"here"<<endl;
 }
 
 void mscomplex_ren_t::render()
