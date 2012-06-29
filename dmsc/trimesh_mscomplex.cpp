@@ -341,9 +341,9 @@ void mscomplex_t::simplify(double f_tresh)
     if(is_valid_canc_edge(*this,pr) == false)
       continue;
 
-    int p = pr[0],q = pr[1];
+    order_pr_by_cp_index(*this,pr[0],pr[1]);
 
-    order_pr_by_cp_index(*this,p,q);
+    int p = pr[0],q = pr[1];
 
     pair_cps(p,q);
 
@@ -427,12 +427,43 @@ inline void bin_write_vec(std::ostream &os, std::vector<T> &v)
 {os.write((const char*)(const void*)v.data(),v.size()*sizeof(T));}
 
 template<typename T>
-inline void bin_write(std::ostream &os, const T &v)
-{os.write((const char*)(const void*)&v,sizeof(T));}
-
-template<typename T>
 inline void bin_read_vec(std::istream &is, std::vector<T> &v,int n)
 {v.resize(n);is.read((char*)(void*)v.data(),n*sizeof(T));}
+
+
+template<>
+inline void bin_write_vec(std::ostream &os, int_pair_list_t &v)
+{
+  int_list_t vlist;
+
+  BOOST_FOREACH(int_pair_t p,v)
+  {
+    vlist.push_back(p[0]);
+    vlist.push_back(p[1]);
+  }
+
+  os.write((const char*)(const void*)vlist.data(),vlist.size()*sizeof(int));
+}
+
+template<>
+inline void bin_read_vec(std::istream &is, int_pair_list_t &v,int n)
+{
+  int_list_t vlist;
+
+  bin_read_vec(is,vlist,n*2);
+
+  v.resize(n);
+
+  for(int i = 0 ; i < n;++i)
+  {
+    v[i][0] = vlist[2*i+0];
+    v[i][1] = vlist[2*i+1];
+  }
+}
+
+template<typename T>
+inline void bin_write(std::ostream &os, const T &v)
+{os.write((const char*)(const void*)&v,sizeof(T));}
 
 inline void bin_read_conn(std::istream &is,conn_t &conn,int n)
 {

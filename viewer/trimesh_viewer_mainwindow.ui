@@ -124,21 +124,6 @@
                <attribute name="verticalHeaderDefaultSectionSize">
                 <number>20</number>
                </attribute>
-               <attribute name="verticalHeaderVisible">
-                <bool>false</bool>
-               </attribute>
-               <attribute name="verticalHeaderDefaultSectionSize">
-                <number>20</number>
-               </attribute>
-               <attribute name="horizontalHeaderCascadingSectionResizes">
-                <bool>false</bool>
-               </attribute>
-               <attribute name="verticalHeaderCascadingSectionResizes">
-                <bool>false</bool>
-               </attribute>
-               <attribute name="horizontalHeaderDefaultSectionSize">
-                <number>100</number>
-               </attribute>
               </widget>
              </item>
             </layout>
@@ -186,20 +171,36 @@
      <x>0</x>
      <y>0</y>
      <width>817</width>
-     <height>24</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
     </property>
+    <addaction name="actionLoad_Ms_Complex"/>
     <addaction name="actionLoad_Canc_Tree"/>
+    <addaction name="separator"/>
+    <addaction name="actionClose_Ms_Complex"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
   <action name="actionLoad_Canc_Tree">
    <property name="text">
     <string>Load Canc Tree</string>
+   </property>
+  </action>
+  <action name="actionLoad_Ms_Complex">
+   <property name="text">
+    <string>Load Ms Complex</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionClose_Ms_Complex">
+   <property name="text">
+    <string>Close Ms Complex</string>
    </property>
   </action>
  </widget>

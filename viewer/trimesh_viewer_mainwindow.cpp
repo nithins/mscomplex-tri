@@ -48,9 +48,9 @@ namespace trimesh
     setParent(par);
   }
 
-  void glviewer_t::setup(std::string tf,std::string mf)
+  void glviewer_t::setup()
   {
-    m_ren = new viewer_t(tf,mf);
+    m_ren = new viewer_t();
   }
 
   glviewer_t::~glviewer_t()
@@ -119,12 +119,15 @@ namespace trimesh
 
   void viewer_mainwindow::on_critpt_view_customContextMenuRequested ( const QPoint &p )
   {
+    if(m_active_otp_idx <0)
+      return;
 
     QModelIndexList l = m_cp_model_proxy->mapSelectionToSource
                         (critpt_view->selectionModel()->selection()).indexes();
 
-    configurable_ctx_menu(&(glviewer->m_ren->m_msc_ren),
-                          l,critpt_view->mapToGlobal(p));
+    mscomplex_ren_ptr_t msc_ren = glviewer->m_ren->m_mscs[m_active_otp_idx];
+
+    configurable_ctx_menu(msc_ren.get(),l,critpt_view->mapToGlobal(p));
 
     glviewer->updateGL();
   }
@@ -136,66 +139,111 @@ namespace trimesh
 
     m_active_otp_idx = index.row();
 
-    m_cp_model->reset_configurable(&(glviewer->m_ren->m_msc_ren));
+    mscomplex_ren_ptr_t msc_ren = glviewer->m_ren->m_mscs[m_active_otp_idx];
+
+    m_cp_model->reset_configurable(msc_ren.get());
+  }
+
+  void viewer_mainwindow::on_actionLoad_Ms_Complex_triggered(bool)
+  {
+    std::string tri_file = QFileDialog::getOpenFileName
+        (this,tr("Select triangulation file"),
+         QDir::currentPath(),"tri (*.tri)").toStdString();
+
+    if(tri_file == "") return;
+
+    std::string ms_file = QFileDialog::getOpenFileName
+        (this,tr("Select mscomplex file"),
+         QDir::currentPath(),"Mscomplex (*.mscomplex.bin *.mscomplex.full.bin)").toStdString();
+
+    if(ms_file == "") return;
+
+    mscomplex_ren_ptr_t msc_ren(new mscomplex_ren_t(tri_file,ms_file));
+
+    msc_ren->init();
+
+    glviewer->m_ren->m_mscs.push_back(msc_ren);
+
+    if(m_cp_model == NULL)
+    {
+      m_cp_model = new configurable_item_model
+                   (msc_ren.get(),this);
+
+      m_cp_model_proxy = new QSortFilterProxyModel(this);
+
+      m_cp_model_proxy->setSourceModel(m_cp_model);
+
+      critpt_view->setModel ( m_cp_model_proxy );
+
+      connect(critpt_filter_edit,SIGNAL(textChanged(QString)),
+              m_cp_model_proxy,SLOT(setFilterFixedString(QString)));
+
+      m_active_otp_idx = 0;
+    }
+
+    m_cp_model->force_reset();
+    m_otp_model->force_reset();
   }
 
   void viewer_mainwindow::on_actionLoad_Canc_Tree_triggered(bool)
   {
-    QString fname = QFileDialog::getOpenFileName
+    if(m_active_otp_idx <0)
+      return;
+
+    std::string fname = QFileDialog::getOpenFileName
         (this,tr("Select simplified ms complex to load canc tree from"),
-         QDir::currentPath(),"Mscomplex (*.bin)");
+         QDir::currentPath(),"Mscomplex (*.mscomplex.bin)").toStdString();
+
+    if(fname == "")
+      return;
 
     mscomplex_t msc;
 
-    msc.load(fname.toStdString());
+    msc.load(fname);
 
-    glviewer->m_ren->m_msc_ren.build_canctree(msc.m_canc_list);
+    mscomplex_ren_ptr_t msc_ren = glviewer->m_ren->m_mscs[m_active_otp_idx];
 
-    glviewer->m_ren->m_msc_ren.update_canctree_tresh(0.0);
+    msc_ren->build_canctree(msc.m_canc_list);
+
+    msc_ren->update_canctree_tresh(0.0);
 
     glviewer->updateGL();
   }
 
   void viewer_mainwindow::on_canc_tree_slider_valueChanged ( int value )
   {
-    glviewer->m_ren->m_msc_ren.update_canctree_tresh(double(value)/99.0);
+    if(m_active_otp_idx <0)
+      return;
+
+    mscomplex_ren_ptr_t msc_ren = glviewer->m_ren->m_mscs[m_active_otp_idx];
+
+    msc_ren->update_canctree_tresh(double(value)/99.0);
 
     glviewer->updateGL();
   }
 
-  viewer_mainwindow::viewer_mainwindow
-      (std::string tf,std::string mf):
-      m_active_otp_idx(0)
+  viewer_mainwindow::viewer_mainwindow():
+      m_active_otp_idx(-1),m_cp_model_proxy(NULL),
+      m_cp_model(NULL),m_otp_model(NULL)
   {
     setupUi (this);
 
-    glviewer->setup(tf,mf);
+    glviewer->setup();
 
     m_otp_model = new configurable_item_model
                   (glviewer->m_ren,this);
 
-    spinviewer->setScene(new QGraphicsScene(this));
+//    spinviewer->setScene(new QGraphicsScene(this));
 
 //    spinviewer->scene()->addItem(new spin::si_graphics_item_t(glviewer->m_ren));
 
     datapiece_view->setModel ( m_otp_model );
-
-    m_cp_model = new configurable_item_model
-                 (&(glviewer->m_ren->m_msc_ren),this);
-
-    m_cp_model_proxy = new QSortFilterProxyModel(this);
-
-    m_cp_model_proxy->setSourceModel(m_cp_model);
-
-    critpt_view->setModel ( m_cp_model_proxy );
-
-    connect(critpt_filter_edit,SIGNAL(textChanged(QString)),
-            m_cp_model_proxy,SLOT(setFilterFixedString(QString)));
   }
 
   void viewer_mainwindow::showEvent ( QShowEvent * )
   {
-    m_cp_model->force_reset();
+    if(m_cp_model)
+      m_cp_model->force_reset();
   }
 
   viewer_mainwindow::~viewer_mainwindow()

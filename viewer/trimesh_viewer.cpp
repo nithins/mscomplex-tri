@@ -99,12 +99,7 @@ inline color_t get_random_color()
   return col;
 }
 
-viewer_t::viewer_t
-    (std::string tf,std::string mf):
-    m_data_dia(0),
-    m_bShowSurface(false),
-    m_msc_ren(tf,mf)
-
+viewer_t::viewer_t()
 {
 }
 
@@ -118,12 +113,8 @@ int viewer_t::render()
 
   glEnable(GL_RESCALE_NORMAL);
 
-  glScalef(1.0/m_data_dia,1.0/m_data_dia,1.0/m_data_dia);
-
-  m_msc_ren.render();
-
-  if(m_bShowSurface)
-    m_surf_ren->render();
+  for( int i = 0 ; i < m_mscs.size(); ++i)
+    m_mscs[i]->render();
 
   glPopAttrib();
 }
@@ -131,24 +122,16 @@ int viewer_t::render()
 void viewer_t::init()
 {
   glutils::init();
-
-  m_msc_ren.init();
-
-  double *e = m_msc_ren.m_extent;
-
-  vertex_t s = mk_vertex(e[1]-e[0],e[3]-e[2],e[5]-e[4]);
-
-  m_data_dia = *std::max_element(s.begin(),s.end());
 }
 
 configurable_t::data_index_t viewer_t::dim()
 {
-  return data_index_t(11,1);
+  return data_index_t(11,m_mscs.size());
 }
 
 bool viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
 {
-  mscomplex_ren_t * gd = &m_msc_ren;
+  mscomplex_ren_ptr_t gd = m_mscs[idx[1]];
 
   switch(idx[0])
   {
@@ -260,6 +243,11 @@ void mscomplex_ren_t::init()
   m_surv_mfold_color[0].resize(m_surv_cps.size(),g_disc_colors[0][0]);
   m_surv_mfold_color[1].resize(m_surv_cps.size(),g_disc_colors[1][1]);
 
+  m_scale_factor = max(m_extent[1] - m_extent[0],m_extent[3]-m_extent[2]);
+  m_scale_factor = max(m_extent[5] - m_extent[4],m_scale_factor);
+
+  m_scale_factor = 2.0/m_scale_factor;
+
 }
 
 inline int get_root(int i,const mscomplex_ren_t::canc_tree_t &canc_tree)
@@ -325,8 +313,10 @@ void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list)
 
     ASSERT(m_msc->is_extrema(pr[0]) && m_msc->is_saddle(pr[1]));
 
-    m_canc_tree[pr[0]].perst  =
-        (abs(m_msc->fn(pr[0]) - m_msc->fn(pr[1])))/(fmax-fmin);
+    fn_t perst = (abs(m_msc->fn(pr[0]) - m_msc->fn(pr[1])))/(fmax-fmin);
+
+    m_canc_tree[pr[0]].perst  = perst;
+    m_canc_tree[pr[1]].perst  = perst;
 
     m_canc_tree[pr[0]].parent = get_other_ex(pr,m_msc,m_canc_tree);
   }
@@ -359,7 +349,7 @@ void mscomplex_ren_t::render()
   glPushMatrix();
   glPushAttrib ( GL_ENABLE_BIT );
 
-  glScalef(2,2,2);
+  glScalef(m_scale_factor,m_scale_factor,m_scale_factor);
   glTranslated(-m_center[0],-m_center[1],-m_center[2]);
 
   if(m_need_update_geom)

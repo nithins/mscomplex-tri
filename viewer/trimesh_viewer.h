@@ -50,6 +50,7 @@ namespace trimesh
     double            m_extent[6];
     glutils::vertex_t m_center;
     tri_cc_geom_ptr_t m_tcc;
+    double            m_scale_factor;
 
     mscomplex_ren_t(std::string tf,std::string mf);
 
@@ -85,21 +86,19 @@ namespace trimesh
     virtual eFieldType exchange_header(const int &,boost::any &);
   };
 
+  typedef boost::shared_ptr<mscomplex_ren_t> mscomplex_ren_ptr_t;
+
   class viewer_t:
       public glutils::renderable_t,
       public configurable_t
   {
   public:
-    mscomplex_ren_t       m_msc_ren;
-    renderable_ptr_t      m_surf_ren;
 
-  public:
-    double m_data_dia;
-    bool   m_bShowSurface;
+    std::vector<mscomplex_ren_ptr_t> m_mscs;
 
   public:
 
-    viewer_t(std::string tf,std::string gf);
+    viewer_t();
 
     ~viewer_t();
 

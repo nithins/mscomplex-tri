@@ -40,7 +40,7 @@ namespace trimesh
 
     glviewer_t(QWidget *par);
 
-    void setup(std::string tf,std::string mf);
+    void setup();
 
     ~glviewer_t();
 
@@ -71,7 +71,7 @@ namespace trimesh
 
   public:
 
-    uint                     m_active_otp_idx;
+    int                      m_active_otp_idx;
 
     QSortFilterProxyModel   *m_cp_model_proxy;
     configurable_item_model *m_cp_model;
@@ -79,7 +79,7 @@ namespace trimesh
 
   public:
 
-    viewer_mainwindow(std::string tf,std::string mf);
+    viewer_mainwindow();
 
     ~viewer_mainwindow();
 
@@ -98,6 +98,8 @@ namespace trimesh
     void on_datapiece_view_activated ( const QModelIndex & index  );
 
     void on_actionLoad_Canc_Tree_triggered(bool);
+
+    void on_actionLoad_Ms_Complex_triggered(bool);
 
     void on_canc_tree_slider_valueChanged ( int value );
   };
