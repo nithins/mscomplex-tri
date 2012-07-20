@@ -20,6 +20,8 @@
 
 #include <config.h>
 
+#define VIEWER_RENDER_AWESOME
+
 #ifndef VIEWER_RENDER_AWESOME
 double g_max_cp_size  = 8.0;
 #else
@@ -363,7 +365,21 @@ void mscomplex_ren_t::render()
   if(m_surv_mfold_show[d][i] && m_surv_mfold_rens[d][i])
   {
     glColor3dv(&m_surv_mfold_color[d][i][0]);
+
+#ifdef VIEWER_RENDER_AWESOME
+    if(m_msc->index(m_surv_cps[i]) == 1)
+    {
+      g_cylinder_shader->use();
+      g_cylinder_shader->sendUniform("ug_cylinder_radius",float(g_max_cp_size/(2*m_scale_factor)));
+    }
+#endif
+
     m_surv_mfold_rens[d][i]->render();
+
+#ifdef VIEWER_RENDER_AWESOME
+    g_cylinder_shader->disable();
+#endif
+
   }
 
   glDisable ( GL_LIGHTING );
@@ -375,7 +391,7 @@ void mscomplex_ren_t::render()
 #else
   g_sphere_shader->use();
 
-  g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size*m_viewer->m_data_dia));
+  g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size/m_scale_factor));
 #endif
 
   for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
@@ -532,62 +548,20 @@ configurable_t::eFieldType mscomplex_ren_t::exchange_header
   throw std::logic_error("octtree_piece_rendata::invalid index");
 }
 
-//template<eGDIR dir>
-//inline int get_edge_pts(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc);
+template<eGDIR dir>
+inline int get_edge_pts(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc);
 
-//template<>
-//inline int get_edge_pts<DES>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
-//{return tcc.get_cell_points(e,pts);}
+template<>
+inline int get_edge_pts<DES>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
+{return tcc.get_cell_points(e,pts);}
 
-//template<>
-//inline int get_edge_pts<ASC>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
-//{
-//  int ncf = tcc.get_cell_co_facets(e,pts);
-//  pts[2] = pts[1]; pts[1] = e;
-//  return ncf+1;
-//}
-
-//template<eGDIR dir>
-//void update_saddle_mfold(mfold_data_t &dp,int scpno)
-//{
-//  cellid_list_t mfold;
-
-//  dp.read_mfold<dir>(scpno,mfold);
-
-//  map<cellid_t,int> pt_idx;
-
-//  line_idx_list_t e_idxs;
-
-//  for(cellid_list_t::iterator it = mfold.begin(); it!= mfold.end(); ++it)
-//  {
-//    cellid_t pt[20];
-
-//    dp.m_tcc->get_cell_points(*it,pt);
-
-//    int npts = get_edge_pts<dir>(*it,pt,*(dp.m_tcc));
-
-//    if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
-//    if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
-//    e_idxs.push_back(mk_line_idx(pt_idx[pt[0]],pt_idx[pt[1]]));
-
-//    if(dir == DES) continue;
-
-//    if(npts < 3) continue;
-
-//    if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
-//    e_idxs.push_back(mk_line_idx(pt_idx[pt[1]],pt_idx[pt[2]]));
-//  }
-
-//  vertex_list_t pts(pt_idx.size());
-
-//  for(map<cellid_t,int>::iterator it = pt_idx.begin(); it!= pt_idx.end();++it)
-//    pts[it->second] = dp.m_tcc->get_cell_position(it->first);
-
-//  smooth_lines(pts,e_idxs,4);
-
-//  dp.m_ren[dir][scpno].reset(create_buffered_lines_ren(make_buf_obj(pts),make_buf_obj(e_idxs)));
-//}
-
+template<>
+inline int get_edge_pts<ASC>(cellid_t e,cellid_t *pts,const tri_cc_geom_t &tcc)
+{
+  int ncf = tcc.get_cell_co_facets(e,pts);
+  pts[2] = pts[1]; pts[1] = e;
+  return ncf+1;
+}
 
 renderable_ptr_t get_maxima_renderer
 (mfold_t &mfold,tri_cc_geom_ptr_t tcc,
@@ -636,6 +610,49 @@ renderable_ptr_t get_minima_renderer
   return ren;
 }
 
+template <eGDIR dir>
+renderable_ptr_t get_saddle_renderer
+(mfold_t &mfold,tri_cc_geom_ptr_t tcc,
+ glutils::bufobj_ptr_t cellbo)
+{
+
+  map<cellid_t,int> pt_idx;
+
+  line_idx_list_t e_idxs;
+
+  for(cellid_list_t::iterator it = mfold.begin(); it!= mfold.end(); ++it)
+  {
+    cellid_t pt[20];
+
+    tcc->get_cell_points(*it,pt);
+
+    int npts = get_edge_pts<dir>(*it,pt,*(tcc));
+
+    if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
+    if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
+    e_idxs.push_back(mk_line_idx(pt_idx[pt[0]],pt_idx[pt[1]]));
+
+    if(dir == DES) continue;
+
+    if(npts < 3) continue;
+
+    if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
+    e_idxs.push_back(mk_line_idx(pt_idx[pt[1]],pt_idx[pt[2]]));
+  }
+
+  vertex_list_t pts(pt_idx.size());
+
+  for(map<cellid_t,int>::iterator it = pt_idx.begin(); it!= pt_idx.end();++it)
+    pts[it->second] = tcc->get_cell_position(it->first);
+
+  smooth_lines(pts,e_idxs,4);
+
+  renderable_ptr_t ren(create_buffered_lines_ren
+                       (make_buf_obj(pts),make_buf_obj(e_idxs)));
+
+  return ren;
+}
+
 
 void mscomplex_ren_t::update_geom()
 {
@@ -651,8 +668,11 @@ void mscomplex_ren_t::update_geom()
             (m_msc->mfold<ASC>(j),m_tcc,m_cell_pos_bo,m_cell_nrm_bo);
       break;
     case 1:
-//      if(m_ren_show[0][i] && !m_ren[0][i]) update_saddle_mfold<DES>(*this,i);
-//      if(m_ren_show[1][i] && !m_ren[1][i]) update_saddle_mfold<ASC>(*this,i);break;
+      if(m_surv_mfold_show[0][i] && !m_surv_mfold_rens[0][i])
+      {
+        m_surv_mfold_rens[0][i] = get_saddle_renderer<DES>
+          (m_msc->mfold<DES>(j),m_tcc,m_cell_pos_bo);
+      }
       break;
     case 2:
 
