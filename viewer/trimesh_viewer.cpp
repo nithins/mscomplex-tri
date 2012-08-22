@@ -14,6 +14,7 @@
 
 #include <glutils.h>
 #include <GLSLProgram.h>
+#include <utls_glsl_shaders.h>
 
 #include <trimesh_viewer.h>
 #include <trimesh_mscomplex.h>
@@ -26,6 +27,8 @@
 double g_max_cp_size  = 8.0;
 #else
 double g_max_cp_size  = 0.025;
+GLSLProgram * g_cylinder_shader = NULL;
+GLSLProgram * g_sphere_shader   = NULL;
 #endif
 
 double g_max_cp_raise = 0.1;
@@ -52,41 +55,41 @@ inline tri_idx_t mk_tri_idx(const T& a,const T&b,const T& c)
 
 glutils::color_t g_cp_colors[gc_max_cell_dim+1] =
 {
-  glutils::mk_vertex(0.0,0.0,1.0),
-  glutils::mk_vertex(0.0,1.0,0.0),
-  glutils::mk_vertex(1.0,0.0,0.0),
+  glutils::make_vec<double>(0.0,0.0,1.0),
+  glutils::make_vec<double>(0.0,1.0,0.0),
+  glutils::make_vec<double>(1.0,0.0,0.0),
 };
 
 glutils::color_t g_grad_colors[gc_max_cell_dim] =
 {
-  glutils::mk_vertex(0.0,0.5,0.5 ),
-  glutils::mk_vertex(0.5,0.0,0.5 ),
+  glutils::make_vec<double>(0.0,0.5,0.5 ),
+  glutils::make_vec<double>(0.5,0.0,0.5 ),
 };
 
 glutils::color_t g_disc_colors[GDIR_CT][gc_max_cell_dim+1] =
 {
   {
-    glutils::mk_vertex(0.15,0.45,0.35 ),
-    glutils::mk_vertex(0.85,0.65,0.75 ),
-    glutils::mk_vertex(0.0,0.0,0.0 ),
+    glutils::make_vec<double>(0.15,0.45,0.35 ),
+    glutils::make_vec<double>(0.85,0.65,0.75 ),
+    glutils::make_vec<double>(0.0,0.0,0.0 ),
   },
 
 {
-    glutils::mk_vertex(0.0,0.0,0.0 ),
-    glutils::mk_vertex(0.65,0.95,0.45 ),
-    glutils::mk_vertex(0.15,0.25,0.75 ),
+    glutils::make_vec<double>(0.0,0.0,0.0 ),
+    glutils::make_vec<double>(0.65,0.95,0.45 ),
+    glutils::make_vec<double>(0.15,0.25,0.75 ),
   },
 };
 
 glutils::color_t g_cp_conn_colors[gc_max_cell_dim] =
 {
-  glutils::mk_vertex(0.0,0.5,0.5 ),
-  glutils::mk_vertex(0.5,0.0,0.5 ),
+  glutils::make_vec<double>(0.0,0.5,0.5 ),
+  glutils::make_vec<double>(0.5,0.0,0.5 ),
 };
 
-glutils::color_t g_roiaabb_color = glutils::mk_vertex(0.85,0.75,0.65);
+glutils::color_t g_roiaabb_color = glutils::make_vec<double>(0.85,0.75,0.65);
 
-glutils::color_t g_normals_color = glutils::mk_vertex(0.85,0.75,0.65);
+glutils::color_t g_normals_color = glutils::make_vec<double>(0.85,0.75,0.65);
 
 inline color_t get_random_color()
 {
@@ -124,6 +127,14 @@ int viewer_t::render()
 void viewer_t::init()
 {
   glutils::init();
+
+  g_cylinder_shader = GLSLProgram::createFromSourceStrings
+                      (CYLINDER_VERT_GLSL,CYLINDER_GEOM_GLSL,
+                       CYLINDER_FRAG_GLSL);
+
+  g_sphere_shader   = GLSLProgram::createFromSourceStrings
+                      (SPHERE_VERT_GLSL,SPHERE_GEOM_GLSL,
+                       SPHERE_FRAG_GLSL);
 }
 
 configurable_t::data_index_t viewer_t::dim()
@@ -224,7 +235,7 @@ void mscomplex_ren_t::init()
   {
     BOOST_FOREACH(int j,m_msc->m_des_conn[i])
     {
-      line_idx_t l = mk_line_idx(m_msc->cellid(i),m_msc->cellid(j));
+      line_idx_t l = make_vec<idx_t>(m_msc->cellid(i),m_msc->cellid(j));
       eind[m_msc->index(j)].push_back(l);
     }
   }
@@ -630,14 +641,14 @@ renderable_ptr_t get_saddle_renderer
 
     if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
     if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
-    e_idxs.push_back(mk_line_idx(pt_idx[pt[0]],pt_idx[pt[1]]));
+    e_idxs.push_back(make_vec<uint>(pt_idx[pt[0]],pt_idx[pt[1]]));
 
     if(dir == DES) continue;
 
     if(npts < 3) continue;
 
     if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
-    e_idxs.push_back(mk_line_idx(pt_idx[pt[1]],pt_idx[pt[2]]));
+    e_idxs.push_back(make_vec<uint>(pt_idx[pt[1]],pt_idx[pt[2]]));
   }
 
   vertex_list_t pts(pt_idx.size());
@@ -673,6 +684,13 @@ void mscomplex_ren_t::update_geom()
         m_surv_mfold_rens[0][i] = get_saddle_renderer<DES>
           (m_msc->mfold<DES>(j),m_tcc,m_cell_pos_bo);
       }
+
+      if(m_surv_mfold_show[1][i] && !m_surv_mfold_rens[1][i])
+      {
+        m_surv_mfold_rens[1][i] = get_saddle_renderer<ASC>
+          (m_msc->mfold<ASC>(j),m_tcc,m_cell_pos_bo);
+      }
+
       break;
     case 2:
 

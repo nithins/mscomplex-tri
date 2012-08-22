@@ -27,6 +27,7 @@ FIND_LIBRARY(QGLVIEWER_LIBRARY NAMES QGLViewer
   /usr/local/lib64
   /usr/lib
   /usr/local/lib
+  /usr/lib/x86_64-linux-gnu/
   NO_DEFAULT_PATH
 )
 FIND_LIBRARY(QGLVIEWER_LIBRARY NAMES QGLViewer)

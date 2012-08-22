@@ -37,6 +37,7 @@ set(viewer_SRCS
 
 QT4_WRAP_CPP(viewer_MOC_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
+  OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
   )
 
 set(viewer_UIS
@@ -76,5 +77,6 @@ target_link_libraries(
   ${QT_LIBRARIES}
   ${QT_ADDITIONAL_LIBRARIES}
   ${QGLVIEWER_LIBRARY}
+  GL
   )
 

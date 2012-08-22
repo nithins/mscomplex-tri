@@ -435,7 +435,7 @@ namespace trimesh
       QColor qc = QColorDialog::getColor(ic);
 
       if(qc.isValid())
-        out_val = glutils::mk_vertex(qc.redF(),qc.greenF(),qc.blueF());
+        out_val = glutils::make_vec<double>(qc.redF(),qc.greenF(),qc.blueF());
     }
 
     if(m_vals[0].type() == typeid(configurable_t::action_callback_t))
