@@ -17,11 +17,11 @@ namespace trimesh
 {
   dataset_t::dataset_t
   (const fn_list_t &vert_fns, const tri_idx_list_t &trilist):
-    m_vert_fns(vert_fns)
+    m_vert_fns(vert_fns),m_tcc(new tri_cc_t)
   {
-    m_tcc.init(trilist,vert_fns.size());
+    m_tcc->init(trilist,vert_fns.size());
 
-    int N = m_tcc.get_num_cells();
+    int N = m_tcc->get_num_cells();
 
     m_cell_own.resize(N,invalid_cellid);
     m_cell_mxfct.resize(N,invalid_cellid);
@@ -33,7 +33,7 @@ namespace trimesh
     m_cell_own.clear();
     m_cell_mxfct.clear();
     m_cell_pairs.clear();
-    m_tcc.clear();
+    m_tcc->clear();
   }
 
   template <int dim,typename Titer>
@@ -182,17 +182,17 @@ namespace trimesh
 
   void dataset_t::work(mscomplex_ptr_t msc)
   {
-    assign_max_facets<1>(*this,m_tcc.begin(1),m_tcc.end(1));
-    assign_max_facets<2>(*this,m_tcc.begin(2),m_tcc.end(2));
+    assign_max_facets<1>(*this,m_tcc->begin(1),m_tcc->end(1));
+    assign_max_facets<2>(*this,m_tcc->begin(2),m_tcc->end(2));
 
-    assign_pairs<0>(*this,m_tcc.begin(0),m_tcc.end(0));
-    assign_pairs<1>(*this,m_tcc.begin(1),m_tcc.end(1));
+    assign_pairs<0>(*this,m_tcc->begin(0),m_tcc->end(0));
+    assign_pairs<1>(*this,m_tcc->begin(1),m_tcc->end(1));
 
-    assign_pairs2<1>(*this,m_tcc.begin(1),m_tcc.end(1));
+    assign_pairs2<1>(*this,m_tcc->begin(1),m_tcc->end(1));
 
     cellid_list_t ccells;
 
-    collect_cps(*this,m_tcc.begin(),m_tcc.end(),back_inserter(ccells));
+    collect_cps(*this,m_tcc->begin(),m_tcc->end(),back_inserter(ccells));
 
     for(cellid_list_t::iterator b = ccells.begin(),e =ccells.end();b!=e; ++b)
     {
@@ -258,8 +258,8 @@ namespace trimesh
 //      BOOST_AUTO(desop_bi,back_inserter(desop));
 //      BOOST_AUTO(ascop_bi,back_inserter(ascop));
 
-//      BOOST_FOREACH(cellid_t c,des) m_tcc.cellid_to_output(c,desop_bi);
-//      BOOST_FOREACH(cellid_t c,asc) m_tcc.cellid_to_output(c,ascop_bi);
+//      BOOST_FOREACH(cellid_t c,des) m_tcc->cellid_to_output(c,desop_bi);
+//      BOOST_FOREACH(cellid_t c,asc) m_tcc->cellid_to_output(c,ascop_bi);
 
 //      nmcells.push_back(desop.size());
 //      nmcells.push_back(ascop.size());

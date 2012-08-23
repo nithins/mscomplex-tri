@@ -13,8 +13,8 @@ namespace trimesh
   typedef float                   fn_t;
   typedef std::vector<fn_t>       fn_list_t;
 
-  typedef boost::numeric::ublas::bounded_vector<int,2>  int_pair_t;
-  typedef std::vector<int_pair_t>                       int_pair_list_t;
+  typedef la::ivec2_t                 int_pair_t;
+  typedef std::vector<int_pair_t>     int_pair_list_t;
 
 
   typedef std::vector<cellid_t>   cellid_list_t;

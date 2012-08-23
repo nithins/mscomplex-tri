@@ -58,6 +58,7 @@ namespace trimesh
     fn_list_t       m_cp_fn;
 
     int_pair_list_t m_canc_list;
+    fn_list_t       m_canc_pers;
 
     conn_list_t   m_conn[GDIR_CT];
     conn_list_t  &m_des_conn;
@@ -137,7 +138,7 @@ namespace trimesh
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
 
-    void simplify_hypervolume(dataset_ptr_t ds, double tresh);
+    void simplify_hypervolume(dataset_ptr_t ds,tri_cc_geom_ptr_t tcc,double tresh);
   };
 
 }

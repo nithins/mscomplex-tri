@@ -352,6 +352,7 @@ void mscomplex_t::simplify(double f_tresh)
     num_cancellations++;
 
     m_canc_list.push_back(pr);
+    m_canc_pers.push_back(get_persistence(*this,pr)/f_range);
 
     for(conn_iter_t i = m_des_conn[p].begin();i != m_des_conn[p].end();++i)
       for(conn_iter_t j = m_asc_conn[q].begin();j != m_asc_conn[q].end();++j)
@@ -510,6 +511,7 @@ void mscomplex_t::save(std::ostream &os)
 
   bin_write(os,int(m_canc_list.size()));
   bin_write_vec(os,m_canc_list);
+  bin_write_vec(os,m_canc_pers);
 
   bin_write_vec(os,nmfold);
 
@@ -549,7 +551,7 @@ void mscomplex_t::load(std::istream &is)
   int NC;
   bin_read(is,NC);
   bin_read_vec(is,m_canc_list,NC);
-
+  bin_read_vec(is,m_canc_pers,NC);
 
   bin_read_vec(is,nmfolds,2*N);
   m_des_mfolds.resize(N);
@@ -613,8 +615,8 @@ void  mscomplex_t::save_mfolds(std::ostream &os,dataset_ptr_t ds)
     auto desop_bi = back_inserter(desop);
     auto ascop_bi = back_inserter(ascop);
 
-    BOOST_FOREACH(cellid_t c,m_mfolds[0][*i]) ds->m_tcc.cellid_to_output(c,desop_bi);
-    BOOST_FOREACH(cellid_t c,m_mfolds[1][*i]) ds->m_tcc.cellid_to_output(c,ascop_bi);
+    BOOST_FOREACH(cellid_t c,m_mfolds[0][*i]) ds->m_tcc->cellid_to_output(c,desop_bi);
+    BOOST_FOREACH(cellid_t c,m_mfolds[1][*i]) ds->m_tcc->cellid_to_output(c,ascop_bi);
 
     nmcells.push_back(desop.size());
     nmcells.push_back(ascop.size());
@@ -690,85 +692,143 @@ void mscomplex_t::save_ascii(const std::string &f)
 namespace trimesh
 {
 
-typedef int_pair_t edge_t;
+template <eGDIR dir>
+inline double get_area(const tri_cc_geom_t &tcc, cellid_t c);
 
-template <typename T>
-inline edge_t mk_edge(const T & u,const T & v)
-{edge_t e; e[0] = u;e[1] = v; return e;}
+template <> double inline get_area<ASC>(const tri_cc_geom_t &tcc, cellid_t c)
+{return tcc.get_vert_area(c);}
+
+template <> double inline get_area<DES>(const tri_cc_geom_t &tcc, cellid_t c)
+{return tcc.get_tri_area(c);}
+
+template <eGDIR dir>
+double get_harea(const tri_cc_geom_t &tcc, const dataset_ptr_t &ds ,  cellid_t c);
+
+template <> double get_harea<ASC>(const tri_cc_geom_t &tcc,
+                                  const dataset_ptr_t &ds ,
+                                  cellid_t cid)
+{
+  cellid_t st[40];
+
+  uint st_ct = tcc.get_vert_star(cid,st);
+
+  double area = 0;
+
+  la::dvec4_t b = la::make_vec<double>
+      (tcc.get_cell_position(cid),ds->fn<dataset_t::CFI_AVE>(cid));
+
+  for(uint i = 1; i < st_ct; i++)
+  {
+    la::dvec4_t a = la::make_vec<double>
+        (tcc.get_cell_position(st[i-1]),ds->fn<dataset_t::CFI_AVE>(st[i-1]));
+
+    la::dvec4_t c = la::make_vec<double>
+        (tcc.get_cell_position(st[i]),ds->fn<dataset_t::CFI_AVE>(st[i]));
+
+    area += la::tri_area<double,4>(a,b,c);
+  }
+
+  return area;
+}
+
+template <> double get_harea<DES>(const tri_cc_geom_t &tcc,
+                                  const dataset_ptr_t &ds ,
+                                  cellid_t id)
+{
+  cellid_t pts[20];
+
+  tcc.get_cell_points(id,pts);
+
+  la::dvec4_t a = la::make_vec<double>
+      (tcc.get_cell_position(pts[0]),ds->fn(pts[0]));
+
+  la::dvec4_t b = la::make_vec<double>
+      (tcc.get_cell_position(pts[1]),ds->fn(pts[1]));
+
+  la::dvec4_t c = la::make_vec<double>
+      (tcc.get_cell_position(pts[2]),ds->fn(pts[2]));
+
+  return la::tri_area<double,4>(a,b,c);
+
+}
 
 
 template <eGDIR dir>
-double get_hyp_volume(mscomplex_ptr_t msc,dataset_ptr_t ds,const int_pair_t &pr)
+double get_mfold_area
+  (mscomplex_ptr_t msc,
+   tri_cc_geom_ptr_t tcc,
+   const int_pair_t &pr)
 {
   const int EIDX = (dir == DES)? (0):(1);
 
   mfold_t &mfold = msc->mfold<dir>(pr[EIDX]);
 
-  cellid_t p[40];
-
-  double sum = 0;
+  double area = 0;
 
   BOOST_FOREACH(cellid_t c,mfold)
   {
-    cellid_t *pb = p,*pe = p+ds->get_points<dir>(c,p);
-
-    fn_t max_f = ds->fn(*pb);
-    fn_t min_f = ds->fn(*pb);
-
-    for (++pb ;pb != pe; ++pb)
-    {
-      max_f = max(max_f,ds->fn(*pb));
-      min_f = min(min_f,ds->fn(*pb));
-    }
-
-    sum += (max_f - min_f);
+    area += get_area<dir>(*tcc,c);
   }
 
-  return sum;
+  return area;
 }
 
 struct hv_edge
 {
-  edge_t     edge;
-  double     hv_pers;
+  int_pair_t   edge;
+  double       pers;
+  double       area;
 
-  hv_edge(edge_t e,double p):edge(e),hv_pers(p){}
+  hv_edge(int_pair_t e,double a,double p):edge(e),area(a),pers(p){}
+
+  static double s_get_val(double pers,double area)
+  {
+    return pow(pers*area,1.0/10.0);
+  }
+
+  double get_val() const
+  {
+    return s_get_val(pers,area);
+  }
 
   bool operator < (const hv_edge & hve) const
-  { return hve.hv_pers < hv_pers ;}
+  { return hve.get_val() < get_val() ;}
 };
 
-void mscomplex_t::simplify_hypervolume(dataset_ptr_t ds, double tresh)
+void mscomplex_t::simplify_hypervolume(dataset_ptr_t ds,tri_cc_geom_ptr_t tcc,double tresh)
 {
   priority_queue<hv_edge> pq;
-  vector<double>  extrema_pers(get_num_critpts());
-  double total_extrema_pers=0;
+  vector<double>  ex_mfold_area(get_num_critpts());
+  double total_area=0;
+  double frange  = (*br::max_element(m_cp_fn) - *br::min_element(m_cp_fn));
 
   for( int i = 0 ; i < get_num_critpts(); ++i)
   {
     BOOST_FOREACH(int j,m_conn[0][i])
     {
-      edge_t e = mk_edge(i,j);
+      int_pair_t e = la::make_vec<int>(i,j);
 
-      double hv_pers = 0;
+      double area = 0;
       int ex_idx=-1;
 
       if (index(i) == 2)
       {
-        hv_pers = get_hyp_volume<DES>(shared_from_this(),ds,e);
+        area = get_mfold_area<DES>(shared_from_this(),tcc,e);
         ex_idx = i;
       }
       else
       {
-        hv_pers = get_hyp_volume<ASC>(shared_from_this(),ds,e);
+        area = get_mfold_area<ASC>(shared_from_this(),tcc,e);
         ex_idx = j;
       }
 
-      pq.push(hv_edge(e,hv_pers));
+      double pers = abs<double>(fn(i) -fn(j));
 
-      extrema_pers[ex_idx] = hv_pers;
+      pq.push(hv_edge(e,area,pers));
 
-      total_extrema_pers += hv_pers;
+      ex_mfold_area[ex_idx] = area;
+
+      total_area += area;
     }
   }
 
@@ -782,40 +842,45 @@ void mscomplex_t::simplify_hypervolume(dataset_ptr_t ds, double tresh)
     if(is_valid_canc_edge(*this,hve.edge) == false)
       continue;
 
-    if(hve.hv_pers != extrema_pers[ex])
+    if(hve.area != ex_mfold_area[ex])
     {
-      pq.push(hv_edge(hve.edge,extrema_pers[ex]));
+      pq.push(hv_edge(hve.edge,ex_mfold_area[ex],hve.pers));
       continue;
     }
 
-    if(hve.hv_pers > total_extrema_pers*tresh)
+    if(hve.get_val() > hv_edge::s_get_val(frange,total_area)*tresh)
       break;
 
     pair_cps(hve.edge);
     cancel_pair(hve.edge[0],hve.edge[1]);
     m_canc_list.push_back(hve.edge);
-
+    m_canc_pers.push_back(hve.get_val()/hv_edge::s_get_val(frange,total_area));
 
     int surv_ex = *m_conn[((index(ex) == 2)?(ASC):(DES))][sd].begin();
-    extrema_pers[surv_ex] += extrema_pers[ex];
-    extrema_pers[ex]       = 0;
+    ex_mfold_area[surv_ex] += ex_mfold_area[ex];
+    ex_mfold_area[ex]       = 0;
 
     BOOST_FOREACH(int i,m_des_conn[hve.edge[0]])
     {
       BOOST_FOREACH(int j,m_asc_conn[hve.edge[1]])
       {
-        edge_t e = mk_edge(i,j);
+        int_pair_t e = la::make_vec<int>(i,j);
 
         int e_ex = i,e_sd = j;
         if(index(e_ex) == 1) swap(e_ex,e_sd);
 
         if(is_valid_canc_edge(*this,e))
-          pq.push(hv_edge(e,extrema_pers[e_ex]));
+          pq.push(hv_edge(e,ex_mfold_area[e_ex],abs<double>(fn(i) - fn(j))));
       }
     }
   }
 
-
+  for(int i = 0 ; i < m_canc_list.size() ; ++i)
+  {
+    cout<<"canc -->"
+        <<m_canc_list[i].transpose()<<" :: "
+        <<m_canc_pers[i]<<endl;
+  }
 
 }
 

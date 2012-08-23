@@ -67,7 +67,7 @@ void print_bin_info(const string & fname)
   cout<<"------------------------------------"<<endl;
 }
 
-void read_tri_file( const char *filename,trimesh::tri_idx_list_t &tlist)
+void read_tri_tlist( const char *filename,trimesh::tri_idx_list_t &tlist)
 {
   uint num_v,num_t;
 
@@ -99,13 +99,36 @@ void read_tri_file( const char *filename,trimesh::tri_idx_list_t &tlist)
   tri_file.close();
 }
 
+void read_tri_vlist( const char *filename,tri_cc_geom_t::vertex_list_t &vlist)
+{
+  uint num_v,num_t;
+
+  std::fstream tri_file ( filename, std::fstream::in );
+
+  if(tri_file.is_open() == false)
+    throw std::runtime_error("unable to open tri file");
+
+  tri_file >> num_v >> num_t;
+
+  vlist.resize(num_v);
+
+  for ( uint i = 0; i < num_v; ++i )
+    tri_file>>vlist[i][0]
+            >>vlist[i][1]
+            >>vlist[i][2];
+
+
+  tri_file.close();
+}
+
 int main(int ac , char **av)
 {
   string tri_filename;
   string bin_filename;
+  string simp_method;
 
   int    bin_comp_no = 0;
-  double simp_tresh= 0.0;
+  double simp_tresh  = 0.0;
 
   bpo::options_description desc("Allowed options");
   desc.add_options()
@@ -113,7 +136,11 @@ int main(int ac , char **av)
       ("tri-file,t",bpo::value(&tri_filename)->required(), "tri file name")
       ("bin-file,b",bpo::value(&bin_filename)->required(), "bin file name (function file)")
       ("simp-tresh,s",bpo::value(&simp_tresh)->default_value(0.0),"simplification treshold")
-      ("bin-file-comp,c",bpo::value(&bin_comp_no)->default_value(0),"scalar component number");
+      ("bin-file-comp,c",bpo::value(&bin_comp_no)->default_value(0),"scalar component number")
+      ("simp-method",bpo::value(&simp_method)->default_value("P"),
+      "simplification method to use\n"\
+      "P  ----> Persistence\n"\
+      "AWP ---> Area weighted persistence");
 
 
   bpo::variables_map vm;
@@ -148,7 +175,7 @@ int main(int ac , char **av)
   cout<<"selected comp = "<<bin_comp_no<<endl;
   cout<<"------------------------------------"<<endl;
 
-  read_tri_file(tri_filename.c_str(),tlist);
+  read_tri_tlist(tri_filename.c_str(),tlist);
   read_bin_file(fns,bin_filename,bin_comp_no);
   cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
@@ -164,8 +191,24 @@ int main(int ac , char **av)
   msc->save_ascii(tri_filename+".mscomplex.full.txt");
   cout<<"write unsimplified done -- "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  msc->simplify(simp_tresh);
-  msc->un_simplify();
+
+  if( simp_method == "P")
+  {
+    msc->simplify(simp_tresh);
+    msc->un_simplify();
+  }
+  else if (simp_method == "AWP")
+  {
+    tri_cc_geom_t::vertex_list_t vlist;
+    read_tri_vlist(tri_filename.c_str(),vlist);
+
+    tri_cc_geom_ptr_t tcc(new tri_cc_geom_t);
+    tcc->init(ds->m_tcc,vlist);
+
+    msc->simplify_hypervolume(ds,tcc,simp_tresh);
+    msc->un_simplify();
+  }
+
   cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
   msc->clear_mfolds();

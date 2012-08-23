@@ -1,5 +1,9 @@
 find_package(Boost COMPONENTS program_options thread REQUIRED)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+find_package(Eigen3 REQUIRED)
+
 set(SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh.h
 
@@ -25,6 +29,7 @@ set(SRCS
 
 
 include_directories(
+  ${EIGEN3_INCLUDE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/include/
   ${Boost_INCLUDE_DIRS})

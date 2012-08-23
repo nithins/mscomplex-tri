@@ -55,41 +55,41 @@ inline tri_idx_t mk_tri_idx(const T& a,const T&b,const T& c)
 
 glutils::color_t g_cp_colors[gc_max_cell_dim+1] =
 {
-  glutils::make_vec<double>(0.0,0.0,1.0),
-  glutils::make_vec<double>(0.0,1.0,0.0),
-  glutils::make_vec<double>(1.0,0.0,0.0),
+  la::make_vec<double>(0.0,0.0,1.0),
+  la::make_vec<double>(0.0,1.0,0.0),
+  la::make_vec<double>(1.0,0.0,0.0),
 };
 
 glutils::color_t g_grad_colors[gc_max_cell_dim] =
 {
-  glutils::make_vec<double>(0.0,0.5,0.5 ),
-  glutils::make_vec<double>(0.5,0.0,0.5 ),
+  la::make_vec<double>(0.0,0.5,0.5 ),
+  la::make_vec<double>(0.5,0.0,0.5 ),
 };
 
 glutils::color_t g_disc_colors[GDIR_CT][gc_max_cell_dim+1] =
 {
   {
-    glutils::make_vec<double>(0.15,0.45,0.35 ),
-    glutils::make_vec<double>(0.85,0.65,0.75 ),
-    glutils::make_vec<double>(0.0,0.0,0.0 ),
+    la::make_vec<double>(0.15,0.45,0.35 ),
+    la::make_vec<double>(0.85,0.65,0.75 ),
+    la::make_vec<double>(0.0,0.0,0.0 ),
   },
 
 {
-    glutils::make_vec<double>(0.0,0.0,0.0 ),
-    glutils::make_vec<double>(0.65,0.95,0.45 ),
-    glutils::make_vec<double>(0.15,0.25,0.75 ),
+    la::make_vec<double>(0.0,0.0,0.0 ),
+    la::make_vec<double>(0.65,0.95,0.45 ),
+    la::make_vec<double>(0.15,0.25,0.75 ),
   },
 };
 
 glutils::color_t g_cp_conn_colors[gc_max_cell_dim] =
 {
-  glutils::make_vec<double>(0.0,0.5,0.5 ),
-  glutils::make_vec<double>(0.5,0.0,0.5 ),
+  la::make_vec<double>(0.0,0.5,0.5 ),
+  la::make_vec<double>(0.5,0.0,0.5 ),
 };
 
-glutils::color_t g_roiaabb_color = glutils::make_vec<double>(0.85,0.75,0.65);
+glutils::color_t g_roiaabb_color = la::make_vec<double>(0.85,0.75,0.65);
 
-glutils::color_t g_normals_color = glutils::make_vec<double>(0.85,0.75,0.65);
+glutils::color_t g_normals_color = la::make_vec<double>(0.85,0.75,0.65);
 
 inline color_t get_random_color()
 {
@@ -235,7 +235,7 @@ void mscomplex_ren_t::init()
   {
     BOOST_FOREACH(int j,m_msc->m_des_conn[i])
     {
-      line_idx_t l = make_vec<idx_t>(m_msc->cellid(i),m_msc->cellid(j));
+      line_idx_t l = la::make_vec<idx_t>(m_msc->cellid(i),m_msc->cellid(j));
       eind[m_msc->index(j)].push_back(l);
     }
   }
@@ -307,15 +307,20 @@ inline int get_other_ex(int_pair_t pr,mscomplex_ptr_t msc,const mscomplex_ren_t:
   return ex;
 }
 
-void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list)
+void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list,
+                                     const fn_list_t       & canc_pers)
 {
+  ASSERT(canc_list.size() == canc_pers.size());
+
   m_canc_tree.resize(m_msc->get_num_critpts());
 
   double fmax = *br::max_element(m_msc->m_cp_fn);
   double fmin = *br::min_element(m_msc->m_cp_fn);
 
-  BOOST_FOREACH(int_pair_t pr,canc_list)
+  for(int i = 0; i < canc_list.size() ;++i)
   {
+    int_pair_t pr = canc_list[i];
+
     ASSERT(is_in_range(pr[0],0,m_msc->get_num_critpts()));
     ASSERT(is_in_range(pr[1],0,m_msc->get_num_critpts()));
 
@@ -326,7 +331,7 @@ void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list)
 
     ASSERT(m_msc->is_extrema(pr[0]) && m_msc->is_saddle(pr[1]));
 
-    fn_t perst = (abs(m_msc->fn(pr[0]) - m_msc->fn(pr[1])))/(fmax-fmin);
+    fn_t perst = canc_pers[i];
 
     m_canc_tree[pr[0]].perst  = perst;
     m_canc_tree[pr[1]].perst  = perst;
@@ -610,9 +615,6 @@ renderable_ptr_t get_minima_renderer
 
     for(uint i = 1; i < st_ct; i++)
       tlist.push_back(mk_tri_idx(st[i-1],st[i],*it));
-
-    if(st_ct%2 == 0)
-      tlist.push_back(mk_tri_idx(st[st_ct-1],st[0],*it));
   }
 
   renderable_ptr_t ren
@@ -641,14 +643,14 @@ renderable_ptr_t get_saddle_renderer
 
     if( pt_idx.count(pt[0]) == 0) pt_idx[pt[0]] = pt_idx.size()-1;
     if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
-    e_idxs.push_back(make_vec<uint>(pt_idx[pt[0]],pt_idx[pt[1]]));
+    e_idxs.push_back(la::make_vec<uint>(pt_idx[pt[0]],pt_idx[pt[1]]));
 
     if(dir == DES) continue;
 
     if(npts < 3) continue;
 
     if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
-    e_idxs.push_back(make_vec<uint>(pt_idx[pt[1]],pt_idx[pt[2]]));
+    e_idxs.push_back(la::make_vec<uint>(pt_idx[pt[1]],pt_idx[pt[2]]));
   }
 
   vertex_list_t pts(pt_idx.size());

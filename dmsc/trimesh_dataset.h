@@ -36,7 +36,7 @@ namespace trimesh
     cellid_list_t       m_cell_pairs;
     cellid_list_t       m_cell_mxfct;
 
-    tri_cc_t            m_tcc;
+    boost::shared_ptr<tri_cc_t> m_tcc;
 
   public:
 
@@ -63,7 +63,9 @@ namespace trimesh
     inline const cellid_t& max_fct(cellid_t ) const;
     inline cellid_t& max_fct(cellid_t );
     template <int dim> inline cellid_t max_vert(cellid_t c) const;
-    inline fn_t fn(cellid_t c) const;
+
+    enum eCellFnInterpolant {CFI_MAX,CFI_AVE};
+    template<eCellFnInterpolant CFI=CFI_MAX> inline fn_t fn(cellid_t c) const;
 
     template <int dim>
     inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;

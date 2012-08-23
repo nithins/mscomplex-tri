@@ -203,7 +203,7 @@ namespace trimesh
 
     mscomplex_ren_ptr_t msc_ren = glviewer->m_ren->m_mscs[m_active_otp_idx];
 
-    msc_ren->build_canctree(msc.m_canc_list);
+    msc_ren->build_canctree(msc.m_canc_list,msc.m_canc_pers);
 
     msc_ren->update_canctree_tresh(0.0);
 
@@ -435,7 +435,7 @@ namespace trimesh
       QColor qc = QColorDialog::getColor(ic);
 
       if(qc.isValid())
-        out_val = glutils::make_vec<double>(qc.redF(),qc.greenF(),qc.blueF());
+        out_val = la::make_vec<double>(qc.redF(),qc.greenF(),qc.blueF());
     }
 
     if(m_vals[0].type() == typeid(configurable_t::action_callback_t))
