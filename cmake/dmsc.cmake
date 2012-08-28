@@ -1,6 +1,9 @@
-find_package(Boost COMPONENTS program_options thread REQUIRED)
+set(CMAKE_MODULE_PATH
+  ${CMAKE_MODULE_PATH}
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/utls/cmake)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 
@@ -13,6 +16,7 @@ set(SRCS
 
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex_ensure.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex_simp.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.cpp
 
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/include/cpputils.h

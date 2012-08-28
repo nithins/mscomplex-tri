@@ -9,6 +9,7 @@
 
 #include <trimesh_dataset.h>
 #include <trimesh_mscomplex.h>
+#include <trimesh_mscomplex_simp.h>
 
 using namespace std;
 namespace bpo = boost::program_options;
@@ -140,7 +141,8 @@ int main(int ac , char **av)
       ("simp-method",bpo::value(&simp_method)->default_value("P"),
       "simplification method to use\n"\
       "P  ----> Persistence\n"\
-      "AWP ---> Area weighted persistence");
+      "AWP ---> Area weighted persistence\n"\
+      "ABP ---> Area before persistence");
 
 
   bpo::variables_map vm;
@@ -197,7 +199,7 @@ int main(int ac , char **av)
     msc->simplify(simp_tresh);
     msc->un_simplify();
   }
-  else if (simp_method == "AWP")
+  else if (simp_method == "AWP" || simp_method == "ABP")
   {
     tri_cc_geom_t::vertex_list_t vlist;
     read_tri_vlist(tri_filename.c_str(),vlist);
@@ -205,7 +207,11 @@ int main(int ac , char **av)
     tri_cc_geom_ptr_t tcc(new tri_cc_geom_t);
     tcc->init(ds->m_tcc,vlist);
 
-    msc->simplify_hypervolume(ds,tcc,simp_tresh);
+    if(simp_method == "AWP")
+      trimesh::simplify_awp(msc,tcc,simp_tresh);
+    else if(simp_method == "ABP")
+      trimesh::simplify_abp(msc,tcc,simp_tresh);
+
     msc->un_simplify();
   }
 

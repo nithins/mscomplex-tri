@@ -138,7 +138,6 @@ namespace trimesh
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
 
-    void simplify_hypervolume(dataset_ptr_t ds,tri_cc_geom_ptr_t tcc,double tresh);
   };
 
 }

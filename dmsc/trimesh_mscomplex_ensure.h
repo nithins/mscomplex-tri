@@ -127,5 +127,23 @@ inline std::string mscomplex_t::cp_conn (int i) const
 
   return ss.str();
 }
+
+inline bool is_valid_canc_edge(const mscomplex_t &msc,int_pair_t e )
+{
+  order_pr_by_cp_index(msc,e[0],e[1]);
+
+  if(msc.is_paired(e[0]) || msc.is_paired(e[1]))
+    return false;
+
+  if(msc.is_boundry(e[0]) != msc.is_boundry(e[1]))
+    return false;
+
+  ASSERT(msc.m_des_conn[e[0]].count(e[1]) == msc.m_asc_conn[e[1]].count(e[0]));
+
+  if(msc.m_des_conn[e[0]].count(e[1]) != 1)
+    return false;
+
+  return true;
+}
 }
 #endif
