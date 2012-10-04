@@ -68,6 +68,10 @@ namespace trimesh
     mfold_list_t &m_des_mfolds;
     mfold_list_t &m_asc_mfolds;
 
+    // offset info for mfold data
+    // modified only by get_mfold and load
+    int           m_cel_off[4];
+
     mscomplex_t();
     ~mscomplex_t();
 

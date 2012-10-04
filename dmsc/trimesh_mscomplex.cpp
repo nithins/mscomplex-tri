@@ -394,6 +394,11 @@ void mscomplex_t::get_mfolds(dataset_ptr_t ds)
     if(index(*b)!=0) ds->get_mfold<DES>(mfold<DES>(*b),contrib_cells[DES][*b]);
     if(index(*b)!=2) ds->get_mfold<ASC>(mfold<ASC>(*b),contrib_cells[ASC][*b]);
   }
+
+  m_cel_off[0] = 0;
+  m_cel_off[1] = ds->m_tcc->get_num_cells_max_dim(0);
+  m_cel_off[2] = ds->m_tcc->get_num_cells_max_dim(1);
+  m_cel_off[3] = ds->m_tcc->get_num_cells_max_dim(2);
 }
 
 void mscomplex_t::clear_mfolds()
@@ -497,6 +502,8 @@ void mscomplex_t::save(std::ostream &os)
 
   bin_write_vec(os,nmfold);
 
+  os.write((const char*)(const void*)m_cel_off,sizeof(int)*4);
+
   for(int i = 0 ; i < N; ++i)
   {
     bin_write_vec(os,m_des_mfolds[i]);
@@ -538,10 +545,16 @@ void mscomplex_t::load(std::istream &is)
   bin_read_vec(is,nmfolds,2*N);
   m_des_mfolds.resize(N);
   m_asc_mfolds.resize(N);
+
+  is.read((char*)(void*)m_cel_off,sizeof(int)*4);
+
   for(int i = 0 ; i < N; ++i)
   {
     bin_read_vec(is,m_des_mfolds[i],nmfolds[2*i]);
     bin_read_vec(is,m_asc_mfolds[i],nmfolds[2*i+1]);
+
+//    if(index(i) == 2)
+//      br::for_each(m_des_mfolds[i],[&](cellid_t &a){a -=m_cel_off[2];});
   }
 
 }
