@@ -13,6 +13,8 @@
 #include <QSortFilterProxyModel>
 #include <QTimer>
 
+#include <PythonQt.h>
+#include <PythonQtScriptingConsole.h>
 #include <QGLViewer/qglviewer.h>
 
 #include <boost/any.hpp>
@@ -51,6 +53,9 @@ namespace trimesh
     virtual QString helpString() const;
     virtual void keyPressEvent(QKeyEvent *e);
 
+  public:
+    bool saveImageSnapshot(const QString& ,int );
+
   };
 
   class configurable_item_model;
@@ -61,6 +66,9 @@ namespace trimesh
 
 namespace trimesh
 {
+
+  class mscomplex_ren_t;
+  typedef boost::shared_ptr<mscomplex_ren_t> mscomplex_ren_ptr_t;
 
   class viewer_mainwindow:
       public QMainWindow,
@@ -77,6 +85,8 @@ namespace trimesh
     configurable_item_model *m_cp_model;
     configurable_item_model *m_otp_model;
 
+    PythonQtObjectPtr          m_pqt;
+    PythonQtScriptingConsole  *m_pqt_cons;
   public:
 
     viewer_mainwindow();
@@ -84,6 +94,10 @@ namespace trimesh
     ~viewer_mainwindow();
 
     void update_roi_box(double l,double u,uint dim);
+
+    mscomplex_ren_ptr_t get_msc_ren();
+
+
 
 
   public:
@@ -102,6 +116,34 @@ namespace trimesh
     void on_actionLoad_Ms_Complex_triggered(bool);
 
     void on_canc_tree_slider_valueChanged ( int value );
+
+    void on_actionEval_Script_triggered(bool);
+
+  public slots:
+
+    void load_mscomplex(QString tf , QString mf);
+
+    void close_mscomplex();
+
+    void eval_script(QString str);
+
+    QSize msc_conf_dim();
+
+    QString msc_conf_header(int i);
+
+    QVariant msc_conf_get_data(int i,int j);
+
+    void  msc_conf_set_data(int i,int j,QVariant var);
+
+    void save_snapshot(QString str,int ms);
+
+    QList<int> get_asc_cps(int i);
+
+    int get_asc_mfold_size(int i);
+
+    QList<int> get_des_cps(int i);
+
+    void render_cp(int i);
   };
 
   void configurable_ctx_menu

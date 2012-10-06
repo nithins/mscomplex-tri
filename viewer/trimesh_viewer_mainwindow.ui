@@ -44,7 +44,7 @@
        <widget class="QWidget" name="layoutWidget">
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
-          <widget class="QSplitter" name="splitter">
+          <widget class="QSplitter" name="data_views_splitter">
            <property name="minimumSize">
             <size>
              <width>0</width>
@@ -171,7 +171,7 @@
      <x>0</x>
      <y>0</y>
      <width>817</width>
-     <height>28</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -182,6 +182,7 @@
     <addaction name="actionLoad_Canc_Tree"/>
     <addaction name="separator"/>
     <addaction name="actionClose_Ms_Complex"/>
+    <addaction name="actionEval_Script"/>
    </widget>
    <addaction name="menuFile"/>
   </widget>
@@ -201,6 +202,14 @@
   <action name="actionClose_Ms_Complex">
    <property name="text">
     <string>Close Ms Complex</string>
+   </property>
+  </action>
+  <action name="actionEval_Script">
+   <property name="text">
+    <string>Eval Script</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
    </property>
   </action>
  </widget>

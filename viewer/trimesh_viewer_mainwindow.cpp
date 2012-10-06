@@ -4,15 +4,19 @@
 #include <QDebug>
 #include <QKeyEvent>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QDir>
 
 #include <boost/typeof/typeof.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <trimesh_viewer.h>
 #include <trimesh_mscomplex.h>
 #include <trimesh_viewer_mainwindow.h>
 
 const int g_roi_show_aabb_time_msec = 5*1000;
+
+using namespace std;
 
 namespace trimesh
 {
@@ -22,8 +26,128 @@ namespace trimesh
     m_ren->render();
   }
 
+  bool glviewer_t::saveImageSnapshot(const QString& fileName,int over_sample)
+  {
+    double oversampling = over_sample;
+    QSize subSize(int(this->width()/oversampling),
+                  int(this->height()/oversampling));
+
+    QSize finalSize = this->size();
+
+    double aspectRatio = width() / static_cast<double>(height());
+
+    double zNear = camera()->zNear();
+    double zFar = camera()->zFar();
+
+    double xMin, yMin;
+    if (camera()->type() == qglviewer::Camera::PERSPECTIVE)
+    {
+      xMin = zNear * tan(camera()->fieldOfView() / 2.0) * aspectRatio;
+      yMin = xMin / aspectRatio;
+    }
+    else
+    {
+      camera()->getOrthoWidthHeight(xMin, yMin);
+      yMin = xMin / aspectRatio;
+    }
+
+#if QT_VERSION >= 0x040000
+    QImage image(finalSize.width(), finalSize.height(), QImage::Format_ARGB32);
+#else
+    QImage image(finalSize.width(), finalSize.height(), 32);
+#endif
+
+    if (image.isNull())
+    {
+      QMessageBox::warning(this, "Image saving error",
+                           "Unable to create resulting image",
+                           QMessageBox::Ok, QMessageBox::NoButton);
+      return false;
+    }
+
+    double deltaX = 2.0 * xMin * subSize.width() / finalSize.width();
+    double deltaY = 2.0 * yMin * subSize.height() / finalSize.height();
+
+    int nbX = finalSize.width() / subSize.width();
+    int nbY = finalSize.height() / subSize.height();
+
+    // Extra subimage on the border if needed
+    if (nbX * subSize.width() < finalSize.width())
+      nbX++;
+    if (nbY * subSize.height() < finalSize.height())
+      nbY++;
+
+    makeCurrent();
+
+    int count=0;
+    for (int i=0; i<nbX; i++)
+      for (int j=0; j<nbY; j++)
+      {
+        preDraw();
+        // Change projection matrix
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        if (camera()->type() == qglviewer::Camera::PERSPECTIVE)
+          glFrustum(-xMin + i*deltaX, -xMin + (i+1)*deltaX,
+                    yMin - (j+1)*deltaY, yMin - j*deltaY,
+                    zNear, zFar);
+        else
+          glOrtho(-xMin + i*deltaX, -xMin + (i+1)*deltaX,
+                  yMin - (j+1)*deltaY, yMin - j*deltaY,
+                  zNear, zFar);
+        glMatrixMode(GL_MODELVIEW);
+
+        draw();
+        postDraw();
+
+
+        QImage snapshot = grabFrameBuffer(true);
+
+
+#if QT_VERSION >= 0x040000
+        QImage subImage = snapshot.scaled(subSize, Qt::IgnoreAspectRatio,
+                                          Qt::SmoothTransformation);
+#else
+# if QT_VERSION >= 0x030000
+        QImage subImage = snapshot.scale(subSize, QImage::ScaleFree);
+# else
+        QImage subImage = snapshot.smoothScale(subSize.width(),
+                                               subSize.height());
+# endif
+#endif
+
+        // Copy subImage in image
+        for (int ii=0; ii<subSize.width(); ii++)
+        {
+          int fi = i*subSize.width() + ii;
+          if (fi == image.width())
+            break;
+          for (int jj=0; jj<subSize.height(); jj++)
+          {
+            int fj = j*subSize.height() + jj;
+            if (fj == image.height())
+              break;
+            image.setPixel(fi, fj, subImage.pixel(ii,jj));
+          }
+        }
+        count++;
+      }
+
+#if QT_VERSION >= 0x040000
+    bool saveOK = image.save(fileName, snapshotFormat().toLatin1().constData(),
+                             snapshotQuality());
+#else
+    bool saveOK = image.save(fileName, snapshotFormat(), snapshotQuality());
+#endif
+
+
+    return saveOK;
+  }
+
   void glviewer_t::init()
   {
+    restoreStateFromFile();
+
     setSnapshotFormat("PNG");
 
     setSnapshotQuality(100);
@@ -37,6 +161,13 @@ namespace trimesh
     glPolygonMode ( GL_BACK, GL_LINE );
 
     m_ren->init();
+
+    setBackgroundColor(Qt::white);
+
+    glMatrixMode(GL_MODELVIEW);
+
+    glLoadIdentity();
+
   }
 
   glviewer_t::glviewer_t(QWidget * par):
@@ -146,19 +277,25 @@ namespace trimesh
 
   void viewer_mainwindow::on_actionLoad_Ms_Complex_triggered(bool)
   {
-    std::string tri_file = QFileDialog::getOpenFileName
+    QString tri_file = QFileDialog::getOpenFileName
         (this,tr("Select triangulation file"),
-         QDir::currentPath(),"tri (*.tri)").toStdString();
+         QDir::currentPath(),"tri (*.tri)");
 
     if(tri_file == "") return;
 
-    std::string ms_file = QFileDialog::getOpenFileName
+    QString ms_file = QFileDialog::getOpenFileName
         (this,tr("Select mscomplex file"),
-         QDir::currentPath(),"Mscomplex (*.mscomplex.bin *.mscomplex.full.bin)").toStdString();
+         QDir::currentPath(),"Mscomplex (*.mscomplex.bin *.mscomplex.full.bin)");
 
     if(ms_file == "") return;
 
-    mscomplex_ren_ptr_t msc_ren(new mscomplex_ren_t(tri_file,ms_file));
+    load_mscomplex(tri_file,ms_file);
+  }
+
+  void viewer_mainwindow::load_mscomplex(QString tf, QString mf)
+  {
+    mscomplex_ren_ptr_t msc_ren(new mscomplex_ren_t(tf.toStdString(),
+                                                    mf.toStdString()));
 
     msc_ren->init();
 
@@ -185,6 +322,114 @@ namespace trimesh
     m_otp_model->force_reset();
   }
 
+  void viewer_mainwindow::close_mscomplex()
+  {
+    if(m_active_otp_idx < 0)
+      return;
+
+
+    glviewer->m_ren->m_mscs.erase(glviewer->m_ren->m_mscs.begin() +
+                                  m_active_otp_idx);
+
+    m_active_otp_idx = std::max<int>(glviewer->m_ren->m_mscs.size(),
+                                     m_active_otp_idx)-1;
+
+    if(m_active_otp_idx < 0)
+    {
+
+      disconnect(critpt_filter_edit,SIGNAL(textChanged(QString)),
+              m_cp_model_proxy,SLOT(setFilterFixedString(QString)));
+
+      m_cp_model_proxy->setSourceModel(NULL);
+      critpt_view->setModel ( NULL );
+
+      delete m_cp_model;
+      m_cp_model =NULL;
+
+      delete m_cp_model_proxy;
+      m_cp_model_proxy = NULL;
+    }
+  }
+
+  void viewer_mainwindow::save_snapshot(QString str, int ms)
+  {
+    glviewer->updateGL();
+
+    glviewer->saveImageSnapshot(str,ms);
+  }
+
+  void viewer_mainwindow::on_actionEval_Script_triggered(bool)
+  {
+    QString fname = QFileDialog::getOpenFileName
+        (this,tr("Select script file"),
+         QDir::currentPath(),"python (*.py)");
+
+    if(fname == "")
+      return;
+
+    eval_script(fname);
+
+    m_pqt_cons->appendCommandPrompt();
+  }
+
+  void viewer_mainwindow::eval_script(QString str)
+  {
+    m_pqt.evalFile(str);
+  }
+
+  QList<int> viewer_mainwindow::get_asc_cps(int i)
+  {
+    QList<int> l;
+
+    i= get_msc_ren()->m_surv_cps[i];
+
+    if(!get_msc_ren())
+      return l;
+
+    boost::range::transform
+        (get_msc_ren()->m_msc->m_asc_conn[i],back_inserter(l),
+         [&](int a){return get_msc_ren()->m_surv_cp_rev[a];});
+
+    return l;
+  }
+
+  QList<int> viewer_mainwindow::get_des_cps(int i)
+  {
+    QList<int> l;
+
+    if(!get_msc_ren())
+      return l;
+
+    i = get_msc_ren()->m_surv_cps[i];
+
+    boost::range::transform
+        (get_msc_ren()->m_msc->m_des_conn[i],back_inserter(l),
+         [&](int a){return get_msc_ren()->m_surv_cp_rev[a];});
+
+    return l;
+
+  }
+
+  void viewer_mainwindow::render_cp(int i)
+  {
+    if(!get_msc_ren())
+      return;
+
+    get_msc_ren()->m_cp_ren_set.insert(i);
+  }
+
+  int viewer_mainwindow::get_asc_mfold_size(int i)
+  {
+    if(!get_msc_ren())
+      return 0;
+
+    i = get_msc_ren()->m_surv_cps[i];
+
+    return get_msc_ren()->m_msc->m_asc_mfolds[i].size();
+  }
+
+
+
   void viewer_mainwindow::on_actionLoad_Canc_Tree_triggered(bool)
   {
     if(m_active_otp_idx <0)
@@ -208,6 +453,14 @@ namespace trimesh
     msc_ren->update_canctree_tresh(0.0);
 
     glviewer->updateGL();
+  }
+
+  mscomplex_ren_ptr_t viewer_mainwindow::get_msc_ren()
+  {
+    if(m_active_otp_idx == -1)
+      return mscomplex_ren_ptr_t();
+
+    return glviewer->m_ren->m_mscs[m_active_otp_idx];
   }
 
   void viewer_mainwindow::on_canc_tree_slider_valueChanged ( int value )
@@ -238,6 +491,14 @@ namespace trimesh
 //    spinviewer->scene()->addItem(new spin::si_graphics_item_t(glviewer->m_ren));
 
     datapiece_view->setModel ( m_otp_model );
+
+    PythonQt::init();
+
+    m_pqt = PythonQt::self()->getMainModule();
+
+    m_pqt.addObject("ms_mw", this);
+
+    m_pqt_cons = new PythonQtScriptingConsole(data_views_splitter,m_pqt);
   }
 
   void viewer_mainwindow::showEvent ( QShowEvent * )
@@ -254,6 +515,82 @@ namespace trimesh
   {
     return QColor::fromRgbF(c[0],c[1],c[2]);
   }
+
+  QSize viewer_mainwindow::msc_conf_dim()
+  {
+    if(!get_msc_ren())
+      return QSize(0,0);
+
+    return QSize(get_msc_ren()->dim()[0],get_msc_ren()->dim()[1]);
+  }
+
+  QString viewer_mainwindow::msc_conf_header(int i)
+  {
+    if(!get_msc_ren())
+      return "";
+
+    boost::any str;
+
+    get_msc_ren()->exchange_header(i,str);
+
+    return boost::any_cast<std::string>(str).c_str();
+  }
+
+  inline QVariant any_to_qvariant(const boost::any &val)
+  {
+    if(val.type() == typeid(std::string))
+      return QString(boost::any_cast<std::string>(val).c_str());
+    else if (val.type() == typeid(bool))
+      return boost::any_cast<bool>(val);
+    else if (val.type() == typeid(int))
+      return boost::any_cast<int>(val);
+    else if (val.type() == typeid(glutils::color_t))
+      return to_qcolor(boost::any_cast<glutils::color_t>(val));
+    else
+      return QVariant();
+  }
+
+  inline boost::any qvariant_to_any(const QVariant &val)
+  {
+    boost::any ret;
+
+    switch(val.type())
+    {
+    case QVariant::Int:    ret = val.toInt();break;
+    case QVariant::String: ret = val.toString().toStdString();break;
+    case QVariant::Bool:   ret = val.toBool();break;
+    case QVariant::Color:
+    {
+      QColor qc = val.value<QColor>();
+
+      ret = la::make_vec<double>(qc.redF(),qc.greenF(),qc.blueF());
+      break;
+    }
+
+    }
+    return ret;
+  }
+
+
+  QVariant viewer_mainwindow::msc_conf_get_data(int i,int j)
+  {
+    if(!get_msc_ren())
+      return QVariant();
+
+    boost::any v;
+
+    get_msc_ren()->exchange_field(configurable_t::data_index_t(i,j),v);
+
+    return any_to_qvariant(v);
+  }
+
+  void viewer_mainwindow::msc_conf_set_data(int i,int j,QVariant var)
+  {
+    boost::any a = qvariant_to_any(var);
+
+    get_msc_ren()->exchange_field(configurable_t::data_index_t(i,j),a);
+  }
+
 
   QVariant configurable_item_model::data
       ( const QModelIndex &index, int role ) const

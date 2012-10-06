@@ -45,6 +45,28 @@ using namespace std;
 namespace br    = boost::range;
 namespace badpt = boost::adaptors;
 
+template <>
+    bool configurable_t::s_exchange_data_rw(bool &p_val,boost::any &c_val)
+{
+  bool ret = false;
+
+  if(c_val.empty())
+    c_val = boost::any(p_val);
+  else
+  {
+    bool newval;
+
+    if(c_val.type() == typeid(bool))
+      newval = boost::any_cast<bool>(c_val);
+    else
+      newval = (bool) boost::any_cast<int>(c_val);
+
+    ret   = (p_val != newval);
+    p_val = newval;
+  }
+  return ret;
+}
+
 
 namespace trimesh
 {
@@ -91,6 +113,43 @@ glutils::color_t g_roiaabb_color = la::make_vec<double>(0.85,0.75,0.65);
 
 glutils::color_t g_normals_color = la::make_vec<double>(0.85,0.75,0.65);
 
+
+glutils::material_properties_t g_surface_material_default =
+{
+  la::make_vec<float>(0.2,0.2,0.2,1),// ambient
+  la::make_vec<float>(0.5,0.5,0.5,1),// diffuse
+  la::make_vec<float>(0.8,0.8,0.8,1),      // specular
+  la::make_vec<float>(0,0,0,1),      // emission
+  66             // shininess
+};
+
+
+// two directional lights by default
+// as a convention directional lights are directed along 0,0,1 model coords
+// and positional lights are located at 0,0,0 model coords
+// another frame is associated with the light to move it around
+// and orient it in world coords
+glutils::light_properties_t g_lights_default[] =
+{
+  {
+    la::make_vec<float>(0.2f, 0.2f, 0.2f, 1.0f), // ambient
+    la::make_vec<float>(0.5f, 0.5f, 0.5f, 1.0f), // diffuse
+    la::make_vec<float>(0.7f, 0.7f, 0.7f, 0.7f), // specular
+    la::make_vec<float>(0.0f, 1.0f, 1.0f, 0.0f), // position
+    1,0,0,                    // attenution c + l + q
+    true                      // enabled
+  },
+
+  {
+    la::make_vec<float>(0.2f, 0.2f, 0.2f, 1.0f), // ambient
+    la::make_vec<float>(0.5f, 0.5f, 0.5f, 1.0f), // diffuse
+    la::make_vec<float>(0.7f, 0.7f, 0.7f, 0.7f), // specular
+    la::make_vec<float>(0.0f, 0.0f, 1.0f, 0.0f), // position
+    1,0,0,                    // attenution c + l + q
+    true                      // enabled
+  }
+};
+
 inline color_t get_random_color()
 {
   color_t col;
@@ -118,8 +177,26 @@ int viewer_t::render()
 
   glEnable(GL_RESCALE_NORMAL);
 
+  glPushMatrix();
+
+  GLfloat lmodel_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
+
+  g_lights_default[0].render(0);
+  g_lights_default[1].render(1);
+  g_surface_material_default.render_all(GL_FRONT_FACE);
+
+  glEnable(GL_COLOR_MATERIAL);
+  glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
+
+  glPopMatrix();
+
+  glPushMatrix();
+
   for( int i = 0 ; i < m_mscs.size(); ++i)
     m_mscs[i]->render();
+
+  glPopMatrix();
 
   glPopAttrib();
 }
@@ -208,9 +285,6 @@ mscomplex_ren_t::mscomplex_ren_t(std::string tf, std::string mf):
   m_tcc->init(tlist,vlist);
   compute_extent(vlist,m_extent);
   m_center = compute_center(vlist);
-  cout<<"Num Verts::"<<m_tcc->get_num_cells_dim(0)<<endl;
-  cout<<"Num Edges::"<<m_tcc->get_num_cells_dim(1)<<endl;
-  cout<<"Num Tris ::"<<m_tcc->get_num_cells_dim(2)<<endl;
 }
 
 void mscomplex_ren_t::init()
@@ -223,8 +297,14 @@ void mscomplex_ren_t::init()
   point_idx_list_t  vind[gc_max_cell_dim+1];
   line_idx_list_t   eind[gc_max_cell_dim];
 
-  br::copy(m_msc->cp_range()|badpt::filtered
-    (bind(&mscomplex_t::is_not_paired,m_msc,_1)),back_inserter(m_surv_cps));
+  for( int i = 0 ; i < m_msc->get_num_critpts(); ++i)
+  {
+    if(m_msc->is_not_paired(i))
+    {
+      m_surv_cp_rev[i] = m_surv_cps.size();
+      m_surv_cps.push_back(i);
+    }
+  }
 
   BOOST_FOREACH(int i,m_surv_cps)
       vind[m_msc->index(i)].push_back(m_msc->cellid(i));
@@ -367,6 +447,8 @@ void mscomplex_ren_t::render()
   glPushMatrix();
   glPushAttrib ( GL_ENABLE_BIT );
 
+  glEnable(GL_LIGHTING);
+
   glScalef(m_scale_factor,m_scale_factor,m_scale_factor);
   glTranslated(-m_center[0],-m_center[1],-m_center[2]);
 
@@ -386,7 +468,7 @@ void mscomplex_ren_t::render()
     if(m_msc->index(m_surv_cps[i]) == 1)
     {
       g_cylinder_shader->use();
-      g_cylinder_shader->sendUniform("ug_cylinder_radius",float(g_max_cp_size/(2*m_scale_factor)));
+      g_cylinder_shader->sendUniform("ug_cylinder_radius",float(g_max_cp_size/(4*m_scale_factor)));
     }
 #endif
 
@@ -396,6 +478,37 @@ void mscomplex_ren_t::render()
     g_cylinder_shader->disable();
 #endif
 
+  }
+
+  BOOST_FOREACH(int i,m_cp_ren_set)
+  {
+
+#ifndef VIEWER_RENDER_AWESOME
+    glPointSize ( g_max_cp_size );
+
+    glEnable(GL_POINT_SMOOTH);
+#else
+    g_sphere_shader->use();
+
+    g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size/m_scale_factor));
+#endif
+
+    glColor3dv(&g_cp_colors[m_msc->index(m_surv_cps[i])][0]);
+
+    m_cell_pos_bo->bind_to_vertex_pointer();
+
+    glBegin(GL_POINTS);
+
+    glArrayElement(m_msc->vertid(m_surv_cps[i]));
+
+    glEnd();
+
+    m_cell_pos_bo->unbind_from_vertex_pointer();
+
+
+#ifdef VIEWER_RENDER_AWESOME
+    g_sphere_shader->disable();
+#endif
   }
 
   glDisable ( GL_LIGHTING );
@@ -645,9 +758,8 @@ renderable_ptr_t get_saddle_renderer
     if( pt_idx.count(pt[1]) == 0) pt_idx[pt[1]] = pt_idx.size()-1;
     e_idxs.push_back(la::make_vec<uint>(pt_idx[pt[0]],pt_idx[pt[1]]));
 
-    if(dir == DES) continue;
+    if(dir == DES || npts < 3) continue;
 
-    if(npts < 3) continue;
 
     if(pt_idx.count(pt[2]) == 0) pt_idx[pt[2]] = pt_idx.size()-1;
     e_idxs.push_back(la::make_vec<uint>(pt_idx[pt[1]],pt_idx[pt[2]]));

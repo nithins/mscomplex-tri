@@ -42,10 +42,12 @@ namespace trimesh
     glutils::bufobj_ptr_t m_cell_nrm_bo;
 
     int_list_t                     m_surv_cps;
+    std::map<int,int>              m_surv_cp_rev;
     std::vector<renderable_ptr_t>  m_surv_mfold_rens[GDIR_CT];
     bool_list_t                    m_surv_mfold_show[GDIR_CT];
     glutils::color_list_t          m_surv_mfold_color[GDIR_CT];
     bool                           m_need_update_geom;
+    std::set<int>                  m_cp_ren_set;
 
     double            m_extent[6];
     glutils::vertex_t m_center;

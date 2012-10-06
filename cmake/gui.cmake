@@ -9,6 +9,10 @@ include(${QT_USE_FILE})
 
 find_package(QGLViewer REQUIRED)
 
+find_package(PythonLibs REQUIRED)
+
+find_package(PythonQt REQUIRED)
+
 add_subdirectory(utls)
 
 option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
@@ -33,10 +37,15 @@ set(viewer_SRCS
 
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.cpp
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/PythonQtScriptingConsole.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/PythonQtScriptingConsole.cpp
+
   )
 
 QT4_WRAP_CPP(viewer_MOC_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/PythonQtScriptingConsole.h
   OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
   )
 
@@ -58,6 +67,8 @@ include_directories(
   ${QT_ADDITIONAL_INCLUDE_PATHS}
   ${QGLVIEWER_INCLUDE_DIR}
   ${Boost_INCLUDE_DIRS}
+  ${PYTHONQT_INCLUDE_DIR}
+  ${PYTHON_INCLUDE_DIRS}
   )
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
@@ -77,6 +88,8 @@ target_link_libraries(
   ${QT_LIBRARIES}
   ${QT_ADDITIONAL_LIBRARIES}
   ${QGLVIEWER_LIBRARY}
+  ${PYTHONQT_LIBRARY}
+  ${PYTHON_LIBRARIES}
   GL
   )
 
