@@ -640,7 +640,7 @@ void mscomplex_t::save_ascii(const std::string &f)
 
   os<<get_num_critpts()<<std::endl;
 
-  os<<"# SL.No  cpIdx isPaired pair_idx vertNo fn "<<std::endl;
+  os<<"# SL.No  cpIdx pair_idx vertNo fn "<<std::endl;
 
   for(uint i = 0 ; i < get_num_critpts();++i)
   {
@@ -657,6 +657,8 @@ void mscomplex_t::save_ascii(const std::string &f)
 
   for(uint i = 0 ; i < get_num_critpts();++i)
   {
+    os<<(int)i<<" ";
+    
     os<<(int)m_conn[0][i].size()<<" ";
     os<<(int)m_conn[1][i].size()<<" ";
 
@@ -670,6 +672,8 @@ void mscomplex_t::save_ascii(const std::string &f)
 
   for(uint i = 0 ; i < get_num_critpts();++i)
   {
+    os<<(int)i<<" ";
+    
     os<<(int)m_mfolds[0][i].size()<<" ";
     os<<(int)m_mfolds[1][i].size()<<" ";
 

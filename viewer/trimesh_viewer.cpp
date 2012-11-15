@@ -21,7 +21,6 @@
 
 #include <config.h>
 
-#define VIEWER_RENDER_AWESOME
 
 #ifndef VIEWER_RENDER_AWESOME
 double g_max_cp_size  = 8.0;
@@ -204,6 +203,8 @@ int viewer_t::render()
 void viewer_t::init()
 {
   glutils::init();
+  
+#ifdef VIEWER_RENDER_AWESOME
 
   g_cylinder_shader = GLSLProgram::createFromSourceStrings
                       (CYLINDER_VERT_GLSL,CYLINDER_GEOM_GLSL,
@@ -212,6 +213,7 @@ void viewer_t::init()
   g_sphere_shader   = GLSLProgram::createFromSourceStrings
                       (SPHERE_VERT_GLSL,SPHERE_GEOM_GLSL,
                        SPHERE_FRAG_GLSL);
+#endif
 }
 
 configurable_t::data_index_t viewer_t::dim()
@@ -499,7 +501,7 @@ void mscomplex_ren_t::render()
 
     glBegin(GL_POINTS);
 
-    glArrayElement(m_msc->vertid(m_surv_cps[i]));
+    glArrayElement(m_msc->cellid(m_surv_cps[i]));
 
     glEnd();
 
