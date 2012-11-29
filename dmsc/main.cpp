@@ -281,15 +281,19 @@ int main(int ac , char **av)
   cout<<"selected comp = "<<comp_no<<endl;
   cout<<"------------------------------------"<<endl;
 
+  string fn_pfx;
+
   if(off_filename.empty())
   {
     print_bin_info(bin_filename);
     read_tri_tlist(tri_filename.c_str(),tlist);
     read_bin_file(fns,bin_filename,comp_no);
+    fn_pfx = tri_filename;
   }
   else
   {
     read_off_file(off_filename,fns,tlist,comp_no);
+    fn_pfx = off_filename;
   }
   cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
@@ -301,8 +305,8 @@ int main(int ac , char **av)
   msc->simplify(0.0);
   msc->un_simplify();
   msc->get_mfolds(ds);
-  msc->save(tri_filename+".mscomplex.full.bin");
-  msc->save_ascii(tri_filename+".mscomplex.full.txt");
+  msc->save(fn_pfx+".mscomplex.full.bin");
+  msc->save_ascii(fn_pfx+".mscomplex.full.txt");
   cout<<"write unsimplified done -- "<<t.getElapsedTimeInMilliSec()<<endl;
 
 
@@ -335,8 +339,8 @@ int main(int ac , char **av)
 
   msc->clear_mfolds();
   msc->get_mfolds(ds);
-  msc->save(tri_filename+".mscomplex.bin");
-  msc->save_ascii(tri_filename+".mscomplex.txt");
+  msc->save(fn_pfx+".mscomplex.bin");
+  msc->save_ascii(fn_pfx+".mscomplex.txt");
   cout<<"write simplified done ---- "<<t.getElapsedTimeInMilliSec()<<endl;
 
   cout<<"------------------------------------"<<endl;
