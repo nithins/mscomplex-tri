@@ -279,7 +279,7 @@ namespace trimesh
   {
     QString tri_file = QFileDialog::getOpenFileName
         (this,tr("Select triangulation file"),
-         QDir::currentPath(),"tri (*.tri)");
+         QDir::currentPath(),"2D Tri-Mesh (*.tri *.off)");
 
     if(tri_file == "") return;
 
@@ -529,12 +529,34 @@ namespace trimesh
     if(!get_msc_ren())
       return "";
 
-    boost::any str;
+    string str;
 
     get_msc_ren()->exchange_header(i,str);
 
-    return boost::any_cast<std::string>(str).c_str();
+    return str.c_str();
   }
+
+  QStringList viewer_mainwindow::msc_conf_headers()
+  {
+    QStringList ret;
+
+    if(get_msc_ren())
+    {
+      int ncols = get_msc_ren()->dim()[0];
+
+      for( int i = 0 ; i < ncols; ++i)
+      {
+        std::string str;
+
+        get_msc_ren()->exchange_header(i,str);
+
+        ret.push_back(str.c_str());
+      }
+    }
+
+    return ret;
+  }
+
 
   inline QVariant any_to_qvariant(const boost::any &val)
   {
@@ -639,12 +661,11 @@ namespace trimesh
          role == Qt::DisplayRole &&
          section < m_column_idxs.size())
     {
-      boost::any h;
+      std::string h;
 
       m_conf->exchange_header(m_column_idxs[section],h);
 
-      if(h.type() == typeid(std::string))
-        return (boost::any_cast<std::string>(h)).c_str();
+      return h.c_str();
     }
     return QVariant();
   }
@@ -671,7 +692,7 @@ namespace trimesh
 
     configurable_t::data_index_t idx = m_conf->dim();
 
-    boost::any val;
+    std::string val;
 
     for(uint i = 0; i < idx[0] ; ++i)
     {
@@ -715,17 +736,12 @@ namespace trimesh
 
     for(uint i = 0 ; i < c->dim()[0];++i)
     {
-      boost::any h;
+      std::string h;
 
       if(c->exchange_header(i,h) == configurable_t::EFT_DATA_RO)
         continue;
 
-      std::string hdr("could not read column header");
-
-      if(h.type() == typeid(std::string))
-        hdr = (boost::any_cast<std::string>(h)).c_str();
-
-      QAction * action  = m.addAction ( hdr.c_str());
+      QAction * action  = m.addAction ( h.c_str());
 
       std::vector<boost::any> vals;
 
@@ -776,9 +792,8 @@ namespace trimesh
     }
 
     if(m_vals[0].type() == typeid(configurable_t::action_callback_t))
-    {
-      for(uint i = 0 ; i < m_vals.size();++i)
-        boost::any_cast<configurable_t::action_callback_t>(m_vals[i])();
+    {      
+      out_val = 1; // just some freakin value so it'll get to exchange field
     }
 
     if(out_val.empty())

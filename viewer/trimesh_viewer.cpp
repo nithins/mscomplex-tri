@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <boost/algorithm/string_regex.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/typeof/typeof.hpp>
@@ -43,6 +44,7 @@ using namespace glutils;
 using namespace std;
 namespace br    = boost::range;
 namespace badpt = boost::adaptors;
+namespace ba    = boost::algorithm;
 
 template <>
     bool configurable_t::s_exchange_data_rw(bool &p_val,boost::any &c_val)
@@ -242,7 +244,7 @@ bool viewer_t::exchange_field(const data_index_t &idx, boost::any &v)
 
   throw std::logic_error("unknown index");
 }
-configurable_t::eFieldType viewer_t::exchange_header(const int &i, boost::any &v)
+configurable_t::eFieldType viewer_t::exchange_header(const int &i, std::string &v)
 {
   switch(i)
   {
@@ -282,8 +284,17 @@ mscomplex_ren_t::mscomplex_ren_t(std::string tf, std::string mf):
 
   tri_idx_list_t tlist;
   vertex_list_t  vlist;
+  string ext = tf.substr(tf.size()-4,4);
 
-  read_tri_file(tf.c_str(),vlist,tlist);
+  ba::to_lower(ext);
+
+  if(ext == ".off")
+    read_off_file(tf.c_str(),vlist,tlist);
+  else if(ext == ".tri")
+    read_tri_file(tf.c_str(),vlist,tlist);
+  else
+    ensure(false,"Cannot read triangulation");
+
   m_tcc->init(tlist,vlist);
   compute_extent(vlist,m_extent);
   m_center = compute_center(vlist);
@@ -661,7 +672,7 @@ bool mscomplex_ren_t::exchange_field
 }
 
 configurable_t::eFieldType mscomplex_ren_t::exchange_header
-    (const int &i,boost::any &v)
+    (const int &i,std::string &v)
 {
   switch(i)
   {

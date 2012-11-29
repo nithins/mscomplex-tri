@@ -86,7 +86,7 @@ namespace trimesh
   public:
     virtual data_index_t  dim();
     virtual bool exchange_field(const data_index_t &,boost::any &);
-    virtual eFieldType exchange_header(const int &,boost::any &);
+    virtual eFieldType exchange_header(const int &,std::string &);
   };
 
   typedef boost::shared_ptr<mscomplex_ren_t> mscomplex_ren_ptr_t;
@@ -117,7 +117,7 @@ namespace trimesh
   public:
     virtual data_index_t  dim();
     virtual bool exchange_field(const data_index_t &,boost::any &);
-    virtual eFieldType exchange_header(const int &,boost::any &);
+    virtual eFieldType exchange_header(const int &,std::string &);
   };
 }
 #endif //VIEWER_H_INCLUDED

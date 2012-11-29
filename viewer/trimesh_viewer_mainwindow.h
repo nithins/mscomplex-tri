@@ -131,6 +131,8 @@ namespace trimesh
 
     QString msc_conf_header(int i);
 
+    QStringList msc_conf_headers();
+
     QVariant msc_conf_get_data(int i,int j);
 
     void  msc_conf_set_data(int i,int j,QVariant var);
