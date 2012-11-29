@@ -71,6 +71,7 @@ namespace trimesh
     // offset info for mfold data
     // modified only by get_mfold and load
     int           m_cel_off[4];
+    int           m_num_surv_dcps[3];
 
     mscomplex_t();
     ~mscomplex_t();
@@ -110,8 +111,8 @@ namespace trimesh
     void get_mfolds(dataset_ptr_t ds);
     void clear_mfolds();
 
-    void cancel_pair(int p, int q);
-    void uncancel_pair( int p, int q);
+    void cancel_pair(int_pair_t pr);
+    void uncancel_pair( int_pair_t pr);
 
     void clear();
 

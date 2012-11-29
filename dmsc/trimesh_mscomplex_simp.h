@@ -204,8 +204,7 @@ void simplify_ap(mscomplex_ptr_t msc, tri_cc_geom_ptr_t tcc,double tresh)
     if(ap_e.get_val() > edge_t::s_get_val(frange,total_area)*tresh)
       break;
 
-    msc->pair_cps(ap_e.edge);
-    msc->cancel_pair(ap_e.edge[0],ap_e.edge[1]);
+    msc->cancel_pair(ap_e.edge);
     msc->m_canc_list.push_back(ap_e.edge);
     msc->m_canc_pers.push_back(ap_e.get_val()/edge_t::s_get_val(frange,total_area));
 

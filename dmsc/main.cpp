@@ -221,17 +221,27 @@ int main(int ac , char **av)
   bpo::options_description desc("Allowed options");
   desc.add_options()
       ("help,h", "produce help message")
-      ("tri-file,t",bpo::value(&tri_filename)->default_value(""), "tri file name")
-      ("bin-file,b",bpo::value(&bin_filename)->default_value(""), "bin file name (function file)")
-      ("off-file",bpo::value(&off_filename)->default_value(""), "off file name")
-      ("simp-tresh,s",bpo::value(&simp_tresh)->default_value(0.0),"simplification treshold")
-      ("bin-file-comp,c",bpo::value(&comp_no)->default_value(0),"scalar component number")
+      ("tri-file,t",bpo::value(&tri_filename)->default_value(""),
+       "tri file name")
+      ("bin-file,b",bpo::value(&bin_filename)->default_value(""),
+       "bin file name (function file)")
+      ("off-file,o",bpo::value(&off_filename)->default_value(""),
+       "off file name")
+      ("comp-no,c",bpo::value(&comp_no)->default_value(0),
+       "scalar component number to use for the MS compelex")
+      ("simp-tresh,s",bpo::value(&simp_tresh)->default_value(0.0),
+       "simplification treshold\n"\
+       "\n"\
+       "====For simp-method = \"P\"=========\n"\
+       "if s in [0,1] then simplify all features having pers < s\n"\
+       "if s < 0 then simplify till there are int(-s) minima\n"\
+       "if s > 1 then simplify till there are int(s)  maxima\n"\
+       "\n")
       ("simp-method",bpo::value(&simp_method)->default_value("P"),
-      "simplification method to use\n"\
-      "P  ----> Persistence\n"\
-      "AWP ---> Area weighted persistence\n"\
-      "ABP ---> Area before persistence");
-
+       "simplification method to use\n"\
+       "P  ----> Persistence\n"\
+       "AWP ---> Area weighted persistence\n"\
+       "ABP ---> Area before persistence");
 
   bpo::variables_map vm;
   bpo::store(bpo::parse_command_line(ac, av, desc), vm);

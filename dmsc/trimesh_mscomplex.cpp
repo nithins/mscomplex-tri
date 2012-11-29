@@ -28,7 +28,12 @@ inline std::string edge_to_string(mscomplex_t *msc,int_pair_t e)
 
 mscomplex_t::mscomplex_t()
   :m_des_conn(m_conn[0]),m_asc_conn(m_conn[1]),
-    m_des_mfolds(m_mfolds[0]),m_asc_mfolds(m_mfolds[1]){}
+    m_des_mfolds(m_mfolds[0]),m_asc_mfolds(m_mfolds[1])
+{
+  m_num_surv_dcps[0] = 0;
+  m_num_surv_dcps[1] = 0;
+  m_num_surv_dcps[2] = 0;
+}
 
 mscomplex_t::~mscomplex_t(){clear();}
 
@@ -39,6 +44,8 @@ void mscomplex_t::set_critpt(int i, cellid_t c, char idx, fn_t f, cellid_t v, bo
   m_cp_index[i]      = idx;
   m_cp_fn[i]         = f;
   m_cp_is_boundry[i] = b;
+
+  ++m_num_surv_dcps[idx];
 }
 
 void  mscomplex_t::resize(int i)
@@ -68,6 +75,10 @@ void mscomplex_t::clear()
   m_asc_conn.clear();
   m_des_mfolds.clear();
   m_asc_mfolds.clear();
+
+  m_num_surv_dcps[0] = 0;
+  m_num_surv_dcps[1] = 0;
+  m_num_surv_dcps[2] = 0;
 }
 
 void mscomplex_t::connect_cps(int p, int q)
@@ -104,15 +115,20 @@ void mscomplex_t::dir_connect_cps(int p, int q)
     conn.insert(q);
 }
 
-void mscomplex_t::cancel_pair ( int p, int q)
+void mscomplex_t::cancel_pair ( int_pair_t pr)
 {
+  int p = pr[0];
+  int q = pr[1];
+
   order_pr_by_cp_index(*this,p,q);
 
   ASSERT(index(p) == index(q)+1);
-  ASSERT(pair_idx(p) == q);
-  ASSERT(pair_idx(q) == p);
+  ASSERT(is_paired(p) == false);
+  ASSERT(is_paired(q) == false);
   ASSERT(m_des_conn[p].count(q) == 1);
   ASSERT(m_asc_conn[q].count(p) == 1);
+
+  pair_cps(p,q);
 
   conn_iter_t i,j;
 
@@ -143,10 +159,16 @@ void mscomplex_t::cancel_pair ( int p, int q)
 
   m_asc_conn[p].clear();
   m_des_conn[q].clear();
+
+  --m_num_surv_dcps[index(p)];
+  --m_num_surv_dcps[index(q)];
 }
 
-void mscomplex_t::uncancel_pair(int p, int q)
+void mscomplex_t::uncancel_pair ( int_pair_t pr)
 {
+  int p = pr[0];
+  int q = pr[1];
+
   order_pr_by_cp_index(*this,p,q);
 
   ASSERT(index(p) == index(q)+1);
@@ -282,9 +304,23 @@ inline bool persistence_lt(const mscomplex_t &msc, int_pair_t p0, int_pair_t p1)
   return c01 < c11;
 }
 
-inline bool is_within_treshold(const mscomplex_t & msc,int_pair_t e,fn_t t)
+inline bool is_within_treshold(const mscomplex_t & msc,
+                               int_pair_t e,
+                               fn_t t,fn_t r)
 {
-  return (is_epsilon_persistent(msc,e) || get_persistence(msc,e) < t);
+  // convention .. if threshold is in [0,1] then use less then
+  // if > 1 then cancel till there are as many maxima
+  // if < 0 then cancel till there are as many minima
+  if( is_epsilon_persistent(msc,e))
+    return true;
+
+  if(t < 0)
+    return (int(-t) < msc.m_num_surv_dcps[0]);
+
+  if(t > 1)
+    return (int(t) < msc.m_num_surv_dcps[2]);
+
+  return get_persistence(msc,e) < (t*r);
 }
 
 void mscomplex_t::simplify(double f_tresh)
@@ -296,23 +332,16 @@ void mscomplex_t::simplify(double f_tresh)
   double f_range = *max_element(m_cp_fn.begin(),m_cp_fn.end()) -
       *min_element(m_cp_fn.begin(),m_cp_fn.end());
 
-  f_tresh *= f_range;
-
   for(int i = 0 ;i < get_num_critpts();++i)
   {
-    for(conn_iter_t j = m_des_conn[i].begin();j != m_des_conn[i].end() ;++j)
+    BOOST_FOREACH(int j, m_des_conn[i])
     {
-      int_pair_t pr;
+      int_pair_t pr = la::make_vec(i,j);
 
-      pr[0] = i;
-      pr[1] = *j;
-
-      if(is_valid_canc_edge(*this,pr) && is_within_treshold(*this,pr,f_tresh))
+      if(is_valid_canc_edge(*this,pr))
         pq.push(pr);
     }
   }
-
-  uint num_cancellations = 0;
 
   while (pq.size() !=0)
   {
@@ -320,32 +349,27 @@ void mscomplex_t::simplify(double f_tresh)
 
     pq.pop();
 
+    order_pr_by_cp_index(*this,pr[0],pr[1]);
+
     if(is_valid_canc_edge(*this,pr) == false)
       continue;
 
-    order_pr_by_cp_index(*this,pr[0],pr[1]);
+    if(is_within_treshold(*this,pr,f_tresh,f_range) == false)
+      break;
 
-    int p = pr[0],q = pr[1];
-
-    pair_cps(p,q);
-
-    cancel_pair(p,q);
-
-    num_cancellations++;
+    cancel_pair(pr);
 
     m_canc_list.push_back(pr);
     m_canc_pers.push_back(get_persistence(*this,pr)/f_range);
 
-    for(conn_iter_t i = m_des_conn[p].begin();i != m_des_conn[p].end();++i)
-      for(conn_iter_t j = m_asc_conn[q].begin();j != m_asc_conn[q].end();++j)
-      {
-        int_pair_t npr;
-        npr[0] = *i;
-        npr[1] = *j;
+    BOOST_FOREACH(int i, m_des_conn[pr[0]])
+    BOOST_FOREACH(int j, m_asc_conn[pr[1]])
+    {
+      int_pair_t npr = la::make_vec(i,j);
 
-        if(is_valid_canc_edge(*this,npr) && is_within_treshold(*this,npr,f_tresh))
-          pq.push(npr);
-      }
+      if(is_valid_canc_edge(*this,npr))
+        pq.push(npr);
+    }
   }
 }
 
@@ -353,7 +377,7 @@ void mscomplex_t::un_simplify()
 {
   for(auto it = m_canc_list.rbegin();it != m_canc_list.rend() ; ++it)
   {
-    uncancel_pair((*it)[0],(*it)[1]);
+    uncancel_pair(*it);
   }
 }
 
@@ -469,6 +493,9 @@ void mscomplex_t::save(std::ostream &os)
   int N = get_num_critpts();
 
   bin_write(os,N);
+  bin_write(os,m_num_surv_dcps[0]);
+  bin_write(os,m_num_surv_dcps[1]);
+  bin_write(os,m_num_surv_dcps[2]);
 
   bin_write_vec(os,m_cp_cellid);
   bin_write_vec(os,m_cp_vertid);
@@ -499,9 +526,12 @@ void mscomplex_t::save(std::ostream &os)
   bin_write_vec(os,m_canc_list);
   bin_write_vec(os,m_canc_pers);
 
-  bin_write_vec(os,nmfold);
+  bin_write(os,m_cel_off[0]);
+  bin_write(os,m_cel_off[1]);
+  bin_write(os,m_cel_off[2]);
+  bin_write(os,m_cel_off[3]);
 
-  os.write((const char*)(const void*)m_cel_off,sizeof(int)*4);
+  bin_write_vec(os,nmfold);
 
   for(int i = 0 ; i < N; ++i)
   {
@@ -519,6 +549,10 @@ void mscomplex_t::load(std::istream &is)
   int_list_t &nmfolds=nconn;
 
   bin_read(is,N);
+  bin_read(is,m_num_surv_dcps[0]);
+  bin_read(is,m_num_surv_dcps[1]);
+  bin_read(is,m_num_surv_dcps[2]);
+
   bin_read_vec(is,m_cp_cellid,N);
   bin_read_vec(is,m_cp_vertid,N);
   bin_read_vec(is,m_cp_pair_idx,N);
@@ -540,11 +574,14 @@ void mscomplex_t::load(std::istream &is)
   bin_read_vec(is,m_canc_list,NC);
   bin_read_vec(is,m_canc_pers,NC);
 
+  bin_read(is,m_cel_off[0]);
+  bin_read(is,m_cel_off[1]);
+  bin_read(is,m_cel_off[2]);
+  bin_read(is,m_cel_off[3]);
+
   bin_read_vec(is,nmfolds,2*N);
   m_des_mfolds.resize(N);
   m_asc_mfolds.resize(N);
-
-  is.read((char*)(void*)m_cel_off,sizeof(int)*4);
 
   for(int i = 0 ; i < N; ++i)
   {
@@ -608,7 +645,7 @@ void mscomplex_t::save_ascii(const std::string &f)
     os<<std::endl;
   }
 
-  os<<"#Cancellation sequence:slno p q pIndex qIndex pers"<<std::endl;
+  os<<"#Cancellation sequence:slno p q pIndex qIndex pers(nrm to [0,1])"<<std::endl;
 
   for(uint i = 0 ; i < m_canc_list.size();++i)
   {
@@ -620,7 +657,7 @@ void mscomplex_t::save_ascii(const std::string &f)
     os<<(int)index(m_canc_list[i][0])<<"\t";
     os<<(int)index(m_canc_list[i][1])<<"\t";
 
-    os<<(fn_t)index(m_canc_pers[i])<<"\t";
+    os<<(fn_t)m_canc_pers[i]<<"\t";
 
     os<<std::endl;
   }
