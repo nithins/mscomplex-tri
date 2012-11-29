@@ -123,10 +123,6 @@ namespace trimesh
 
     void save_ascii(const std::string &f);
 
-    void save_mfolds(std::ostream &os,dataset_ptr_t ds);
-    inline void save_mfolds(const std::string &f,dataset_ptr_t ds)
-    {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);save_mfolds(fs,ds);}
-
     inline void save(const std::string &f)
     {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);save(fs);}
     void load(const std::string &f)

@@ -460,7 +460,6 @@ inline void bin_read_conn(std::istream &is,conn_t &conn,int n)
   conn.insert(vec.begin(),vec.end());
 }
 
-
 template<typename T>
 inline void bin_read(std::istream &is, const T &v)
 {is.read((char*)(void*)&v,sizeof(T));}
@@ -536,7 +535,6 @@ void mscomplex_t::load(std::istream &is)
     bin_read_conn(is,m_asc_conn[i],nconn[2*i+1]);
   }
 
-
   int NC;
   bin_read(is,NC);
   bin_read_vec(is,m_canc_list,NC);
@@ -559,79 +557,6 @@ void mscomplex_t::load(std::istream &is)
 
 }
 
-//template<typename T>
-//inline void bin_write_vec(std::ostream &os, std::vector<T> &v)
-//{os.write((const char*)(const void*)v.data(),v.size()*sizeof(T));}
-
-//template<typename T>
-//inline void bin_write(std::ostream &os, const T &v)
-//{os.write((const char*)(const void*)&v,sizeof(T));}
-
-inline int get_header_size(int num_cps)
-{
-  return sizeof(int)              + // num_cps
-         sizeof(cellid_t)*num_cps + // cellids
-         sizeof(char)*num_cps     + // cell indices
-         sizeof(int)*(2*num_cps);   // numcells
-}
-
-void write_header
-(std::ostream & os,
- int_list_t & nmcells,
- cellid_list_t &cps,
- char_list_t &cp_inds,
- ios::off_type hoff= 0)
-{
-  os.seekp(hoff,ios::beg);
-
-  bin_write(os,(int)cps.size());
-  bin_write_vec(os,cps);
-  bin_write_vec(os,cp_inds);
-  bin_write_vec(os,nmcells);
-}
-
-
-void  mscomplex_t::save_mfolds(std::ostream &os,dataset_ptr_t ds)
-{
-  auto rng = cp_range()|badpt::filtered
-      (boost::bind(&mscomplex_t::is_not_paired,this,_1));
-
-  int num_cps = utls::count(boost::begin(rng),boost::end(rng));
-  int hoff    = os.tellp();
-
-  os.seekp(get_header_size(num_cps),ios::cur);
-
-  int_list_t nmcells;
-
-  for(auto i = boost::begin(rng);i!=boost::end(rng);++i)
-  {
-    int_list_t    desop,ascop;
-
-    auto desop_bi = back_inserter(desop);
-    auto ascop_bi = back_inserter(ascop);
-
-    BOOST_FOREACH(cellid_t c,m_mfolds[0][*i]) ds->m_tcc->cellid_to_output(c,desop_bi);
-    BOOST_FOREACH(cellid_t c,m_mfolds[1][*i]) ds->m_tcc->cellid_to_output(c,ascop_bi);
-
-    nmcells.push_back(desop.size());
-    nmcells.push_back(ascop.size());
-
-    bin_write_vec(os,desop);
-    bin_write_vec(os,ascop);
-  }
-
-  cellid_list_t cps;
-  char_list_t   cp_idxs;
-
-  br::copy(rng,back_inserter(cps));
-  br::transform(rng,back_inserter(cp_idxs),bind(&mscomplex_t::index,this,_1));
-
-  br::copy(cps,ostream_iterator<cellid_t>(cout," ")); cout<<endl;
-
-  write_header(os,nmcells,cps,cp_idxs,hoff);
-}
-
-
 void mscomplex_t::save_ascii(const std::string &f)
 {
   fstream os(f.c_str(),ios::out);
@@ -640,7 +565,7 @@ void mscomplex_t::save_ascii(const std::string &f)
 
   os<<get_num_critpts()<<std::endl;
 
-  os<<"# SL.No  cpIdx pair_idx vertNo fn "<<std::endl;
+  os<<"#Cp info: SL.No  cpIdx pair_idx vertNo fn "<<std::endl;
 
   for(uint i = 0 ; i < get_num_critpts();++i)
   {
@@ -653,7 +578,7 @@ void mscomplex_t::save_ascii(const std::string &f)
     os<<std::endl;
   }
 
-  os<<"#slno numDes numAsc connList"<<std::endl;
+  os<<"#Cp connections: slno numDes numAsc connList"<<std::endl;
 
   for(uint i = 0 ; i < get_num_critpts();++i)
   {
@@ -668,7 +593,7 @@ void mscomplex_t::save_ascii(const std::string &f)
     os<<std::endl;
   }
 
-  os<<"#slno numDes numAsc mfoldCellids"<<std::endl;
+  os<<"#Cp geometry: slno numDes numAsc mfoldCellids"<<std::endl;
 
   for(uint i = 0 ; i < get_num_critpts();++i)
   {
@@ -679,6 +604,23 @@ void mscomplex_t::save_ascii(const std::string &f)
 
     br::copy(m_mfolds[0][i],ostream_iterator<int>(os," "));
     br::copy(m_mfolds[1][i],ostream_iterator<int>(os," "));
+
+    os<<std::endl;
+  }
+
+  os<<"#Cancellation sequence:slno p q pIndex qIndex pers"<<std::endl;
+
+  for(uint i = 0 ; i < m_canc_list.size();++i)
+  {
+    os<<(int)i<<"\t";
+
+    os<<(int)m_canc_list[i][0]<<"\t";
+    os<<(int)m_canc_list[i][1]<<"\t";
+
+    os<<(int)index(m_canc_list[i][0])<<"\t";
+    os<<(int)index(m_canc_list[i][1])<<"\t";
+
+    os<<(fn_t)index(m_canc_pers[i])<<"\t";
 
     os<<std::endl;
   }

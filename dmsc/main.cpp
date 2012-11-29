@@ -4,6 +4,7 @@
 #include <string>
 
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <timer.h>
 
@@ -22,6 +23,8 @@ template <typename T>
 void read_bin_file(std::vector<T> &fns, const string & fname,int compno)
 {
   fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
+
+  ensure(fnfile.is_open(),"unable to open bin file");
 
   int num_bin_values, num_bin_comps;
 
@@ -50,6 +53,8 @@ void print_bin_info(const string & fname)
 {
   fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
 
+  ensure(fnfile.is_open(),"unable to open bin file");
+
   int num_bin_values, num_bin_comps;
 
   fnfile.read ( reinterpret_cast<char *> ( &num_bin_values ), sizeof ( int ) );
@@ -74,8 +79,7 @@ void read_tri_tlist( const char *filename,trimesh::tri_idx_list_t &tlist)
 
   std::fstream tri_file ( filename, std::fstream::in );
 
-  if(tri_file.is_open() == false)
-    throw std::runtime_error("unable to open tri file");
+  ensure(tri_file.is_open(),"unable to open tri file");
 
   tri_file >> num_v >> num_t;
 
@@ -91,10 +95,7 @@ void read_tri_tlist( const char *filename,trimesh::tri_idx_list_t &tlist)
     {
       tri_file >> tlist[i][j];
 
-      if(tlist[i][j] >= num_v||tlist[i][j] < 0)
-      {
-        throw std::runtime_error("invalid index");
-      }
+      ensure(is_in_range(tlist[i][j],0,num_v),"invalid index in file");
     }
 
   tri_file.close();
@@ -106,8 +107,7 @@ void read_tri_vlist( const char *filename,tri_cc_geom_t::vertex_list_t &vlist)
 
   std::fstream tri_file ( filename, std::fstream::in );
 
-  if(tri_file.is_open() == false)
-    throw std::runtime_error("unable to open tri file");
+  ensure(tri_file.is_open(),"unable to open tri file");
 
   tri_file >> num_v >> num_t;
 
@@ -122,22 +122,110 @@ void read_tri_vlist( const char *filename,tri_cc_geom_t::vertex_list_t &vlist)
   tri_file.close();
 }
 
+namespace ba = boost::algorithm;
+
+template <typename T>
+void read_off_file(const string & fname, std::vector<T> &fns,
+                   trimesh::tri_idx_list_t &tlist ,int compno)
+{
+  fstream off_file ( fname.c_str(), fstream::in);
+
+  ensure(off_file.is_open(),"unable to open off file");
+
+  string ln;
+  std::vector<string> strs;
+
+  getline(off_file,ln);
+  ensure(ln=="OFF","Doesn't seem to be an OFF FILE");
+
+  getline(off_file,ln);
+  ba::split(strs,ln,ba::is_any_of("\t \n"));
+
+  int num_v = atoi(strs[0].c_str());
+  int num_t = atoi(strs[1].c_str());
+
+  fns.resize(num_v);
+  tlist.resize(num_t);
+
+  for ( uint i = 0; i < num_v; ++i )
+  {
+    getline(off_file,ln);
+    ba::split(strs,ln,ba::is_any_of("\t \n"));
+    fns[i] = atof(strs[compno].c_str());
+
+    ensure(is_in_range(compno,0,strs.size()),
+           "too few components in vinfo line");
+  }
+
+  for ( uint i = 0; i < num_t; i++ )
+  {
+    getline(off_file,ln);
+    ba::split(strs,ln,ba::is_any_of("\t \n"));
+
+    int ntv     = atoi(strs[0].c_str());
+    tlist[i][0] = atoi(strs[1].c_str());
+    tlist[i][1] = atoi(strs[2].c_str());
+    tlist[i][2] = atoi(strs[3].c_str());
+
+    ensure(ntv == 3,"Mesh contains non-triangle polys");
+    ensure(is_in_range(tlist[i][0],0,num_v),"invalid index in file");
+    ensure(is_in_range(tlist[i][1],0,num_v),"invalid index in file");
+    ensure(is_in_range(tlist[i][2],0,num_v),"invalid index in file");
+  }
+
+  off_file.close();
+}
+
+void read_off_vlist(const string & fname, tri_cc_geom_t::vertex_list_t &vlist)
+{
+  fstream off_file ( fname.c_str(), fstream::in);
+
+  ensure(off_file.is_open(),"unable to open off file");
+
+  string ln;
+  std::vector<string> strs;
+
+  getline(off_file,ln);
+  ensure(ln=="OFF","Doesn't seem to be an OFF FILE");
+
+  getline(off_file,ln);
+  ba::split(strs,ln,ba::is_any_of("\t \n"));
+
+  int num_v = atoi(strs[0].c_str());
+  vlist.resize(num_v);
+
+  for ( uint i = 0; i < num_v; ++i )
+  {
+    getline(off_file,ln);
+    ba::split(strs,ln,ba::is_any_of("\t \n"));
+
+    vlist[i][0] = atof(strs[0].c_str());
+    vlist[i][1] = atof(strs[1].c_str());
+    vlist[i][2] = atof(strs[2].c_str());
+  }
+
+  off_file.close();
+}
+
+
 int main(int ac , char **av)
 {
   string tri_filename;
   string bin_filename;
+  string off_filename;
   string simp_method;
 
-  int    bin_comp_no = 0;
+  int    comp_no = 0;
   double simp_tresh  = 0.0;
 
   bpo::options_description desc("Allowed options");
   desc.add_options()
       ("help,h", "produce help message")
-      ("tri-file,t",bpo::value(&tri_filename)->required(), "tri file name")
-      ("bin-file,b",bpo::value(&bin_filename)->required(), "bin file name (function file)")
+      ("tri-file,t",bpo::value(&tri_filename)->default_value(""), "tri file name")
+      ("bin-file,b",bpo::value(&bin_filename)->default_value(""), "bin file name (function file)")
+      ("off-file",bpo::value(&off_filename)->default_value(""), "off file name")
       ("simp-tresh,s",bpo::value(&simp_tresh)->default_value(0.0),"simplification treshold")
-      ("bin-file-comp,c",bpo::value(&bin_comp_no)->default_value(0),"scalar component number")
+      ("bin-file-comp,c",bpo::value(&comp_no)->default_value(0),"scalar component number")
       ("simp-method",bpo::value(&simp_method)->default_value("P"),
       "simplification method to use\n"\
       "P  ----> Persistence\n"\
@@ -164,6 +252,13 @@ int main(int ac , char **av)
     return 1;
   }
 
+  if((tri_filename.empty() || bin_filename.empty()) && off_filename.empty())
+  {
+    cout<<"Must specify either tri-bin or off file"<<endl;
+    cout<<desc<<endl;
+    return 1;
+  }
+
   Timer t;
   t.start();
 
@@ -173,12 +268,19 @@ int main(int ac , char **av)
 
   trimesh::tri_idx_list_t tlist;
   trimesh::fn_list_t      fns;
-  print_bin_info(bin_filename);
-  cout<<"selected comp = "<<bin_comp_no<<endl;
+  cout<<"selected comp = "<<comp_no<<endl;
   cout<<"------------------------------------"<<endl;
 
-  read_tri_tlist(tri_filename.c_str(),tlist);
-  read_bin_file(fns,bin_filename,bin_comp_no);
+  if(off_filename.empty())
+  {
+    print_bin_info(bin_filename);
+    read_tri_tlist(tri_filename.c_str(),tlist);
+    read_bin_file(fns,bin_filename,comp_no);
+  }
+  else
+  {
+    read_off_file(off_filename,fns,tlist,comp_no);
+  }
   cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
 
   trimesh::dataset_ptr_t   ds(new trimesh::dataset_t(fns,tlist));
@@ -202,7 +304,11 @@ int main(int ac , char **av)
   else if (simp_method == "AWP" || simp_method == "ABP")
   {
     tri_cc_geom_t::vertex_list_t vlist;
-    read_tri_vlist(tri_filename.c_str(),vlist);
+
+    if(off_filename.empty())
+      read_tri_vlist(tri_filename.c_str(),vlist);
+    else
+      read_off_vlist(off_filename.c_str(),vlist);
 
     tri_cc_geom_ptr_t tcc(new tri_cc_geom_t);
     tcc->init(ds->m_tcc,vlist);
