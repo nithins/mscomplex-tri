@@ -74,6 +74,7 @@ namespace trimesh
 
 
     canc_tree_t  m_canc_tree;
+    fn_t         m_canc_tresh;
 
 
     void build_canctree(const int_pair_list_t & canc_list,

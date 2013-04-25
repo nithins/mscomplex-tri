@@ -276,6 +276,8 @@ mscomplex_ren_t::mscomplex_ren_t(std::string tf, std::string mf):
     m_need_update_geom(false)
 
 {
+  m_canc_tresh = 0;
+
   m_msc->load(mf);
 
   m_bShowCps[0] = false;
@@ -443,6 +445,8 @@ void mscomplex_ren_t::update_canctree_tresh(double tresh)
   if (m_canc_tree.size() == 0)
     return;
 
+  m_canc_tresh = tresh;
+
   for( int i = 0; i < m_surv_cps.size(); ++i)
   {
     int j = m_surv_cps[i];
@@ -493,9 +497,6 @@ void mscomplex_ren_t::render()
 
   }
 
-  BOOST_FOREACH(int i,m_cp_ren_set)
-  {
-
 #ifndef VIEWER_RENDER_AWESOME
     glPointSize ( g_max_cp_size );
 
@@ -506,48 +507,45 @@ void mscomplex_ren_t::render()
     g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size/m_scale_factor));
 #endif
 
+  m_cell_pos_bo->bind_to_vertex_pointer();
+  glBegin(GL_POINTS);
+
+  BOOST_FOREACH(int i,m_cp_ren_set)
+  {
     glColor3dv(&g_cp_colors[m_msc->index(m_surv_cps[i])][0]);
-
-    m_cell_pos_bo->bind_to_vertex_pointer();
-
-    glBegin(GL_POINTS);
-
     glArrayElement(m_msc->cellid(m_surv_cps[i]));
-
-    glEnd();
-
-    m_cell_pos_bo->unbind_from_vertex_pointer();
-
-
-#ifdef VIEWER_RENDER_AWESOME
-    g_sphere_shader->disable();
-#endif
   }
 
-  glDisable ( GL_LIGHTING );
-
-#ifndef VIEWER_RENDER_AWESOME
-  glPointSize ( g_max_cp_size );
-
-  glEnable(GL_POINT_SMOOTH);
-#else
-  g_sphere_shader->use();
-
-  g_sphere_shader->sendUniform("g_wc_radius",float(g_max_cp_size/m_scale_factor));
-#endif
-
-  for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
+  BOOST_FOREACH(int i,m_surv_cps)
   {
-    if(ren_cp[i]&& (m_bShowCps[i]||m_bShowAllCps))
+    int indx = m_msc->index(i);
+    bool surv = (m_canc_tree.size() == 0) ||
+        (get_ancestor(i,m_canc_tree,m_canc_tresh) == i);
+
+    if((m_bShowCps[indx]||m_bShowAllCps) && surv)
     {
-      glColor3dv(&g_cp_colors[i][0]);
-
-      ren_cp[i]->render();
-
-      if(ren_cp_labels[i] && m_bShowCpLabels)
-        ren_cp_labels[i]->render();
+      glColor3dv(&g_cp_colors[indx][0]);
+      glArrayElement(m_msc->cellid(i));
     }
   }
+
+  glEnd();
+
+  m_cell_pos_bo->unbind_from_vertex_pointer();
+
+
+//  for(uint i = 0 ; i < gc_max_cell_dim+1;++i)
+//  {
+//    if(ren_cp[i]&& (m_bShowCps[i]||m_bShowAllCps))
+//    {
+//      glColor3dv(&g_cp_colors[i][0]);
+
+//      ren_cp[i]->render();
+
+//      if(ren_cp_labels[i] && m_bShowCpLabels)
+//        ren_cp_labels[i]->render();
+//    }
+//  }
 
 #ifdef VIEWER_RENDER_AWESOME
   g_sphere_shader->sendUniform("g_wc_radius",(float)g_max_cp_size*2/3);
