@@ -485,7 +485,7 @@ void mscomplex_ren_t::render()
     if(m_msc->index(m_surv_cps[i]) == 1)
     {
       g_cylinder_shader->use();
-      g_cylinder_shader->sendUniform("ug_cylinder_radius",float(g_max_cp_size/(4*m_scale_factor)));
+      g_cylinder_shader->sendUniform("ug_cylinder_radius",float(0.05/(4*m_scale_factor)));
     }
 #endif
 
@@ -680,8 +680,8 @@ configurable_t::eFieldType mscomplex_ren_t::exchange_header
   case 3: v = std::string("asc mfold"); return EFT_DATA_RW;
   case 4: v = std::string("des mfold color"); return EFT_DATA_RW;
   case 5: v = std::string("asc mfold color"); return EFT_DATA_RW;
-  case 6: v = std::string("rand des mflod color"); return EFT_ACTION;
-  case 7: v = std::string("rand asc mflod color"); return EFT_ACTION;
+  case 6: v = std::string("rand des mfold color"); return EFT_ACTION;
+  case 7: v = std::string("rand asc mfold color"); return EFT_ACTION;
   case 8: v = std::string("vert no"); return EFT_DATA_RO;
 
   }

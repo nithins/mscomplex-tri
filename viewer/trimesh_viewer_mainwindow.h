@@ -146,6 +146,8 @@ namespace trimesh
     QList<int> get_des_cps(int i);
 
     void render_cp(int i);
+
+    void set_cp_size(double s);
   };
 
   void configurable_ctx_menu

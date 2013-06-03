@@ -16,6 +16,8 @@
 
 const int g_roi_show_aabb_time_msec = 5*1000;
 
+extern double g_max_cp_size;
+
 using namespace std;
 
 namespace trimesh
@@ -416,6 +418,11 @@ namespace trimesh
       return;
 
     get_msc_ren()->m_cp_ren_set.insert(i);
+  }
+
+  void viewer_mainwindow::set_cp_size(double s)
+  {
+    g_max_cp_size = s;
   }
 
   int viewer_mainwindow::get_asc_mfold_size(int i)
