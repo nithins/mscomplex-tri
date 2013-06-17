@@ -86,6 +86,12 @@ inline bool mscomplex_t::is_extrema(int i) const
 inline bool mscomplex_t::is_saddle(int i) const
 {return (index(i) == 1);}
 
+inline bool mscomplex_t::is_maxima(int i) const
+{return (index(i) == 2);}
+
+inline bool mscomplex_t::is_minima(int i) const
+{return (index(i) == 0);}
+
 inline void mscomplex_t::pair_cps(int p, int q)
 {m_cp_pair_idx[p] = q;m_cp_pair_idx[q] = p;}
 

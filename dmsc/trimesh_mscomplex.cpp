@@ -304,9 +304,11 @@ inline bool persistence_lt(const mscomplex_t &msc, int_pair_t p0, int_pair_t p1)
   return c01 < c11;
 }
 
-inline bool is_within_treshold(const mscomplex_t & msc,
-                               int_pair_t e,
-                               fn_t t,fn_t r)
+template<bool is_nrm> inline bool is_within_treshold
+(const mscomplex_t & msc,int_pair_t e,fn_t t,fn_t r);
+
+template<> inline bool is_within_treshold<true>
+(const mscomplex_t & msc,int_pair_t e,fn_t t,fn_t r)
 {
   // convention .. if threshold is in [0,1] then use less then
   // if > 1 then cancel till there are as many maxima
@@ -320,17 +322,26 @@ inline bool is_within_treshold(const mscomplex_t & msc,
   if(t > 1)
     return (int(t) < msc.m_num_surv_dcps[2]);
 
-  return get_persistence(msc,e) < (t*r);
+  return get_persistence(msc,e) < t*r;
 }
 
-void mscomplex_t::simplify(double f_tresh)
+template<> inline bool is_within_treshold<false>
+(const mscomplex_t & msc,int_pair_t e,fn_t t,fn_t r)
+{
+  if( is_epsilon_persistent(msc,e))
+    return true;
+
+  return get_persistence(msc,e) < t;
+}
+
+template<bool is_tnrm>
+void mscomplex_t::simplify_impl(double f_tresh)
 {
   BOOST_AUTO(cmp,bind(persistence_lt,boost::cref(*this),_2,_1));
 
   priority_queue<int_pair_t,int_pair_list_t,decltype(cmp)> pq(cmp);
 
-  double f_range = *max_element(m_cp_fn.begin(),m_cp_fn.end()) -
-      *min_element(m_cp_fn.begin(),m_cp_fn.end());
+  double f_range = *br::max_element(m_cp_fn) - *br::min_element(m_cp_fn);
 
   for(int i = 0 ;i < get_num_critpts();++i)
   {
@@ -354,7 +365,7 @@ void mscomplex_t::simplify(double f_tresh)
     if(is_valid_canc_edge(*this,pr) == false)
       continue;
 
-    if(is_within_treshold(*this,pr,f_tresh,f_range) == false)
+    if(is_within_treshold<is_tnrm>(*this,pr,f_tresh,f_range) == false)
       break;
 
     cancel_pair(pr);
@@ -371,6 +382,14 @@ void mscomplex_t::simplify(double f_tresh)
         pq.push(npr);
     }
   }
+}
+
+void mscomplex_t::simplify(double thresh, bool is_normalized)
+{
+  if(is_normalized)
+    simplify_impl<true>(thresh);
+  else
+    simplify_impl<false>(thresh);
 }
 
 void mscomplex_t::un_simplify()

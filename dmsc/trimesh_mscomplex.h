@@ -99,13 +99,15 @@ namespace trimesh
 
     inline bool is_extrema(int i) const;
     inline bool is_saddle(int i) const;
+    inline bool is_maxima(int i) const;
+    inline bool is_minima(int i) const;
 
     template<eGDIR dir>
     inline mfold_t& mfold(int i){return m_mfolds[dir][i];}
 
   public:
 
-    void simplify(double simplification_treshold);
+    void simplify(double thresh,bool is_normalized=true);
     void un_simplify();
 
     void get_mfolds(dataset_ptr_t ds);
@@ -138,6 +140,12 @@ namespace trimesh
     inline range_t cp_range()
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
+
+  public:
+    // internal methods
+    template<bool is_normalized>
+    void simplify_impl(double thresh);
+
 
   };
 
