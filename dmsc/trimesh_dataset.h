@@ -41,6 +41,8 @@ namespace trimesh
   public:
 
     dataset_t (const fn_list_t &vert_fns,const tri_idx_list_t & trilist);
+    dataset_t (const fn_list_t &vert_fns,tri_cc_ptr_t tcc);
+
     ~dataset_t ();
 
   public:
@@ -65,7 +67,7 @@ namespace trimesh
     template <int dim> inline cellid_t max_vert(cellid_t c) const;
 
     enum eCellFnInterpolant {CFI_MAX,CFI_AVE};
-    template<eCellFnInterpolant CFI=CFI_MAX> inline fn_t fn(cellid_t c) const;
+    template<eCellFnInterpolant CFI> inline fn_t fn(cellid_t c) const;
 
     template <int dim>
     inline bool compare_cells(const cellid_t & c1, const cellid_t &c2) const;

@@ -10,6 +10,9 @@ namespace trimesh
 inline void order_pr_by_cp_index(const mscomplex_t &msc,int &p,int &q)
 {if(msc.index(p) < msc.index(q))std::swap(p,q);}
 
+template<eGDIR dir>
+int_pair_t order_by_dir_index(mscomplex_ptr_t msc,int_pair_t pr);
+
 inline int  mscomplex_t::get_num_critpts() const
 {return m_cp_cellid.size();}
 
@@ -92,11 +95,16 @@ inline bool mscomplex_t::is_maxima(int i) const
 inline bool mscomplex_t::is_minima(int i) const
 {return (index(i) == 0);}
 
-inline void mscomplex_t::pair_cps(int p, int q)
-{m_cp_pair_idx[p] = q;m_cp_pair_idx[q] = p;}
+template<> inline bool mscomplex_t::is_index_i_cp<0>(int i) const
+{return (index(i) == 0);}
 
-inline void mscomplex_t::pair_cps(const int_pair_t &e)
-{pair_cps(e[0],e[1]);}
+template<> inline bool mscomplex_t::is_index_i_cp<1>(int i) const
+{return (index(i) == 1);}
+
+template<> inline bool mscomplex_t::is_index_i_cp<2>(int i) const
+{return (index(i) == 2);}
+
+
 
 
 inline std::string mscomplex_t::cp_info (int cp_no) const
@@ -136,20 +144,35 @@ inline std::string mscomplex_t::cp_conn (int i) const
 
 inline bool is_valid_canc_edge(const mscomplex_t &msc,int_pair_t e )
 {
-  order_pr_by_cp_index(msc,e[0],e[1]);
+  order_pr_by_cp_index(msc,e.first,e.second);
 
-  if(msc.is_paired(e[0]) || msc.is_paired(e[1]))
+  if(msc.is_paired(e.first) || msc.is_paired(e.second))
     return false;
 
-  if(msc.is_boundry(e[0]) != msc.is_boundry(e[1]))
+  if(msc.is_boundry(e.first) != msc.is_boundry(e.second))
     return false;
 
-  ASSERT(msc.m_des_conn[e[0]].count(e[1]) == msc.m_asc_conn[e[1]].count(e[0]));
+  ASSERT(msc.m_des_conn[e.first].count(e.second) == msc.m_asc_conn[e.second].count(e.first));
 
-  if(msc.m_des_conn[e[0]].count(e[1]) != 1)
+  if(msc.m_des_conn[e.first].count(e.second) != 1)
     return false;
 
   return true;
 }
+
+inline void mscomplex_t::save(const std::string &f) const
+{
+  std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);
+  ensure(fs.is_open(),"file not found!!");
+  save_bin(fs);
+}
+inline void mscomplex_t::load(const std::string &f)
+{
+  std::fstream fs(f.c_str(),std::ios::in|std::ios::binary);
+  ensure(fs.is_open(),"file not found!!");
+  load_bin(fs);
+}
+
+
 }
 #endif

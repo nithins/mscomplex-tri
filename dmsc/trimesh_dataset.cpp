@@ -28,12 +28,24 @@ namespace trimesh
     m_cell_pairs.resize(N,invalid_cellid);
   }
 
+  dataset_t::dataset_t
+  (const fn_list_t &vert_fns,tri_cc_ptr_t tcc):
+    m_vert_fns(vert_fns),m_tcc(tcc)
+  {
+    int N = m_tcc->get_num_cells();
+
+    m_cell_own.resize(N,invalid_cellid);
+    m_cell_mxfct.resize(N,invalid_cellid);
+    m_cell_pairs.resize(N,invalid_cellid);
+  }
+
+
   dataset_t::~dataset_t ()
   {
     m_cell_own.clear();
     m_cell_mxfct.clear();
     m_cell_pairs.clear();
-    m_tcc->clear();
+//    m_tcc->clear();
   }
 
   template <int dim,typename Titer>
@@ -150,7 +162,7 @@ namespace trimesh
     for( int i = 0 ; i < ccells.size() ; ++i)
     {
       cellid_t c = ccells[i];
-      msc.set_critpt(i,c,ds.cell_dim(c),ds.fn(c),ds.max_vert<-1>(c),ds.is_boundry(c));
+      msc.set_critpt(i,c,ds.cell_dim(c),ds.fn<dataset_t::CFI_MAX>(c),ds.max_vert<-1>(c),ds.is_boundry(c));
       id_cp_map[c] = i;
     }
 

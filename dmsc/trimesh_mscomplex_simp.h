@@ -82,15 +82,20 @@ double get_mfold_area
    tri_cc_geom_ptr_t tcc,
    const int_pair_t &pr)
 {
-  const int EIDX = (dir == DES)? (0):(1);
+  int cp = (dir == DES)? (pr.first):(pr.second);
 
-  mfold_t &mfold = msc->mfold<dir>(pr[EIDX]);
+  int_list_t contrib;
+
+  msc->get_contrib(dir,cp,contrib);
 
   double area = 0;
 
-  BOOST_FOREACH(cellid_t c,mfold)
+  BOOST_FOREACH(int cp,contrib)
   {
-    area += get_area<dir>(*tcc,c);
+    BOOST_FOREACH(cellid_t c,msc->m_mfolds[dir][cp])
+    {
+      area += get_area<dir>(*tcc,c);
+    }
   }
 
   return area;
@@ -159,7 +164,7 @@ void simplify_ap(mscomplex_ptr_t msc, tri_cc_geom_ptr_t tcc,double tresh)
   {
     BOOST_FOREACH(int j,msc->m_conn[0][i])
     {
-      int_pair_t e = la::make_vec<int>(i,j);
+      int_pair_t e(i,j);
 
       double area = 0;
       int ex_idx=-1;
@@ -189,7 +194,7 @@ void simplify_ap(mscomplex_ptr_t msc, tri_cc_geom_ptr_t tcc,double tresh)
   {
     edge_t ap_e = pq.top(); pq.pop();
 
-    int ex = ap_e.edge[0],sd = ap_e.edge[1];
+    int ex = ap_e.edge.first,sd = ap_e.edge.second;
     if(msc->index(ex) == 1) swap(ex,sd);
 
     if(is_valid_canc_edge(*msc,ap_e.edge) == false)
@@ -204,7 +209,7 @@ void simplify_ap(mscomplex_ptr_t msc, tri_cc_geom_ptr_t tcc,double tresh)
     if(ap_e.get_val() > edge_t::s_get_val(frange,total_area)*tresh)
       break;
 
-    msc->cancel_pair(ap_e.edge);
+    msc->cancel_pair(ap_e.edge.first,ap_e.edge.second);
     msc->m_canc_list.push_back(ap_e.edge);
     msc->m_canc_pers.push_back(ap_e.get_val()/edge_t::s_get_val(frange,total_area));
 
@@ -212,11 +217,11 @@ void simplify_ap(mscomplex_ptr_t msc, tri_cc_geom_ptr_t tcc,double tresh)
     ex_mfold_area[surv_ex] += ex_mfold_area[ex];
     ex_mfold_area[ex]       = 0;
 
-    BOOST_FOREACH(int i,msc->m_des_conn[ap_e.edge[0]])
+    BOOST_FOREACH(int i,msc->m_des_conn[ap_e.edge.first])
     {
-      BOOST_FOREACH(int j,msc->m_asc_conn[ap_e.edge[1]])
+      BOOST_FOREACH(int j,msc->m_asc_conn[ap_e.edge.second])
       {
-        int_pair_t e = la::make_vec<int>(i,j);
+        int_pair_t e = make_pair(i,j);
 
         int e_ex = i,e_sd = j;
         if(msc->index(e_ex) == 1) swap(e_ex,e_sd);
@@ -229,9 +234,10 @@ void simplify_ap(mscomplex_ptr_t msc, tri_cc_geom_ptr_t tcc,double tresh)
 
   for(int i = 0 ; i < msc->m_canc_list.size() ; ++i)
   {
-    cout<<"canc -->"
-        <<msc->m_canc_list[i].transpose()<<" :: "
-        <<msc->m_canc_pers[i]<<endl;
+    cout<<"canc -->"<<
+          msc->m_canc_list[i].first <<"," <<
+          msc->m_canc_list[i].second <<"::"<<
+          msc->m_canc_pers[i]<<endl;
   }
 
 }

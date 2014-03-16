@@ -5,6 +5,7 @@
 #include <stack>
 
 #include <boost/range.hpp>
+#include <boost/typeof/typeof.hpp>
 
 #include <trimesh_dataset.h>
 
@@ -185,8 +186,8 @@ namespace trimesh
   {
     std::stack<cellid_t> stk;
 
-    auto b = boost::begin(rng);
-    auto e = boost::end(rng);
+    BOOST_AUTO(b,boost::begin(rng));
+    BOOST_AUTO(e,boost::end(rng));
 
     int dim = cell_dim(*b);
 

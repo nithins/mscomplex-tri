@@ -45,6 +45,7 @@ namespace trimesh
   typedef cellid_list_t            mfold_t;
   typedef std::vector<mfold_t>     mfold_list_t;
 
+  class merge_dag_t;
 
   class mscomplex_t:public boost::enable_shared_from_this<mscomplex_t>
   {
@@ -54,8 +55,12 @@ namespace trimesh
     cellid_list_t   m_cp_vertid;
     int_list_t      m_cp_pair_idx;
     char_list_t     m_cp_index;
+    int_list_t      m_cp_cancno;
     bool_list_t     m_cp_is_boundry;
     fn_list_t       m_cp_fn;
+    fn_t            m_fmax;
+    fn_t            m_fmin;
+
 
     int_pair_list_t m_canc_list;
     fn_list_t       m_canc_pers;
@@ -68,11 +73,14 @@ namespace trimesh
     mfold_list_t &m_des_mfolds;
     mfold_list_t &m_asc_mfolds;
 
-    // offset info for mfold data
-    // modified only by get_mfold and load
-    int           m_cel_off[4];
-    int           m_num_surv_dcps[3];
+    int m_multires_version;
 
+    boost::shared_ptr<merge_dag_t>
+                  m_merge_dag;
+
+
+
+    mscomplex_t(std::string fname);
     mscomplex_t();
     ~mscomplex_t();
 
@@ -82,10 +90,7 @@ namespace trimesh
     void set_critpt(int i,cellid_t c,char idx,fn_t f,cellid_t vert_cell,bool is_bndry);
 
     void connect_cps(int p, int q);
-    void dir_connect_cps(int p , int q);
-
-    inline void pair_cps(int p , int q);
-    inline void pair_cps(const int_pair_t &);
+    void disconnect_cps(int p, int q);
 
     inline const char& index(int i) const;
     inline const int& pair_idx(int i) const;
@@ -102,34 +107,40 @@ namespace trimesh
     inline bool is_maxima(int i) const;
     inline bool is_minima(int i) const;
 
+    template <int i>
+    inline bool is_index_i_cp(int cp) const;
+
+
     template<eGDIR dir>
     inline mfold_t& mfold(int i){return m_mfolds[dir][i];}
 
   public:
 
-    void simplify(double thresh,bool is_normalized=true);
-    void un_simplify();
+    void simplify(double f_tresh, bool is_nrm=false, int req_nmin=0, int req_nmax=0);
+    void set_multires_version(int version);
+    inline int  get_multires_version() const {return m_multires_version;}
+    int  get_multires_version_for_thresh(double t,bool is_nrm=false) const;
 
-    void get_mfolds(dataset_ptr_t ds);
-    void clear_mfolds();
+    void collect_mfolds(eGDIR dir, int dim, dataset_ptr_t ds);
+    void get_mfold(eGDIR dir, int cp,cellid_list_t &mfold,int ver=-1);
+    void get_contrib(eGDIR dir, int cp,int_list_t &contrib,int ver=-1);
 
-    void cancel_pair(int_pair_t pr);
-    void uncancel_pair( int_pair_t pr);
+
+
+    void cancel_pair(int p,int q);
+    void cancel_pair();
+    void anticancel_pair();
 
     void clear();
 
-    void write_graph(std::ostream & os) const;
-    void write_graph(const std::string & fn) const;
+    inline void save(const std::string &f) const;
+    inline void load(const std::string &f);
 
-    void save(std::ostream &os);
-    void load(std::istream &is);
+    void save_bin(std::ostream &os) const;
+    void load_bin(std::istream &is);
 
-    void save_ascii(const std::string &f);
-
-    inline void save(const std::string &f)
-    {std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);save(fs);}
-    void load(const std::string &f)
-    {std::fstream fs(f.c_str(),std::ios::in|std::ios::binary);load(fs);}
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int /* file_version */);
 
     inline std::string cp_info (int cp_no) const;
     inline std::string cp_conn (int cp_no) const;
@@ -140,12 +151,6 @@ namespace trimesh
     inline range_t cp_range()
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
-
-  public:
-    // internal methods
-    template<bool is_normalized>
-    void simplify_impl(double thresh);
-
 
   };
 

@@ -10,10 +10,10 @@ namespace trimesh
 
   const uint gc_max_cell_dim =    tri_cc_t::cc_dim;
   typedef tri_cc_t::cellid_t      cellid_t;
-  typedef float                   fn_t;
+  typedef double                  fn_t;
   typedef std::vector<fn_t>       fn_list_t;
 
-  typedef la::ivec2_t                 int_pair_t;
+  typedef std::pair<int,int>          int_pair_t;
   typedef std::vector<int_pair_t>     int_pair_list_t;
 
 
