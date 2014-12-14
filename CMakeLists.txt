@@ -8,7 +8,7 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} " -frounding-math -std=c++0x")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_subdirectory(dmsc)
+add_subdirectory(core)
 
 option(BUILD_VIEWER "build the mscomplex viewer" OFF)
 

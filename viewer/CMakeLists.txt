@@ -57,7 +57,7 @@ QT4_WRAP_UI(viewer_UI_SRCS ${viewer_UIS})
 
 
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../dmsc/
+  ${CMAKE_CURRENT_SOURCE_DIR}/../core/
 #  ${CMAKE_CURRENT_SOURCE_DIR}/../spin/ 
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
