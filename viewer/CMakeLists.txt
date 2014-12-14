@@ -21,6 +21,8 @@ find_package(Eigen3 REQUIRED)
 
 find_package(Boost COMPONENTS program_options serialization system REQUIRED)
 
+find_package(GLEW REQUIRED)
+
 option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 
 #set(spin_SRCS
@@ -28,6 +30,7 @@ option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 #  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
 #)
 
+set(BUILD_UTLS_LIB OFF)
 add_subdirectory(utls)
 
 set(viewer_SRCS
@@ -76,6 +79,7 @@ configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
 
 add_executable(mscomplex-tri-viewer
   $<TARGET_OBJECTS:mscomplex-tri-core>
+  $<TARGET_OBJECTS:utls-objects>
 #  ${spin_SRCS}
   ${viewer_SRCS}
   ${viewer_MOC_SRCS}
@@ -84,13 +88,16 @@ add_executable(mscomplex-tri-viewer
 
 target_link_libraries(
   mscomplex-tri-viewer
-  utls
   ${Boost_LIBRARIES}
   ${QT_LIBRARIES}
   ${QT_ADDITIONAL_LIBRARIES}
   ${QGLVIEWER_LIBRARY}
   ${PYTHONQT_LIBRARY}
   ${PYTHON_LIBRARIES}
+  ${GLEW_LIBRARY}
   GL
   )
+
+install(TARGETS mscomplex-tri-viewer DESTINATION bin)
+
 

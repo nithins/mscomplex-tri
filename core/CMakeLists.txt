@@ -40,6 +40,7 @@ option(BUILD_CL_TOOL "command line tool" ON)
 if(BUILD_CL_TOOL)
     add_executable(mscomplex-tri-cl-tool  $<TARGET_OBJECTS:mscomplex-tri-core> main.cpp)
     target_link_libraries(mscomplex-tri-cl-tool  ${Boost_LIBRARIES})
+    install(TARGETS mscomplex-tri-cl-tool DESTINATION bin)
 endif(BUILD_CL_TOOL)
 
 option(BUILD_PYMSTRI "mstri python module" ON)
