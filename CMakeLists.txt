@@ -13,7 +13,8 @@ add_subdirectory(dmsc)
 option(BUILD_VIEWER "build the mscomplex viewer" OFF)
 
 if(BUILD_VIEWER)
-include(cmake/gui.cmake)
+add_subdirectory(utls)
+add_subdirectory(viewer)
 endif(BUILD_VIEWER)
 
 

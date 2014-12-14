@@ -1,3 +1,7 @@
+project(mscomplex-tri-viewer)
+
+cmake_minimum_required(VERSION 2.8.8)
+
 set(QT_MIN_VERSION "4.5.0")
 set(QT_USE_QTGUI TRUE)
 set(QT_USE_QTOPENGL TRUE)
@@ -17,8 +21,6 @@ find_package(Eigen3 REQUIRED)
 
 find_package(Boost COMPONENTS program_options serialization system REQUIRED)
 
-add_subdirectory(utls)
-
 option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 
 #set(spin_SRCS
@@ -27,39 +29,39 @@ option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 #)
 
 set(viewer_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/main.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer.cpp
+  trimesh_viewer.h
+  main.cpp
+  trimesh_viewer.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.cpp
+  trimesh_viewer_mainwindow.h
+  trimesh_viewer_mainwindow.cpp
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/PythonQtScriptingConsole.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/PythonQtScriptingConsole.cpp
+  PythonQtScriptingConsole.h
+  PythonQtScriptingConsole.cpp
 
   )
 
 QT4_WRAP_CPP(viewer_MOC_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/PythonQtScriptingConsole.h
+  trimesh_viewer_mainwindow.h
+  PythonQtScriptingConsole.h
   OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
   )
 
 set(viewer_UIS
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/trimesh_viewer_mainwindow.ui
+  trimesh_viewer_mainwindow.ui
   )
 
 QT4_WRAP_UI(viewer_UI_SRCS ${viewer_UIS})
 
 
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/
-  ${CMAKE_CURRENT_SOURCE_DIR}/spin/
-  ${CMAKE_CURRENT_SOURCE_DIR}/viewer/
-  ${CMAKE_CURRENT_BINARY_DIR}/viewer/
-  ${utls_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../dmsc/
+#  ${CMAKE_CURRENT_SOURCE_DIR}/../spin/ 
+  ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_BINARY_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}/utls/
+  ${utls_SOURCE_DIR}/include
+  ${utls_BINARY_DIR}
+
   ${QT_ADDITIONAL_INCLUDE_PATHS}
   ${QGLVIEWER_INCLUDE_DIR}
   ${Boost_INCLUDE_DIRS}
@@ -72,7 +74,7 @@ configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
 
 add_executable(mscomplex-tri-viewer
   $<TARGET_OBJECTS:mscomplex-tri-core>
-  ${spin_SRCS}
+#  ${spin_SRCS}
   ${viewer_SRCS}
   ${viewer_MOC_SRCS}
   ${viewer_UI_SRCS}
