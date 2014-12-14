@@ -65,13 +65,13 @@ template <> double get_harea<DES>(const tri_cc_geom_t &tcc,
   tcc.get_cell_points(id,pts);
 
   la::dvec4_t a = la::make_vec<double>
-      (tcc.get_cell_position(pts[0]),ds->fn(pts[0]));
+      (tcc.get_cell_position(pts[0]),ds->fn<dataset_t::CFI_MAX>(pts[0]));
 
   la::dvec4_t b = la::make_vec<double>
-      (tcc.get_cell_position(pts[1]),ds->fn(pts[1]));
+      (tcc.get_cell_position(pts[1]),ds->fn<dataset_t::CFI_MAX>(pts[1]));
 
   la::dvec4_t c = la::make_vec<double>
-      (tcc.get_cell_position(pts[2]),ds->fn(pts[2]));
+      (tcc.get_cell_position(pts[2]),ds->fn<dataset_t::CFI_MAX>(pts[2]));
 
   return la::tri_area<double,4>(a,b,c);
 }

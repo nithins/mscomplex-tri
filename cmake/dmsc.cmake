@@ -3,7 +3,7 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
   ${CMAKE_CURRENT_SOURCE_DIR}/utls/cmake)
 
-find_package(Boost COMPONENTS program_options REQUIRED)
+find_package(Boost COMPONENTS program_options serialization system REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 

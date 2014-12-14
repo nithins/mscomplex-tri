@@ -710,8 +710,10 @@ inline void __collect_mfolds(mscomplex_ptr_t msc, dataset_ptr_t ds)
 
   BOOST_FOREACH(contrib_t::value_type pr,contrib)
   {
-    ensure(msc->m_mfolds[dir][pr.first].size() == 0,
-        "Geom for cp has already been collected");
+//    ensure(msc->m_mfolds[dir][pr.first].size() == 0,
+//        "Geom for cp has already been collected");
+
+    msc->m_mfolds[dir][pr.first].clear();
 
     ds->get_mfold<dir>(msc->m_mfolds[dir][pr.first],
         pr.second|badpt::transformed(bind(&mscomplex_t::cellid,msc,_1)));
@@ -730,6 +732,16 @@ void mscomplex_t::collect_mfolds(eGDIR dir, int dim, dataset_ptr_t ds)
   if(dir == DES && dim == 1 ) __collect_mfolds<DES,1>(shared_from_this(),ds);
   if(dir == DES && dim == 2 ) __collect_mfolds<DES,2>(shared_from_this(),ds);
 }
+
+
+void mscomplex_t::collect_mfolds(dataset_ptr_t ds)
+{
+  __collect_mfolds<ASC,0>(shared_from_this(),ds);
+  __collect_mfolds<ASC,1>(shared_from_this(),ds);
+  __collect_mfolds<DES,1>(shared_from_this(),ds);
+  __collect_mfolds<DES,2>(shared_from_this(),ds);
+}
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -799,5 +811,3 @@ int_pair_t order_by_dir_index<ASC>(mscomplex_ptr_t msc,int_pair_t pr)
 
 /*****************************************************************************/
 }// namespace trimesh
-
-

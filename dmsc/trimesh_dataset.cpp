@@ -3,8 +3,6 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include <timer.h>
-
 #include <trimesh_dataset.h>
 #include <trimesh_mscomplex.h>
 

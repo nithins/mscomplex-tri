@@ -240,8 +240,9 @@ int main(int ac , char **av)
       ("simp-method",bpo::value(&simp_method)->default_value("P"),
        "simplification method to use\n"\
        "P  ----> Persistence\n"\
-       "AWP ---> Area weighted persistence\n"\
-       "ABP ---> Area before persistence");
+//       "AWP ---> Area weighted persistence\n"\
+//       "ABP ---> Area before persistence"
+       );
 
   bpo::variables_map vm;
   bpo::store(bpo::parse_command_line(ac, av, desc), vm);
@@ -303,44 +304,39 @@ int main(int ac , char **av)
   cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
   msc->simplify(0.0);
-  msc->un_simplify();
-  msc->get_mfolds(ds);
+  msc->collect_mfolds(ds);
+
   msc->save(fn_pfx+".mscomplex.full.bin");
-  msc->save_ascii(fn_pfx+".mscomplex.full.txt");
   cout<<"write unsimplified done -- "<<t.getElapsedTimeInMilliSec()<<endl;
 
 
   if( simp_method == "P")
   {
     msc->simplify(simp_tresh);
-    msc->un_simplify();
   }
-  else if (simp_method == "AWP" || simp_method == "ABP")
-  {
-    tri_cc_geom_t::vertex_list_t vlist;
+//  else if (simp_method == "AWP" || simp_method == "ABP")
+//  {
+//    tri_cc_geom_t::vertex_list_t vlist;
 
-    if(off_filename.empty())
-      read_tri_vlist(tri_filename.c_str(),vlist);
-    else
-      read_off_vlist(off_filename.c_str(),vlist);
+//    if(off_filename.empty())
+//      read_tri_vlist(tri_filename.c_str(),vlist);
+//    else
+//      read_off_vlist(off_filename.c_str(),vlist);
 
-    tri_cc_geom_ptr_t tcc(new tri_cc_geom_t);
-    tcc->init(ds->m_tcc,vlist);
+//    tri_cc_geom_ptr_t tcc(new tri_cc_geom_t);
+//    tcc->init(ds->m_tcc,vlist);
 
-    if(simp_method == "AWP")
-      trimesh::simplify_awp(msc,tcc,simp_tresh);
-    else if(simp_method == "ABP")
-      trimesh::simplify_abp(msc,tcc,simp_tresh);
+//    if(simp_method == "AWP")
+//      trimesh::simplify_awp(msc,tcc,simp_tresh);
+//    else if(simp_method == "ABP")
+//      trimesh::simplify_abp(msc,tcc,simp_tresh);
 
-    msc->un_simplify();
-  }
+//  }
 
   cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
 
-  msc->clear_mfolds();
-  msc->get_mfolds(ds);
+  msc->collect_mfolds(ds);
   msc->save(fn_pfx+".mscomplex.bin");
-  msc->save_ascii(fn_pfx+".mscomplex.txt");
   cout<<"write simplified done ---- "<<t.getElapsedTimeInMilliSec()<<endl;
 
   cout<<"------------------------------------"<<endl;

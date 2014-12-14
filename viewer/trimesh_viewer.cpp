@@ -376,12 +376,12 @@ inline int get_ancestor(int i,const mscomplex_ren_t::canc_tree_t &canc_tree,doub
 
 inline int get_other_ex(int_pair_t pr,mscomplex_ptr_t msc,const mscomplex_ren_t::canc_tree_t &canc_tree)
 {
-  if(!msc->is_extrema(pr[0])) swap(pr[0],pr[1]);
+  if(!msc->is_extrema(pr.first)) swap(pr.first,pr.second);
 
-  int dir = (msc->index(pr[0]) == 0)?(0):(1);
+  int dir = (msc->index(pr.first) == 0)?(0):(1);
 
-  auto beg = msc->m_conn[dir][pr[1]].begin();
-  auto end = msc->m_conn[dir][pr[1]].end();
+  auto beg = msc->m_conn[dir][pr.second].begin();
+  auto end = msc->m_conn[dir][pr.second].end();
 
   ASSERT(beg != end);
 
@@ -393,7 +393,7 @@ inline int get_other_ex(int_pair_t pr,mscomplex_ptr_t msc,const mscomplex_ren_t:
 
   int ex = get_root(ex1,canc_tree);
 
-  if(ex == pr[0])
+  if(ex == pr.first)
   {
     ASSERT(is_in_range(ex2,0,msc->get_num_critpts()));
     ex = get_root(ex2,canc_tree);
@@ -416,22 +416,22 @@ void mscomplex_ren_t::build_canctree(const int_pair_list_t & canc_list,
   {
     int_pair_t pr = canc_list[i];
 
-    ASSERT(is_in_range(pr[0],0,m_msc->get_num_critpts()));
-    ASSERT(is_in_range(pr[1],0,m_msc->get_num_critpts()));
+    ASSERT(is_in_range(pr.first,0,m_msc->get_num_critpts()));
+    ASSERT(is_in_range(pr.second,0,m_msc->get_num_critpts()));
 
-    ASSERT(m_msc->index(pr[0]) + 1 == m_msc->index(pr[1]) ||
-           m_msc->index(pr[1]) + 1 == m_msc->index(pr[0]));
+    ASSERT(m_msc->index(pr.first) + 1 == m_msc->index(pr.second) ||
+           m_msc->index(pr.second) + 1 == m_msc->index(pr.first));
 
-    if(!m_msc->is_extrema(pr[0])) swap(pr[0],pr[1]);
+    if(!m_msc->is_extrema(pr.first)) swap(pr.first,pr.second);
 
-    ASSERT(m_msc->is_extrema(pr[0]) && m_msc->is_saddle(pr[1]));
+    ASSERT(m_msc->is_extrema(pr.first) && m_msc->is_saddle(pr.second));
 
     fn_t perst = canc_pers[i];
 
-    m_canc_tree[pr[0]].perst  = perst;
-    m_canc_tree[pr[1]].perst  = perst;
+    m_canc_tree[pr.first].perst  = perst;
+    m_canc_tree[pr.second].perst  = perst;
 
-    m_canc_tree[pr[0]].parent = get_other_ex(pr,m_msc,m_canc_tree);
+    m_canc_tree[pr.first].parent = get_other_ex(pr,m_msc,m_canc_tree);
   }
 
   for(int i = 0 ; i < m_msc->get_num_critpts(); ++i)

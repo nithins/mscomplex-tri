@@ -92,12 +92,12 @@ namespace trimesh
     void connect_cps(int p, int q);
     void disconnect_cps(int p, int q);
 
-    inline const char& index(int i) const;
-    inline const int& pair_idx(int i) const;
-    inline const char& is_boundry(int i) const;
-    inline const cellid_t& cellid(int i) const;
-    inline const cellid_t& vertid(int i) const;
-    inline const fn_t& fn(int i) const;
+    inline int index(int i)   const;
+    inline int pair_idx(int i) const;
+    inline bool is_boundry(int i) const;
+    inline cellid_t cellid(int i) const;
+    inline cellid_t vertid(int i) const;
+    inline fn_t fn(int i) const;
 
     inline bool is_paired(int i) const;
     inline bool is_not_paired(int i) const;
@@ -122,6 +122,7 @@ namespace trimesh
     int  get_multires_version_for_thresh(double t,bool is_nrm=false) const;
 
     void collect_mfolds(eGDIR dir, int dim, dataset_ptr_t ds);
+    void collect_mfolds(dataset_ptr_t ds);
     void get_mfold(eGDIR dir, int cp,cellid_list_t &mfold,int ver=-1);
     void get_contrib(eGDIR dir, int cp,int_list_t &contrib,int ver=-1);
 
@@ -148,9 +149,11 @@ namespace trimesh
     typedef boost::counting_iterator<int> iterator_t;
     typedef boost::iterator_range<iterator_t> range_t;
 
-    inline range_t cp_range()
+    inline range_t cp_range() const
     {return boost::make_iterator_range
           (iterator_t(0),iterator_t(get_num_critpts()));}
+
+    void save_conn_graph_vtk(const std::string & fn, tri_cc_geom_ptr_t tcc) const;
 
   };
 
