@@ -6,9 +6,10 @@
 /* Linear Algebra utilities
 /*---------------------------------------------------------------------------*/
 
+// This section may be redefined in other projects.
+#ifndef __CPPUTILS_H_INCLUDED__
 #include <Eigen/Dense>
 #include <math.h>
-
 
 namespace la
 {
@@ -95,6 +96,7 @@ namespace la
   }
 }
 
+#endif
 /*===========================================================================*/
 
 

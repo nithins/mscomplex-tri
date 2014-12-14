@@ -13,6 +13,10 @@ find_package(PythonLibs REQUIRED)
 
 find_package(PythonQt REQUIRED)
 
+find_package(Eigen3 REQUIRED)
+
+find_package(Boost COMPONENTS program_options serialization system REQUIRED)
+
 add_subdirectory(utls)
 
 option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
@@ -73,6 +77,7 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
   ${PYTHONQT_INCLUDE_DIR}
   ${PYTHON_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
   )
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
