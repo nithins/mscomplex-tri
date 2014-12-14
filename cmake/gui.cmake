@@ -21,18 +21,6 @@ add_subdirectory(utls)
 
 option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 
-set(dmsc_SRCS
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh.h
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex_ensure.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.cpp
-
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/tri_edge.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/tri_edge.cpp
-
-)
-
 #set(spin_SRCS
 #  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.h
 #  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
@@ -82,8 +70,8 @@ include_directories(
 
 configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_BINARY_DIR}/config.h)
 
-add_executable(${PROJECT_NAME}_gui
-  ${dmsc_SRCS}
+add_executable(mscomplex-tri-viewer
+  $<TARGET_OBJECTS:mscomplex-tri-core>
   ${spin_SRCS}
   ${viewer_SRCS}
   ${viewer_MOC_SRCS}
@@ -91,7 +79,7 @@ add_executable(${PROJECT_NAME}_gui
   )
 
 target_link_libraries(
-  ${PROJECT_NAME}_gui
+  mscomplex-tri-viewer
   utls
   ${Boost_LIBRARIES}
   ${QT_LIBRARIES}

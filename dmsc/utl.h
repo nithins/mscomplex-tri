@@ -110,15 +110,7 @@ namespace utl {
 
 /*---------------------------------------------------------------------------*/
 
-/**
-  \brief A generic to string impl that uses the << operator of type T
-
-  \tparam     T  the value type of the vector
-  \param[in]  v  Value
-
-  \returns string
-**/
-
+///  \brief A generic to string impl that uses the << operator of type T
 template <typename T>
 inline std::string to_string (const T& v)
 {std::stringstream ss; ss << v ; return ss.str();}
@@ -137,6 +129,32 @@ void rearrange(iter_t b, iter_t e,const std::vector<size_t>& idxs);
 
 /// \brief strip front and back whitespaces in given string
 void trim(std::string &s);
+
+/*---------------------------------------------------------------------------*/
+
+/// \brief Converts a given string to the template type
+template <class T> inline T from_string(std::string s);
+
+/*---------------------------------------------------------------------------*/
+
+///  \brief Converts a given string to the template types
+template <typename T1,typename T2>
+inline void from_string(std::string s,T1& t1,T2& t2)
+{std::stringstream ss(s);ss >> t1 >> t2;}
+
+/*---------------------------------------------------------------------------*/
+
+///  \brief Converts a given string to the template types
+template <typename T1,typename T2,typename T3>
+inline void from_string(std::string s,T1& t1,T2& t2,T3& t3)
+{std::stringstream ss(s);ss >> t1 >> t2 >> t3;}
+
+/*---------------------------------------------------------------------------*/
+
+///  \brief Converts a given string to the template types
+template <typename T1,typename T2,typename T3,typename T4>
+inline void from_string(std::string s,T1& t1,T2& t2,T3& t3,T4& t4)
+{std::stringstream ss(s);ss >> t1 >> t2 >> t3 >> t4;}
 
 /*---------------------------------------------------------------------------*/
 
