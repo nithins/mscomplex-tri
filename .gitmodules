@@ -1,3 +1,3 @@
-[submodule "utls"]
-	path = utls
+[submodule "viewer/utls"]
+	path = viewer/utls
 	url = https://github.com/nithins/utls.git

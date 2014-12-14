@@ -13,7 +13,6 @@ add_subdirectory(dmsc)
 option(BUILD_VIEWER "build the mscomplex viewer" OFF)
 
 if(BUILD_VIEWER)
-add_subdirectory(utls)
 add_subdirectory(viewer)
 endif(BUILD_VIEWER)
 

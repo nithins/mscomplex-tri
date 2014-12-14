@@ -28,6 +28,8 @@ option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 #  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
 #)
 
+add_subdirectory(utls)
+
 set(viewer_SRCS
   trimesh_viewer.h
   main.cpp
