@@ -23,6 +23,10 @@ set(dmsc_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex_ensure.h
   ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/trimesh_mscomplex.cpp
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/tri_edge.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/dmsc/tri_edge.cpp
+
 )
 
 #set(spin_SRCS

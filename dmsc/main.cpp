@@ -6,8 +6,6 @@
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <timer.h>
-
 #include <trimesh_dataset.h>
 #include <trimesh_mscomplex.h>
 #include <trimesh_mscomplex_simp.h>
@@ -24,7 +22,7 @@ void read_bin_file(std::vector<T> &fns, const string & fname,int compno)
 {
   fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
 
-  ensure(fnfile.is_open(),"unable to open bin file");
+  ENSURE(fnfile.is_open(),"unable to open bin file");
 
   int num_bin_values, num_bin_comps;
 
@@ -53,7 +51,7 @@ void print_bin_info(const string & fname)
 {
   fstream fnfile ( fname.c_str(), fstream::in | fstream::binary );
 
-  ensure(fnfile.is_open(),"unable to open bin file");
+  ENSURE(fnfile.is_open(),"unable to open bin file");
 
   int num_bin_values, num_bin_comps;
 
@@ -79,7 +77,7 @@ void read_tri_tlist( const char *filename,trimesh::tri_idx_list_t &tlist)
 
   std::fstream tri_file ( filename, std::fstream::in );
 
-  ensure(tri_file.is_open(),"unable to open tri file");
+  ENSURE(tri_file.is_open(),"unable to open tri file");
 
   tri_file >> num_v >> num_t;
 
@@ -95,7 +93,7 @@ void read_tri_tlist( const char *filename,trimesh::tri_idx_list_t &tlist)
     {
       tri_file >> tlist[i][j];
 
-      ensure(is_in_range(tlist[i][j],0,num_v),"invalid index in file");
+      ENSURE(is_in_range(tlist[i][j],0,num_v),"invalid index in file");
     }
 
   tri_file.close();
@@ -107,7 +105,7 @@ void read_tri_vlist( const char *filename,tri_cc_geom_t::vertex_list_t &vlist)
 
   std::fstream tri_file ( filename, std::fstream::in );
 
-  ensure(tri_file.is_open(),"unable to open tri file");
+  ENSURE(tri_file.is_open(),"unable to open tri file");
 
   tri_file >> num_v >> num_t;
 
@@ -130,13 +128,13 @@ void read_off_file(const string & fname, std::vector<T> &fns,
 {
   fstream off_file ( fname.c_str(), fstream::in);
 
-  ensure(off_file.is_open(),"unable to open off file");
+  ENSURE(off_file.is_open(),"unable to open off file");
 
   string ln;
   std::vector<string> strs;
 
   getline(off_file,ln);
-  ensure(ln=="OFF","Doesn't seem to be an OFF FILE");
+  ENSURE(ln=="OFF","Doesn't seem to be an OFF FILE");
 
   getline(off_file,ln);
   ba::split(strs,ln,ba::is_any_of("\t \n"));
@@ -153,7 +151,7 @@ void read_off_file(const string & fname, std::vector<T> &fns,
     ba::split(strs,ln,ba::is_any_of("\t \n"));
     fns[i] = atof(strs[compno].c_str());
 
-    ensure(is_in_range(compno,0,strs.size()),
+    ENSURE(is_in_range(compno,0,strs.size()),
            "too few components in vinfo line");
   }
 
@@ -167,10 +165,10 @@ void read_off_file(const string & fname, std::vector<T> &fns,
     tlist[i][1] = atoi(strs[2].c_str());
     tlist[i][2] = atoi(strs[3].c_str());
 
-    ensure(ntv == 3,"Mesh contains non-triangle polys");
-    ensure(is_in_range(tlist[i][0],0,num_v),"invalid index in file");
-    ensure(is_in_range(tlist[i][1],0,num_v),"invalid index in file");
-    ensure(is_in_range(tlist[i][2],0,num_v),"invalid index in file");
+    ENSURE(ntv == 3,"Mesh contains non-triangle polys");
+    ENSURE(is_in_range(tlist[i][0],0,num_v),"invalid index in file");
+    ENSURE(is_in_range(tlist[i][1],0,num_v),"invalid index in file");
+    ENSURE(is_in_range(tlist[i][2],0,num_v),"invalid index in file");
   }
 
   off_file.close();
@@ -180,13 +178,13 @@ void read_off_vlist(const string & fname, tri_cc_geom_t::vertex_list_t &vlist)
 {
   fstream off_file ( fname.c_str(), fstream::in);
 
-  ensure(off_file.is_open(),"unable to open off file");
+  ENSURE(off_file.is_open(),"unable to open off file");
 
   string ln;
   std::vector<string> strs;
 
   getline(off_file,ln);
-  ensure(ln=="OFF","Doesn't seem to be an OFF FILE");
+  ENSURE(ln=="OFF","Doesn't seem to be an OFF FILE");
 
   getline(off_file,ln);
   ba::split(strs,ln,ba::is_any_of("\t \n"));
@@ -270,8 +268,8 @@ int main(int ac , char **av)
     return 1;
   }
 
-  Timer t;
-  t.start();
+  utl::timer t;
+  t.restart();
 
   cout<<"===================================="<<endl;
   cout<<"         Starting Processing        "<<endl;
@@ -296,18 +294,18 @@ int main(int ac , char **av)
     read_off_file(off_filename,fns,tlist,comp_no);
     fn_pfx = off_filename;
   }
-  cout<<"data read ---------------- "<<t.getElapsedTimeInMilliSec()<<endl;
+  cout<<"data read ---------------- "<<t.elapsed()<<endl;
 
   trimesh::dataset_ptr_t   ds(new trimesh::dataset_t(fns,tlist));
   trimesh::mscomplex_ptr_t msc(new trimesh::mscomplex_t);
   ds->work(msc);
-  cout<<"gradient done ------------ "<<t.getElapsedTimeInMilliSec()<<endl;
+  cout<<"gradient done ------------ "<<t.elapsed()<<endl;
 
   msc->simplify(0.0);
   msc->collect_mfolds(ds);
 
   msc->save(fn_pfx+".mscomplex.full.bin");
-  cout<<"write unsimplified done -- "<<t.getElapsedTimeInMilliSec()<<endl;
+  cout<<"write unsimplified done -- "<<t.elapsed()<<endl;
 
 
   if( simp_method == "P")
@@ -333,11 +331,11 @@ int main(int ac , char **av)
 
 //  }
 
-  cout<<"simplification done ------ "<<t.getElapsedTimeInMilliSec()<<endl;
+  cout<<"simplification done ------ "<<t.elapsed()<<endl;
 
   msc->collect_mfolds(ds);
   msc->save(fn_pfx+".mscomplex.bin");
-  cout<<"write simplified done ---- "<<t.getElapsedTimeInMilliSec()<<endl;
+  cout<<"write simplified done ---- "<<t.elapsed()<<endl;
 
   cout<<"------------------------------------"<<endl;
   cout<<"        Finished Processing         "<<endl;

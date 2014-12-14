@@ -113,7 +113,7 @@ void merge_dag_t::build(mscomplex_ptr_t msc)
 
     int pnode = m_cp_geom[dir][p],pcancno = msc->m_cp_cancno[p];
 
-    ensure(get_node(pnode).canc_no < pcancno,
+    ENSURE(get_node(pnode).canc_no < pcancno,
            "earlier pnode has formed from a later cancellation");
 
     if( pnode >=  ncps || msc->m_mfolds[dir][pnode].size() > 0)
@@ -123,7 +123,7 @@ void merge_dag_t::build(mscomplex_ptr_t msc)
         int rnode = m_cp_geom[dir][r];
         m_cp_geom[dir][r] = m_nodes.size();
         m_nodes.push_back(node_t(rnode,pnode,pcancno));
-        ensure(get_node(rnode).canc_no < pcancno,
+        ENSURE(get_node(rnode).canc_no < pcancno,
                "earlier rnode has formed from a later cancellation");
       }
     }
@@ -307,15 +307,15 @@ void mscomplex_t::cancel_pair ( int p, int q)
 {
   order_pr_by_cp_index(*this,p,q);
 
-  ensure(m_multires_version == m_canc_list.size(),
+  ENSURE(m_multires_version == m_canc_list.size(),
          "Cannot cancel pair !! Ms complex resolution is not coarsest.");
-  ensure(index(p) == index(q)+1,
+  ENSURE(index(p) == index(q)+1,
          "indices do not differ by 1");
-  ensure(m_cp_pair_idx[p] == -1 && m_cp_pair_idx[q] == -1,
+  ENSURE(m_cp_pair_idx[p] == -1 && m_cp_pair_idx[q] == -1,
          "p/q has already been paired");
-  ensure(m_des_conn[p].count(q)  == m_asc_conn[q].count(p),
+  ENSURE(m_des_conn[p].count(q)  == m_asc_conn[q].count(p),
          "p is not connected to q");
-  ensure(m_des_conn[p].count(q) == 1,
+  ENSURE(m_des_conn[p].count(q) == 1,
          "p and q are multiply connected");
 
   m_cp_cancno[p] = m_canc_list.size();
@@ -331,7 +331,7 @@ void mscomplex_t::cancel_pair()
 {
   try
   {
-    ensure(is_in_range(m_multires_version,0,m_canc_list.size()),
+    ENSURE(is_in_range(m_multires_version,0,m_canc_list.size()),
            "invalid cancellation position");
 
     int p = m_canc_list[m_multires_version].first;
@@ -381,7 +381,7 @@ void mscomplex_t::anticancel_pair()
 {
   m_multires_version--;
 
-  ensure(is_in_range(m_multires_version,0,m_canc_list.size()),
+  ENSURE(is_in_range(m_multires_version,0,m_canc_list.size()),
          "invalid cancellation position");
 
   int p = m_canc_list[m_multires_version].first;
@@ -508,7 +508,7 @@ void mscomplex_t::simplify(double f_tresh, bool is_nrm, int req_nmin, int req_nm
 
   if (is_nrm) f_tresh *= f_rng;
 
-  ensure(f_tresh >=0 && f_tresh <= f_rng,"tresh out of range");
+  ENSURE(f_tresh >=0 && f_tresh <= f_rng,"tresh out of range");
 
   for(int i = 0 ;i < get_num_critpts();++i)
   {
@@ -675,18 +675,18 @@ void get_contrib_cps(mscomplex_ptr_t msc,contrib_t& contrib)
   // Sanity checks.
   BOOST_FOREACH(contrib_t::value_type pr, contrib)
   {
-    ensure(msc->index(pr.first) == dim,
+    ENSURE(msc->index(pr.first) == dim,
            "Computed the contribution of index != dim");
-    ensure(msc->is_not_paired(pr.first),
+    ENSURE(msc->is_not_paired(pr.first),
            "Computed the contribution to a cancelled cp");
 
     BOOST_FOREACH(int ccp, pr.second)
     {
-      ensure(msc->index(ccp) == dim,
+      ENSURE(msc->index(ccp) == dim,
              "other dim cp is attempting to contribute");
-      ensure(msc->is_paired(ccp),
+      ENSURE(msc->is_paired(ccp),
              "an unpaired cp is attempting to contribute");
-      ensure(msc->index(msc->pair_idx(ccp)) == odim,
+      ENSURE(msc->index(msc->pair_idx(ccp)) == odim,
              "wrong cancellation type cp is attempting to contribute");
     }
   }
@@ -710,7 +710,7 @@ inline void __collect_mfolds(mscomplex_ptr_t msc, dataset_ptr_t ds)
 
   BOOST_FOREACH(contrib_t::value_type pr,contrib)
   {
-//    ensure(msc->m_mfolds[dir][pr.first].size() == 0,
+//    ENSURE(msc->m_mfolds[dir][pr.first].size() == 0,
 //        "Geom for cp has already been collected");
 
     msc->m_mfolds[dir][pr.first].clear();

@@ -21,67 +21,58 @@ inline int  mscomplex_t::get_num_critpts() const
 
 inline int mscomplex_t::index(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_index.size()));
-  ASSERT(is_in_range(m_cp_index[i],0,3));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_index.size()),i);
+  ASSERTV(is_in_range(m_cp_index[i],0,3),i);
 
   return m_cp_index[i];
 }
 
 inline int mscomplex_t::pair_idx(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_pair_idx.size()));
-  ASSERT(is_in_range(m_cp_pair_idx[i],0,(int)m_cp_pair_idx.size()));
-  ASSERT(i == m_cp_pair_idx[m_cp_pair_idx[i]]);}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_pair_idx.size()),i);
+  ASSERTV(is_in_range(m_cp_pair_idx[i],0,(int)m_cp_pair_idx.size()),i);
+  ASSERTV(i == m_cp_pair_idx[m_cp_pair_idx[i]],i);
 
   return m_cp_pair_idx[i];
 }
 
 inline bool mscomplex_t::is_paired(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_pair_idx.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_pair_idx.size()),i);
 
   return (m_cp_pair_idx[i] != -1);
 }
 
 inline bool mscomplex_t::is_not_paired(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_pair_idx.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_pair_idx.size()),i);
 
   return (m_cp_pair_idx[i] == -1);
 }
 
 inline bool mscomplex_t::is_boundry(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_is_boundry.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_is_boundry.size()),i);
 
   return m_cp_is_boundry[i];
 }
 
 inline cellid_t mscomplex_t::cellid(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_cellid.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
-
+  ASSERTV(is_in_range(i,0,(int)m_cp_cellid.size()),i);
   return m_cp_cellid[i];
 }
 
 inline cellid_t mscomplex_t::vertid(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_vertid.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_vertid.size()),i);
 
   return m_cp_vertid[i];
 }
 
 inline fn_t mscomplex_t::fn(int i) const
 {
-  try{ASSERT(is_in_range(i,0,(int)m_cp_fn.size()));}
-  catch(assertion_error e){e.push(_FFL).push(SVAR(i));throw;}
+  ASSERTV(is_in_range(i,0,(int)m_cp_fn.size()),i);
 
   return m_cp_fn[i];
 }
@@ -166,13 +157,13 @@ inline bool is_valid_canc_edge(const mscomplex_t &msc,int_pair_t e )
 inline void mscomplex_t::save(const std::string &f) const
 {
   std::fstream fs(f.c_str(),std::ios::out|std::ios::binary);
-  ensure(fs.is_open(),"file not found!!");
+  ENSUREV(fs.is_open(),"file not found!!",f);
   save_bin(fs);
 }
 inline void mscomplex_t::load(const std::string &f)
 {
   std::fstream fs(f.c_str(),std::ios::in|std::ios::binary);
-  ensure(fs.is_open(),"file not found!!");
+  ENSUREV(fs.is_open(),"file not found!!",f);
   load_bin(fs);
 }
 
