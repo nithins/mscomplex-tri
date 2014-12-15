@@ -98,6 +98,6 @@ target_link_libraries(
   GL
   )
 
-install(TARGETS mscomplex-tri-viewer DESTINATION bin)
+install(TARGETS mscomplex-tri-viewer DESTINATION ${MSCOMPLEX_TRI_INSTALL_DIR_BIN})
 
 

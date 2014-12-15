@@ -15,7 +15,6 @@
 
 #include <glutils.h>
 #include <GLSLProgram.h>
-#include <utls_glsl_shaders.h>
 
 #include <trimesh_viewer.h>
 #include <trimesh_mscomplex.h>
@@ -29,6 +28,14 @@ double g_max_cp_size  = 8.0;
 double g_max_cp_size  = 0.025;
 GLSLProgram * g_cylinder_shader = NULL;
 GLSLProgram * g_sphere_shader   = NULL;
+
+extern const char *CYLINDER_VERT_GLSL;
+extern const char *CYLINDER_GEOM_GLSL;
+extern const char *CYLINDER_FRAG_GLSL;
+
+extern const char *SPHERE_VERT_GLSL;
+extern const char *SPHERE_GEOM_GLSL;
+extern const char *SPHERE_FRAG_GLSL;
 #endif
 
 double g_max_cp_raise = 0.1;
