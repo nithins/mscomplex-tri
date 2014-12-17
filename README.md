@@ -1,5 +1,5 @@
 
-# Welcome to the MsComplex-tri code repository
+# Welcome to the mscomplex-tri code repo
 
 ![3wdm segmentation](https://github.com/nithins/mscomplex-tri/raw/master/logo.png)
 
