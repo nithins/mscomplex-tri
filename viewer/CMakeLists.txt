@@ -30,7 +30,7 @@ option(VIEWER_RENDER_AWESOME "build renderer to render awesome" OFF)
 #  ${CMAKE_CURRENT_SOURCE_DIR}/spin/spin_image.cpp
 #)
 
-set(BUILD_UTLS_LIB OFF)
+set(BUILD_UTLS_LIB OFF CACHE BOOL "Build the utls shared lib")
 add_subdirectory(utls)
 
 set(viewer_SRCS

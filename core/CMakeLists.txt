@@ -43,7 +43,7 @@ if(BUILD_CL_TOOL)
     install(TARGETS mscomplex-tri-cl-tool DESTINATION ${MSCOMPLEX_TRI_INSTALL_DIR_BIN})
 endif(BUILD_CL_TOOL)
 
-option(BUILD_PYMSTRI "mstri python module" ON)
+option(BUILD_PYMSTRI "mstri python module" OFF)
 if(BUILD_PYMSTRI)
     include(pymstri.cmake)
 endif(BUILD_PYMSTRI)

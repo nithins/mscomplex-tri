@@ -287,7 +287,7 @@ namespace trimesh
 
     QString ms_file = QFileDialog::getOpenFileName
         (this,tr("Select mscomplex file"),
-         QDir::currentPath(),"Mscomplex (*.mscomplex.bin *.mscomplex.full.bin)");
+         QDir::currentPath(),"Mscomplex (*.bin)");
 
     if(ms_file == "") return;
 

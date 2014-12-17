@@ -3,8 +3,11 @@
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 
+#include <iostream>
+
 
 #include <tri_edge.h>
+#include <trimesh_dataset.h>
 #include <trimesh_mscomplex.h>
 
 using namespace std;
@@ -48,58 +51,153 @@ void read_off(const std::string &fname,
   ENSURES(j == nt);
 }
 
+void read_off(const std::string &fname,
+	      tri_cc_geom_t::vertex_list_t &verts,
+	      tri_cc_geom_t::tri_idx_list_t &tris,
+	      std::vector<double> &func)
+{
+  file_line_iterator lgen(fname.c_str()),lend;
+
+  ENSURES(*lgen++ == "OFF");
+
+  int i = 0, j = 0 , nv = 0 , nt = 0 , np = 0;
+
+  from_string(*lgen++,nv,nt);
+
+  verts.resize(nv);
+  tris.resize(nt);
+  func.resize(nv);
+
+  for(i = 0 ; i < nv && lgen != lend ; ++i)
+    from_string(*lgen++,verts[i][0],verts[i][1],verts[i][2],func[i]);
+
+  ENSURES(i == nv);
+
+  for(j = 0 ; j < nt && lgen != lend ; ++j)
+  {
+    from_string(*lgen++,np,tris[j][0],tris[j][1],tris[j][2]);
+
+    ENSURES(np == 3);
+  }
+
+  ENSURES(j == nt);
+}
+
+
 /*****************************************************************************/
 /******** Python wrapped Morse-Smale complex class                    ********/
 /*****************************************************************************/
 
-mscomplex_ptr_t read_msc(std::string f)
+// Wrapper to hold on to references to some other objects
+class mscomplex_pymstri_t: public mscomplex_t
 {
-  mscomplex_ptr_t msc(new mscomplex_t);
+public:
+  tri_cc_geom_ptr_t tcc;
+  dataset_ptr_t     ds;
+};
 
-  msc->load(f);
+typedef  boost::shared_ptr<mscomplex_pymstri_t> mscomplex_pymstri_ptr_t;
 
+mscomplex_pymstri_ptr_t new_msc()
+{
+  mscomplex_pymstri_ptr_t msc(new mscomplex_pymstri_t);
   return msc;
 }
 
-int mscomplex_num_canc(mscomplex_ptr_t msc)
+tri_cc_geom_ptr_t mscomplex_get_tri_cc(mscomplex_pymstri_ptr_t msc)
+{
+  ENSURES(msc->tcc != 0);
+  return msc->tcc;
+}
+
+void __mscomplex_compute_internel__(
+    mscomplex_pymstri_ptr_t msc,
+    tri_idx_list_t &tris,
+    tri_cc_geom_t::vertex_list_t  &verts,
+    fn_list_t &func)
+{
+  msc->tcc.reset(new tri_cc_geom_t());
+  msc->tcc->init(tris,verts);
+
+  verts.clear();
+  tris.clear();
+
+  msc->ds.reset(new dataset_t(func,msc->tcc->get_tri_cc()));
+  msc->ds->work(msc);
+}
+
+void mscomplex_compute_off(mscomplex_pymstri_ptr_t msc,std::string off_file)
+{
+  tri_idx_list_t tris;
+  tri_cc_geom_t::vertex_list_t  verts;
+  fn_list_t func;
+
+  read_off(off_file,verts,tris,func);
+  __mscomplex_compute_internel__(msc,tris,verts,func);
+}
+
+template<typename T> void read_bin_arr
+(std::string fn,std::vector<fn_t> & funcs,int n)
+{
+  fstream is(fn.c_str(),std::ios::binary|std::ios::in);
+
+  funcs.resize(n);
+  is.read((char*)(void*)(funcs.data()),n*sizeof(T));
+
+  ENSURES(is) << "Ran out of data when reading file=" << fn <<"\n";
+}
+
+
+void mscomplex_compute_off_bin
+(mscomplex_pymstri_ptr_t msc,std::string off_file,
+ std::string bin_file,std::string bin_fmt="float64")
+{
+  tri_idx_list_t tris;
+  tri_cc_geom_t::vertex_list_t  verts;
+  fn_list_t funcs;
+
+  read_off(off_file,verts,tris);
+
+  if(bin_fmt == "float32")
+    read_bin_arr<float>(bin_file,funcs,verts.size());
+  else if(bin_fmt == "float64")
+    read_bin_arr<double>(bin_file,funcs,verts.size());
+  else
+    throw std::runtime_error("Unknown bin format");
+
+  __mscomplex_compute_internel__(msc,tris,verts,funcs);
+}
+
+
+int mscomplex_num_canc(mscomplex_pymstri_ptr_t msc)
 {
   return msc->m_canc_list.size();
 }
 
-bp::tuple mscomplex_canc(mscomplex_ptr_t msc,int i)
+bp::tuple mscomplex_canc(mscomplex_pymstri_ptr_t msc,int i)
 {
   ASSERT(is_in_range(i,0,msc->m_canc_list.size()));
   return bp::make_tuple(msc->m_canc_list[i].first,msc->m_canc_list[i].second);
 }
 
-bp::tuple mscomplex_frange(mscomplex_ptr_t msc)
+bp::tuple mscomplex_frange(mscomplex_pymstri_ptr_t msc)
 {
   return bp::make_tuple(msc->m_fmin,msc->m_fmax);
 }
 
-bp::list mscomplex_asc(mscomplex_ptr_t msc,int i)
+template <eGDIR dir>
+bp::list mscomplex_conn(mscomplex_pymstri_ptr_t msc, int i)
 {
   ASSERT(is_in_range(i,0,msc->get_num_critpts()));
   bp::list r;
-  BOOST_FOREACH(int c,msc->m_asc_conn[i])
+  BOOST_FOREACH(int c,msc->m_conn[dir][i])
   {
     r.append(c);
   }
   return r;
 }
 
-bp::list mscomplex_des(mscomplex_ptr_t msc,int i)
-{
-  ASSERT(is_in_range(i,0,msc->get_num_critpts()));
-  bp::list r;
-  BOOST_FOREACH(int c,msc->m_des_conn[i])
-  {
-    r.append(c);
-  }
-  return r;
-}
-
-bp::list mscomplex_cps(mscomplex_ptr_t msc)
+bp::list mscomplex_cps(mscomplex_pymstri_ptr_t msc)
 {
   bp::list r;
 
@@ -110,11 +208,32 @@ bp::list mscomplex_cps(mscomplex_ptr_t msc)
   return r;
 }
 
-void mscomplex_gen_pers_pairs(mscomplex_ptr_t msc)
+void mscomplex_gen_pers_pairs(mscomplex_pymstri_ptr_t msc)
 {
   int lastVer = msc->get_multires_version();
   msc->simplify(1.0,true);
   msc->set_multires_version(lastVer);
+}
+
+void mscomplex_collect_mfolds(mscomplex_pymstri_ptr_t msc)
+{
+  ENSURES(msc->ds !=0)
+      << "Gradient information unavailable" <<endl
+      << "Did you load the mscomplex from a file!!!"<<endl;
+
+  msc->collect_mfolds(msc->ds);
+}
+
+template <eGDIR dir>
+bp::list mscomplex_geom(mscomplex_pymstri_ptr_t msc, int i)
+{
+  ASSERT(is_in_range(i,0,msc->get_num_critpts()));
+  bp::list r;
+  BOOST_FOREACH(int c,msc->m_mfolds[dir][i])
+  {
+    r.append(c);
+  }
+  return r;
 }
 
 //bp::list mscomplex_arc_geom(mscomplex_ptr_t msc, int a, int b)
@@ -132,15 +251,17 @@ void mscomplex_gen_pers_pairs(mscomplex_ptr_t msc)
 //  return r;
 //}
 
+
 void wrap_mscomplex_t()
 {
 
   docstring_options local_docstring_options(true, false, false);
 
 
-  class_<mscomplex_t,mscomplex_ptr_t>("mscomplex","The Morse-Smale complex object",no_init)
-      .def("__init__", make_constructor( &read_msc),
-           "build the MSC object using the graph.bin file")
+  class_<mscomplex_pymstri_t,mscomplex_pymstri_ptr_t>
+      ("mscomplex","The Morse-Smale complex object",no_init)
+      .def("__init__", make_constructor( &new_msc),
+           "ctor")
       .def("num_cp",&mscomplex_t::get_num_critpts,
            "Number of Critical Points")
       .def("fn",&mscomplex_t::fn,
@@ -155,6 +276,8 @@ void wrap_mscomplex_t()
            "vertex id of maximal vertex of critical cell")
       .def("cellid",&mscomplex_t::cellid,
            "cell id of critical cell")
+      .def("load",&mscomplex_t::load,
+           "Load mscomplex from file")
       .def("save",&mscomplex_t::save,
            "Save mscomplex to file")
       .def("num_canc",&mscomplex_num_canc,
@@ -163,14 +286,58 @@ void wrap_mscomplex_t()
            "The ith cancellation pair")
       .def("frange",&mscomplex_frange,
            "Range of function values")
-      .def("asc",&mscomplex_asc,
-           "List of ascending cps connected to i")
-      .def("des",&mscomplex_des,
-           "List of descending cps connected to i")
+      .def("asc",&mscomplex_conn<ASC>,
+           "List of ascending cps connected to a given critical point i")
+      .def("des",&mscomplex_conn<DES>,
+           "List of descending cps connected to a given critical point i")
+      .def("asc_geom",&mscomplex_geom<ASC>,
+           "Ascending manifold geometry of a given critical point i")
+      .def("des_geom",&mscomplex_geom<DES>,
+           "Descending manifold geometry of a given critical point i")
       .def("cps",&mscomplex_cps,
            "Returns a list of surviving critical cps")
       .def("gen_pers_hierarchy",&mscomplex_gen_pers_pairs,
            "Generates the persistence hierarchy using topo simplification")
+      .def("get_tri_cc",mscomplex_get_tri_cc,
+           "Get the underlying triangulation object")
+      .def("compute_off",&mscomplex_compute_off,
+           "Compute the Mscomplex from a triagulation given in the .off format\n"\
+           "\n"\
+           "Note:The scalar function is assumed to be provided as \n"\
+           "     the fourth coordinateof each vertex in the off file.\n"\
+           "\n"\
+           "Note: This only computes the combinatorial structure\n"\
+           "     Call collect_mfold(s) to extract geometry\n"
+           )
+      .def("compute_off_bin",&mscomplex_compute_off_bin,
+           "Compute the Mscomplex from a triagulation given in the .off format\n"\
+           "and scalar function from the given bin file in the given bin format\n"\
+           "\n"\
+           "Parameters: \n"\
+           "    off_file: the off file containing the triangulation.\n"\
+           "    bin_file: the bin file containing the scalar function.\n"\
+           "    bin_fmt: binary format .\n"\
+           "             Acceptable values = (\"float32\",\"float64\")\n"
+           "\n"\
+           "Note: This only computes the combinatorial structure\n"\
+           "     Call collect_mfold(s) to extract geometry\n"
+           )
+      .def("collect_geom",&mscomplex_collect_mfolds,
+           "Collect the geometry of all survivng critical points\n"\
+           "\n"\
+           "Note: This must be called only after any of the compute functions are called. \n"\
+           )
+
+      .def("simplify_pers",&mscomplex_t::simplify,
+           "Simplify the Morse-Smale complex using topological persistence\n"\
+           "Parameters:\n"\
+           "    tresh: persistence threshold\n"\
+           "    is_nrm: is the threshold normalized to [0,1] or not.\n"\
+           "            if not then thresh is in same scale as input function\n"\
+           "    req_nmax,req_nmin: num maxima/minima that should be retained\n"\
+           "                       set to 0 to ignore"
+           )
+
 
 //      .def("arc_geom",&mscomplex_arc_geom,
 //           "seqence of cells of arc connecting 2 cps (empty list if no arc exists)")
@@ -193,38 +360,6 @@ tri_cc_geom_ptr_t tcc_from_off(std::string f)
   ret->init(tris,verts);
   return ret;
 }
-
-//numeric::array get_tris_tetvers(tet_geom_cc_ptr_t tcc,
-//                   const numeric::array &tris)
-//{
-//  const bp::tuple & shape = extract<bp::tuple>(tris.attr("shape"));
-
-//  int ntris = extract<int>(shape[0]);
-
-//  bp::list lst;
-
-//  for(int i = 0 ; i < ntris; ++i)
-//  {
-//    object ti_obj = tris[bp::make_tuple(i,0)];
-
-//    int tri = boost::python::extract<int>(ti_obj.attr("__int__")());
-
-//    ASSERT(is_in_range(tri,tcc->m_cel_off[2],tcc->m_cel_off[3]));
-
-//    int d1 = tcc->m_cel_drt[tri];
-//    int d2 = tcc->beta2(d1);
-
-//    int v1 = (d1%12)/3 , v2 = (d2%12)/3;
-
-//    d1 /=24;
-//    if (d2 != -1)
-//      d2/=24;
-
-//    lst.append(bp::make_tuple(d1,v1,d2,v2));
-//  }
-
-//  return numeric::array(lst);
-//}
 
 inline bp::tuple dcell_range(tri_cc_geom_ptr_t tcc, int d)
 {
