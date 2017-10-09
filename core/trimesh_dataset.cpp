@@ -63,13 +63,18 @@ namespace trimesh
   template <int dim,typename Titer>
   inline void assign_pairs(dataset_t &ds,Titer b,Titer e)
   {
-    cellid_t cf[10],*cfe;
+	const int size = 20;
+	cellid_t cf[size], *cfe;
 
     BOOST_AUTO(cmp,bind(&dataset_t::compare_cells<dim+1>,&ds,_1,_2));
 
     for(;b!=e;++b)
     {
-      cfe = cf + ds.get_cets<ASC>(*b,cf);
+      uint pos = ds.get_cets<ASC>(*b, cf);
+	  ENSURES(pos < size)
+			  <<"A maximum of 20 cofacets are assumed. Adjust const above!!";
+      cfe = cf + pos;
+
       cfe = filter_elst(cf,cfe,cf,*b,ds);
 
       cellid_t *mcf = min_element(cf,cfe,cmp);
@@ -91,7 +96,8 @@ namespace trimesh
   template <int dim,typename Titer>
   inline void assign_pairs2(dataset_t &ds,Titer b,Titer e)
   {
-    cellid_t cf[10],*cfe;
+	const int size = 20;
+	cellid_t cf[size],*cfe;
 
     BOOST_AUTO(cmp,bind(&dataset_t::compare_cells<dim+1>,&ds,_1,_2));
 
@@ -100,8 +106,11 @@ namespace trimesh
     for(;b!=e;++b)
       if(!ds.is_paired(*b))
       {
-        cfe = cf + ds.get_cets<ASC>(*b,cf);
-        cfe = filter_elst2(cf,cfe,cf,*b,ds);
+		uint pos = ds.get_cets<ASC>(*b, cf);
+		ENSURES(pos < size)
+				  <<"A maximum of 20 cofacets are assumed. Adjust const above!!";
+		cfe = cf + pos;
+		cfe = filter_elst2(cf,cfe,cf,*b,ds);
 
         cellid_t *mcf = min_element(cf,cfe,cmp);
 
