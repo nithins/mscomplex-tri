@@ -444,7 +444,9 @@ void wrap_tet_cc_t()
 
 BOOST_PYTHON_MODULE(pymstri)
 {
-  numeric::array::set_module_and_type("numpy", "ndarray");
+  #if BOOST_VERSION < 106500
+        numeric::array::set_module_and_type("numpy", "ndarray");
+  #endif
 
   wrap_tet_cc_t();
 

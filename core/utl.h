@@ -10,6 +10,7 @@
 #ifndef __CPPUTILS_H_INCLUDED__
 #include <Eigen/Dense>
 #include <math.h>
+#include <vector>
 
 namespace la
 {
